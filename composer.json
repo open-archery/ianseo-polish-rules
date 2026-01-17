@@ -1,0 +1,15 @@
+{
+    "name": "open-archery/ianseo-polish-rules",
+    "description": "Polish Archery Association-compliant IANSEO rules",
+    "type": "project",
+    "license": "Unlicense",
+    "authors": [
+        {
+            "name": "Open Archery"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {
+        "php": "^8.0"
+    }
+}
