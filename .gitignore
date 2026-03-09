@@ -1,3 +1,17 @@
-.DS_Store
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
+# OS
+.DS_Store
+Thumbs.db
+
+# PHP
 /vendor/
+*.log
+
+# Research PDFs (source documents, not committed to repo)
+research/*.pdf
