@@ -7,11 +7,11 @@ ianseo Polish Archery Federation module. Read this before starting any feature w
 
 ## Agents at a Glance
 
-| Agent | Prompt file | Role | Writes |
-|-------|-------------|------|--------|
-| **Advisor** | `.agents/advisor.prompt.md` | PZŁucz rules expert + ianseo mapping | Specs, `research/pzlucz-rules.md` |
-| **Developer** | `.agents/developer.prompt.md` | PHP implementer | Code in `PL/`, `research/ianseo-internals.md` |
-| **Reviewer** | `.agents/reviewer.prompt.md` | Quality & security gate | Review documents only |
+| Agent         | Prompt file                   | Role                                 | Writes                                        |
+| ------------- | ----------------------------- | ------------------------------------ | --------------------------------------------- |
+| **Advisor**   | `.agents/advisor.prompt.md`   | PZŁucz rules expert + ianseo mapping | Specs, `research/pzlucz-rules.md`             |
+| **Developer** | `.agents/developer.prompt.md` | PHP implementer                      | Code in `PL/`, `research/ianseo-internals.md` |
+| **Reviewer**  | `.agents/reviewer.prompt.md`  | Quality & security gate              | Review documents only                         |
 
 ---
 
@@ -136,6 +136,7 @@ git commit -m "feat: {short description of feature}"
 ```
 
 Commit message conventions:
+
 - `feat:` — new feature
 - `fix:` — bug fix
 - `docs:` — research or documentation update
@@ -148,14 +149,15 @@ Commit message conventions:
 
 Update research files when these events occur:
 
-| Event | Action | Agent |
-|-------|--------|-------|
-| PZŁucz publishes new regulations | Re-run research phase §3.1 with new PDF | Advisor |
-| ianseo core is upgraded | Re-read affected `Common/` files and update `ianseo-internals.md` | Developer |
-| Implementation reveals undocumented ianseo behaviour | Append finding to `ianseo-internals.md` | Developer |
-| New competition format not yet in `pzlucz-rules.md` | Ask Advisor to add the relevant section | Advisor |
+| Event                                                | Action                                                            | Agent     |
+| ---------------------------------------------------- | ----------------------------------------------------------------- | --------- |
+| PZŁucz publishes new regulations                     | Re-run research phase §3.1 with new PDF                           | Advisor   |
+| ianseo core is upgraded                              | Re-read affected `Common/` files and update `ianseo-internals.md` | Developer |
+| Implementation reveals undocumented ianseo behaviour | Append finding to `ianseo-internals.md`                           | Developer |
+| New competition format not yet in `pzlucz-rules.md`  | Ask Advisor to add the relevant section                           | Advisor   |
 
 Commit message for research updates:
+
 ```
 docs: update ianseo-internals — discovered {topic}
 docs: update pzlucz-rules for {year} regulations
@@ -169,11 +171,11 @@ See `PLAN.md` §7 for the suggested implementation order.
 
 Current status:
 
-| Priority | Feature | Status |
-|----------|---------|--------|
-| 0 | Research phase | ☐ Not started |
-| 1 | Tournament setup scripts (`Setup/`) | ☐ Not started |
-| 2 | Extended `sets.php` | ☐ Not started |
-| 3 | Field/3D support | ☐ Not started |
-| 4 | Custom printouts | ☐ Not started |
-| 5 | License/classification check | ☐ Not started |
+| Priority | Feature                             | Status        |
+| -------- | ----------------------------------- | ------------- |
+| 0        | Research phase                      | ☐ Not started |
+| 1        | Tournament setup scripts (`Setup/`) | ☐ Not started |
+| 2        | Extended `sets.php`                 | ☐ Not started |
+| 3        | Field/3D support                    | ☐ Not started |
+| 4        | Custom printouts                    | ☐ Not started |
+| 5        | License/classification check        | ☐ Not started |

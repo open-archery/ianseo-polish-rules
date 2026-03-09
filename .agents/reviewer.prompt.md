@@ -1,5 +1,5 @@
 ---
-mode: agent
+agent: agent
 description: >
   Code review agent for the PZŁucz ianseo module. Reviews PHP code produced by
   the Developer agent for security, conventions, scope, and completeness.
@@ -28,46 +28,46 @@ severity, and a clear fix instruction.
 
 ### 1. Security (CRITICAL — any finding blocks approval)
 
-| Check | What to look for |
-|-------|-----------------|
-| **SQL injection** | Every value in SQL must go through `StrSafe_DB()`. No string concatenation of raw `$_GET`/`$_POST`/`$_REQUEST` into queries. |
-| **XSS** | All user-controlled values echoed to HTML must be wrapped in `htmlspecialchars($val, ENT_QUOTES, 'UTF-8')` |
-| **Session check** | Every page must call `CheckTourSession(true)` (UI) or `CheckTourSession(false)` (AJAX) immediately after bootstrap |
-| **Direct file access** | No sensitive logic in files that skip the session check |
-| **CSRF** | POST-only actions on state-changing operations |
+| Check                  | What to look for                                                                                                             |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| **SQL injection**      | Every value in SQL must go through `StrSafe_DB()`. No string concatenation of raw `$_GET`/`$_POST`/`$_REQUEST` into queries. |
+| **XSS**                | All user-controlled values echoed to HTML must be wrapped in `htmlspecialchars($val, ENT_QUOTES, 'UTF-8')`                   |
+| **Session check**      | Every page must call `CheckTourSession(true)` (UI) or `CheckTourSession(false)` (AJAX) immediately after bootstrap           |
+| **Direct file access** | No sensitive logic in files that skip the session check                                                                      |
+| **CSRF**               | POST-only actions on state-changing operations                                                                               |
 
 ### 2. Scope (CRITICAL — any finding blocks approval)
 
-| Check | What to look for |
-|-------|-----------------|
-| **No core modifications** | No files outside `Modules/Sets/PL/` are created or modified |
-| **No install-script changes** | DB tables must auto-create; no modifications to `Install/` |
+| Check                                | What to look for                                                  |
+| ------------------------------------ | ----------------------------------------------------------------- |
+| **No core modifications**            | No files outside `Modules/Sets/PL/` are created or modified       |
+| **No install-script changes**        | DB tables must auto-create; no modifications to `Install/`        |
 | **No hardcoded tournament type IDs** | That conflict with existing ianseo types (check `lib.php` header) |
 
 ### 3. Conventions (MAJOR — must be fixed)
 
-| Check | What to look for |
-|-------|-----------------|
-| **Bootstrap path** | `dirname(dirname(dirname(dirname(__FILE__))))` — count the levels from `PL/{sub}/file.php` |
-| **DB helpers** | Only `safe_r_sql`, `safe_w_sql`, `safe_fetch`, `safe_num_rows`, `safe_free_result`, `StrSafe_DB` |
-| **Naming — tables** | `PL` prefix, e.g., `PLMyTable` |
-| **Naming — columns** | Consistent prefix abbreviation per table |
-| **Naming — functions** | `pl_` prefix |
-| **Naming — classes** | `PL` prefix |
-| **Auto-install pattern** | `SHOW TABLES LIKE` before `CREATE TABLE` |
-| **Template usage** | UI pages use `head.php` / `tail.php` |
-| **Polish UI text** | No hardcoded English strings in the user-facing UI |
-| **PDF class** | Extends `TCPDF`, has `createInstance()` static factory |
+| Check                    | What to look for                                                                                 |
+| ------------------------ | ------------------------------------------------------------------------------------------------ |
+| **Bootstrap path**       | `dirname(dirname(dirname(dirname(__FILE__))))` — count the levels from `PL/{sub}/file.php`       |
+| **DB helpers**           | Only `safe_r_sql`, `safe_w_sql`, `safe_fetch`, `safe_num_rows`, `safe_free_result`, `StrSafe_DB` |
+| **Naming — tables**      | `PL` prefix, e.g., `PLMyTable`                                                                   |
+| **Naming — columns**     | Consistent prefix abbreviation per table                                                         |
+| **Naming — functions**   | `pl_` prefix                                                                                     |
+| **Naming — classes**     | `PL` prefix                                                                                      |
+| **Auto-install pattern** | `SHOW TABLES LIKE` before `CREATE TABLE`                                                         |
+| **Template usage**       | UI pages use `head.php` / `tail.php`                                                             |
+| **Polish UI text**       | No hardcoded English strings in the user-facing UI                                               |
+| **PDF class**            | Extends `TCPDF`, has `createInstance()` static factory                                           |
 
 ### 4. Completeness (MINOR — should be fixed before merge)
 
-| Check | What to look for |
-|-------|-----------------|
-| **Menu registration** | New pages are reachable via `menu.php` |
-| **Edge cases** | Empty result sets handled gracefully (no PHP warnings on `safe_fetch` returning false) |
-| **Resource cleanup** | `safe_free_result()` called after queries |
-| **Spec coverage** | Every requirement in `spec.md` is addressed |
-| **Research update** | If new ianseo API behaviour was discovered, `ianseo-internals.md` update is included |
+| Check                 | What to look for                                                                       |
+| --------------------- | -------------------------------------------------------------------------------------- |
+| **Menu registration** | New pages are reachable via `menu.php`                                                 |
+| **Edge cases**        | Empty result sets handled gracefully (no PHP warnings on `safe_fetch` returning false) |
+| **Resource cleanup**  | `safe_free_result()` called after queries                                              |
+| **Spec coverage**     | Every requirement in `spec.md` is addressed                                            |
+| **Research update**   | If new ianseo API behaviour was discovered, `ianseo-internals.md` update is included   |
 
 ### 5. Code Quality (MINOR — suggestions welcome but not blocking)
 

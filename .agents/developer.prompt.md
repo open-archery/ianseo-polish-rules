@@ -1,5 +1,5 @@
 ---
-mode: agent
+agent: edit
 description: >
   Developer agent for the PZŁucz ianseo module. Implements PHP features
   exclusively inside Modules/Sets/PL/. Follows all ianseo coding conventions
@@ -34,6 +34,7 @@ APIs and patterns but you never modify it.
 ## Mandatory Code Conventions
 
 ### File Bootstrap (every non-AJAX page)
+
 ```php
 <?php
 require_once(dirname(dirname(dirname(dirname(__FILE__)))) . '/config.php');
@@ -41,6 +42,7 @@ CheckTourSession(true);
 ```
 
 ### AJAX Endpoint Bootstrap
+
 ```php
 <?php
 require_once(dirname(dirname(dirname(dirname(__FILE__)))) . '/config.php');
@@ -49,6 +51,7 @@ header('Content-Type: application/json; charset=utf-8');
 ```
 
 ### Database Helpers (always use these — never raw mysqli/PDO)
+
 ```php
 safe_r_sql($sql)         // SELECT queries → result resource
 safe_w_sql($sql)         // INSERT/UPDATE/DELETE
@@ -59,6 +62,7 @@ StrSafe_DB($value)       // escape + quote a value for SQL (always use for user 
 ```
 
 ### Page Template Structure
+
 ```php
 $page_title = 'Tytuł Strony';
 include(ROOT_DIR . 'Common/Templates/head.php');
@@ -67,6 +71,7 @@ include(ROOT_DIR . 'Common/Templates/tail.php');
 ```
 
 ### Auto-Install DB Tables
+
 ```php
 if (!safe_num_rows(safe_r_sql("SHOW TABLES LIKE 'PLTableName'"))) {
     safe_w_sql("CREATE TABLE PLTableName (
@@ -78,16 +83,18 @@ if (!safe_num_rows(safe_r_sql("SHOW TABLES LIKE 'PLTableName'"))) {
 ```
 
 ### Naming Conventions
-| Item | Convention | Example |
-|------|-----------|---------|
-| DB tables | `PL` prefix, CamelCase | `PLDiplomaConfig` |
-| DB columns | table-prefix abbreviation + CamelCase | `PlDcTournament` |
-| PHP functions | `pl_` prefix, snake_case | `pl_get_results()` |
-| PHP classes | `PL` prefix, CamelCase | `PLDiplomaPdf` |
-| Files | CamelCase | `DiplomaConfig.php` |
-| Directories | CamelCase | `Diplomas/` |
+
+| Item          | Convention                            | Example             |
+| ------------- | ------------------------------------- | ------------------- |
+| DB tables     | `PL` prefix, CamelCase                | `PLDiplomaConfig`   |
+| DB columns    | table-prefix abbreviation + CamelCase | `PlDcTournament`    |
+| PHP functions | `pl_` prefix, snake_case              | `pl_get_results()`  |
+| PHP classes   | `PL` prefix, CamelCase                | `PLDiplomaPdf`      |
+| Files         | CamelCase                             | `DiplomaConfig.php` |
+| Directories   | CamelCase                             | `Diplomas/`         |
 
 ### PDF Generation
+
 ```php
 require_once(ROOT_DIR . 'Common/tcpdf/tcpdf.php');
 
@@ -101,6 +108,7 @@ class PLSomePdf extends TCPDF {
 ```
 
 ### Menu Registration (in `menu.php`)
+
 ```php
 if ($on && $_SESSION["TourLocRule"] == 'PL') {
     $ret['PRNT'][] = 'Nazwa|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/Feature/Page.php';
@@ -110,6 +118,7 @@ if ($on && $_SESSION["TourLocRule"] == 'PL') {
 ## File Organisation
 
 Each feature gets its own subdirectory:
+
 ```
 Modules/Sets/PL/{FeatureName}/
     spec.md               # Advisor spec (committed, never removed)
@@ -120,6 +129,7 @@ Modules/Sets/PL/{FeatureName}/
 ```
 
 Tournament setup scripts go in:
+
 ```
 Modules/Sets/PL/Setup/
     Setup_{TypeId}_PL.php
@@ -137,6 +147,7 @@ Modules/Sets/PL/Setup/
 ## What to Produce
 
 For each task, produce:
+
 - All required PHP files in the correct `PL/` subdirectory
 - Any required `menu.php` additions
 - A brief summary of what was implemented and what `research/ianseo-internals.md` sections were updated (if any)
