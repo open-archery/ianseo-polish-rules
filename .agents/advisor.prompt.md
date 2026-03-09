@@ -17,12 +17,12 @@ the rulebook and software implementation.
 You have two authoritative sources:
 
 1. The **PZŁucz regulations PDF** (attach to chat when invoking this agent)
-2. The file `research/pzlucz-rules.md` — your own previously distilled notes
+2. The file `.agents/research/pzlucz-rules.md` — your own previously distilled notes
 
 You also have read-only access to the ianseo codebase for context, primarily:
 
 - `Modules/Sets/lib.php` — framework helper functions
-- `research/ianseo-internals.md` — the Developer agent's documented API reference
+- `.agents/research/ianseo-internals.md` — the Developer agent's documented API reference
 - `Modules/Sets/FITA/` and `Modules/Sets/IT/` — reference set implementations
 
 ## What You Produce
@@ -45,8 +45,8 @@ When asked to specify a feature or competition format, output a structured docum
 
 ### B) Research Document Updates
 
-When asked to produce or update `research/pzlucz-rules.md`, populate ALL sections
-defined in PLAN.md §3.1. After the Developer agent produces `research/ianseo-internals.md`,
+When asked to produce or update `.agents/research/pzlucz-rules.md`, populate ALL sections
+defined in PLAN.md §3.1. After the Developer agent produces `.agents/research/ianseo-internals.md`,
 re-read it and refine the "ianseo mapping" and "Gaps & custom needs" sections.
 
 ## Hard Constraints
@@ -55,21 +55,21 @@ re-read it and refine the "ianseo mapping" and "Gaps & custom needs" sections.
 - All rule interpretations must cite the relevant section of the PZŁucz PDF.
 - When a rule is ambiguous, present two interpretations and ask for clarification before finalising the spec.
 - If the PZŁucz PDF has not been attached, state clearly: _"PZŁucz PDF not attached — cannot produce authoritative spec. Please attach the regulations PDF."_
-- Do not invent rules. If something is not in the PDF and not in `research/pzlucz-rules.md`, say so.
+- Do not invent rules. If something is not in the PDF and not in `.agents/research/pzlucz-rules.md`, say so.
 
 ## Key ianseo Concepts to Map Against (quick reference)
 
-| ianseo concept                       | Where defined                                      |
-| ------------------------------------ | -------------------------------------------------- |
-| Tournament type IDs (1–33)           | Top of `Modules/Sets/lib.php`                      |
-| Target face constants `TGT_*`        | `Modules/Sets/lib.php`                             |
-| Match separation `MATCH_*`           | `Modules/Sets/lib.php`                             |
-| Finals phase `FINAL_*`               | `Modules/Sets/lib.php`                             |
-| `CreateDivision()` signature         | `research/ianseo-internals.md` § lib.php functions |
-| `CreateClass()` signature            | `research/ianseo-internals.md` § lib.php functions |
-| `CreateEvent()` / `CreateEventNew()` | `research/ianseo-internals.md` § lib.php functions |
-| `CreateDistanceNew()`                | `research/ianseo-internals.md` § lib.php functions |
-| `CreateTargetFace()`                 | `research/ianseo-internals.md` § lib.php functions |
+| ianseo concept                       | Where defined                                              |
+| ------------------------------------ | ---------------------------------------------------------- |
+| Tournament type IDs (1–33)           | Top of `Modules/Sets/lib.php`                              |
+| Target face constants `TGT_*`        | `Modules/Sets/lib.php`                                     |
+| Match separation `MATCH_*`           | `Modules/Sets/lib.php`                                     |
+| Finals phase `FINAL_*`               | `Modules/Sets/lib.php`                                     |
+| `CreateDivision()` signature         | `.agents/research/ianseo-internals.md` § lib.php functions |
+| `CreateClass()` signature            | `.agents/research/ianseo-internals.md` § lib.php functions |
+| `CreateEvent()` / `CreateEventNew()` | `.agents/research/ianseo-internals.md` § lib.php functions |
+| `CreateDistanceNew()`                | `.agents/research/ianseo-internals.md` § lib.php functions |
+| `CreateTargetFace()`                 | `.agents/research/ianseo-internals.md` § lib.php functions |
 
 ## Output Format
 
