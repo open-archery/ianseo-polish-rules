@@ -507,137 +507,253 @@ Calculated totals: e.g., 6-arrow end simultaneous = 180s; 3-arrow end simultaneo
 
 ---
 
-## 10. ianseo Mapping
+## 10. ianseo Mapping (Cross-Reviewed)
+
+> **Cross-review note:** This section was refined after analysis of the actual
+> ianseo source code (`FITA/lib.php`, `Modules/Sets/lib.php`, `FITA/Setup_Target.php`).
+> All division codes, class codes, bracket phases, and match mode values have
+> been verified against the codebase.
 
 ### 10.1 Tournament Types → ianseo Type IDs
 
-| PZŁucz Round            | Closest ianseo Type ID | Notes                                                |
-| ----------------------- | ---------------------- | ---------------------------------------------------- |
-| 70m Round (R)           | 3 (WA 70m Round)       | Direct match                                         |
-| 60m Round (R)           | CUSTOM                 | No exact equivalent; needs custom Setup script       |
-| 50m Round (C)           | CUSTOM                 | WA Compound round exists but PZŁucz specifics differ |
-| 50m Round (B)           | CUSTOM                 | Barebow-specific target assignments                  |
-| 40m/20m Round (U15)     | CUSTOM                 | Split-distance round, not in base ianseo             |
-| 1440 Round              | 1 (WA FITA/1440)       | Direct match; distance table varies by category      |
-| Indoor 18m (R/C senior) | 6 (WA Indoor 18)       | Close match; triple 40cm face                        |
-| Indoor 18m (U18/B)      | CUSTOM                 | Full 40cm face variant                               |
-| Indoor 15m (U12)        | CUSTOM                 | Not in base ianseo                                   |
-| Indoor 25m              | 7 (WA Indoor 25)       | Direct match                                         |
-| Field round             | CUSTOM                 | Field archery module needed                          |
-| 3D round                | CUSTOM                 | 3D module needed                                     |
-| Children's Round (U12)  | CUSTOM                 | 4×18 arrows — not in base ianseo                     |
-| Special Shootings       | CUSTOM                 | Unique PZŁucz; no equivalent anywhere                |
+| PZŁucz Round           | ianseo Type ID         | Setup Script             | Notes                                                                                       |
+| ---------------------- | ---------------------- | ------------------------ | ------------------------------------------------------------------------------------------- |
+| 70m Round (R)          | **3** (70m Round)      | `Setup_3_PL.php`         | Direct match. FITA's `Setup_3.php` is the reference. PL needs custom classes/divisions.     |
+| 60m Round (R U18/50+)  | **10** (720 Round 60m) | `Setup_10_PL.php`        | Type 10 = 72 arrows at 60m. Same arrow count/structure; PL adds U18/50+ specific config.    |
+| 50m Round (C)          | **9** (720 Round 50m)  | `Setup_9_PL.php`         | Type 9 = 72 arrows at 50m. PL needs 80cm target (6-ring for compound matchplay).            |
+| 50m Round (B)          | **9** (720 Round 50m)  | `Setup_9_PL.php`         | Same type as compound but with 122cm full face. Handled via sub-rule or target face config. |
+| 40m/20m Round (U15)    | **3** (via sub-rule)   | `Setup_3_PL.php`         | Split-distance round. Use `CreateDistanceNew()` with 2 distances + different target faces.  |
+| 1440 Round             | **1** (FITA/1440)      | `Setup_1_PL.php`         | Direct match. Distance table varies by PZŁucz category — needs PL-specific distances.       |
+| Indoor 18m             | **6** (Indoor 18)      | `Setup_6_PL.php`         | Direct match. PL needs different target faces per category (triple 40/full 40/60/80cm).     |
+| Indoor 15m (U12)       | **6** (via sub-rule)   | `Setup_6_PL.php`         | Use type 6 with distance override to 15m for U12 class. Custom distance info entry.         |
+| Indoor 25m             | **7** (Indoor 25)      | `Setup_7_PL.php` or FITA | Direct match. Low priority — consider using FITA default.                                   |
+| Field Unmarked         | **11**                 | `Setup_11_PL.php`        | ianseo has `TGT_FIELD` target type and field tournament types 11/12/13. Needs PL classes.   |
+| Field Marked           | **12**                 | `Setup_12_PL.php`        | Same as above for marked distances.                                                         |
+| Field Mixed            | **13**                 | `Setup_13_PL.php`        | Combined unmarked + marked round.                                                           |
+| 3D Round               | CUSTOM (new type?)     | `Setup_XX_PL.php`        | 3D uses `TGT_3D`. May need a new type or reuse existing if available.                       |
+| Children's Round (U12) | **1** (via sub-rule)   | `Setup_1_PL.php`         | 4×18 arrows. Handle as a sub-rule of 1440 Round with reduced distances.                     |
+| Special Shootings      | CUSTOM                 | Separate module          | Unique to PZŁucz. Requires custom scoring module (not a standard tournament type).          |
 
-### 10.2 Divisions → ianseo `CreateDivision()`
+**Key implementation insight:** Most PZŁucz rounds map to existing ianseo type IDs.
+The Setup script `Setup_{type}_PL.php` customizes divisions, classes, distances,
+and target faces within the existing type framework. The rare truly custom types
+are 3D (if no existing type ID covers it) and Special Shootings.
 
-| PZŁucz Div | ianseo concept  | Notes                                       |
-| ---------- | --------------- | ------------------------------------------- |
-| R          | "OL" (Olympic)  | Standard recurve division code in ianseo    |
-| C          | "CO" (Compound) | Standard compound code                      |
-| B          | "BB" (Barebow)  | Standard barebow code                       |
-| T          | CUSTOM          | Traditional — only for 3D; not in base sets |
-| L          | CUSTOM          | Longbow — only for 3D; not in base sets     |
-| RMO/RWO    | CUSTOM          | Para recurve OPEN                           |
-| CMO/CWO    | CUSTOM          | Para compound OPEN                          |
-| MW1/WW1    | CUSTOM          | Para W1                                     |
-| VI1/VI23   | CUSTOM          | Para visually impaired                      |
+### 10.2 Divisions → `CreateDivision()` Parameters
 
-### 10.3 Age Classes → ianseo `CreateClass()`
+FITA uses exactly these division codes (verified in `FITA/lib.php`):
 
-| PZŁucz Class | Typical ianseo code | Notes                          |
-| ------------ | ------------------- | ------------------------------ |
-| Senior M     | "SM"                | Standard                       |
-| Senior W     | "SW"                | Standard                       |
-| U24 M/W      | CUSTOM              | Not a standard WA age class    |
-| U21 M/W      | "JM"/"JW"           | "Junior" in WA                 |
-| U18 M/W      | "CM"/"CW"           | "Cadet" in WA                  |
-| U15 M/W      | CUSTOM              | No WA equivalent               |
-| U12 M/W      | CUSTOM              | No WA equivalent               |
-| 50+ M/W      | CUSTOM              | "Master" — custom class needed |
+| PZŁucz Div   | ianseo Code | `CreateDivision()` Call                                           | Status   |
+| ------------ | ----------- | ----------------------------------------------------------------- | -------- |
+| R (Recurve)  | `'R'`       | `CreateDivision($TourId, 1, 'R', 'Recurve')`                      | Standard |
+| C (Compound) | `'C'`       | `CreateDivision($TourId, 2, 'C', 'Compound')`                     | Standard |
+| B (Barebow)  | `'B'`       | `CreateDivision($TourId, 3, 'B', 'Barebow')`                      | Standard |
+| T (Trad.)    | `'T'`       | `CreateDivision($TourId, 4, 'T', 'Traditional')`                  | FITA 3D  |
+| L (Longbow)  | `'L'`       | `CreateDivision($TourId, 5, 'L', 'Longbow')`                      | FITA 3D  |
+| Para R OPEN  | `'RO'`      | `CreateDivision($TourId, n, 'RO', 'Recurve OPEN', 1, '', '', 1)`  | Custom   |
+| Para C OPEN  | `'CO'`      | `CreateDivision($TourId, n, 'CO', 'Compound OPEN', 1, '', '', 1)` | Custom   |
+| Para W1      | `'W1'`      | `CreateDivision($TourId, n, 'W1', 'W1', 1, '', '', 1)`            | Custom   |
+| Para VI      | `'VI'`      | `CreateDivision($TourId, n, 'VI', 'VI', 1, '', '', 1)`            | Custom   |
 
-### 10.4 Elimination Brackets → ianseo Constants
+**Note:** R, C, B, T, L are all FITA-standard codes — the pzlucz-rules.md previously
+listed 'OL', 'CO', 'BB' which were **incorrect**. Para divisions need `$IsPara=1`.
 
-| PZŁucz Bracket | ianseo Constant/Value | Notes                           |
-| -------------- | --------------------- | ------------------------------- |
-| 104 individual | CUSTOM                | Non-standard; ianseo has 64, 32 |
-| 32 indoor      | Standard (32-draw)    | May map to existing bracket     |
-| 24 team        | CUSTOM                | Non-standard team bracket       |
-| 16 mixed/field | Standard (16-draw)    | May map to existing bracket     |
+### 10.3 Age Classes → `CreateClass()` Parameters
 
-### 10.5 Match Types → ianseo `MATCH_*` Constants
+FITA's `CreateStandardClasses()` already creates many of these (verified in `FITA/lib.php`):
 
-| PZŁucz Rule             | ianseo Constant       |
-| ----------------------- | --------------------- |
-| Set system (R/B indiv.) | MATCH_SET or similar  |
-| Cumulative (C indiv.)   | MATCH_CUMULATIVE      |
-| Set system (R/B team)   | MATCH_SET_TEAM        |
-| Cumulative (C team)     | MATCH_CUMULATIVE_TEAM |
+| PZŁucz Class | ianseo Code | `CreateClass()` Key Params                                                    | Status              |
+| ------------ | ----------- | ----------------------------------------------------------------------------- | ------------------- |
+| Senior M     | `'M'`       | `CreateClass($TourId, 1, 21, 49, 0, 'M', 'M', 'Men')`                         | FITA standard       |
+| Senior W     | `'W'`       | `CreateClass($TourId, 2, 21, 49, 1, 'W', 'W', 'Women')`                       | FITA standard       |
+| U24 M        | `'U24M'`    | `CreateClass($TourId, n, 21, 23, 0, 'U24M', 'U24M,M', 'Under 24 Men')`        | **PL custom** (new) |
+| U24 W        | `'U24W'`    | `CreateClass($TourId, n, 21, 23, 1, 'U24W', 'U24W,W', 'Under 24 Women')`      | **PL custom** (new) |
+| U21 M        | `'U21M'`    | `CreateClass($TourId, 3, 18, 20, 0, 'U21M', 'U21M,M', 'Under 21 Men')`        | FITA standard       |
+| U21 W        | `'U21W'`    | `CreateClass($TourId, 4, 18, 20, 1, 'U21W', 'U21W,W', 'Under 21 Women')`      | FITA standard       |
+| U18 M        | `'U18M'`    | `CreateClass($TourId, 5, 15, 17, 0, 'U18M', 'U18M,U21M,M', 'Under 18 Men')`   | FITA standard       |
+| U18 W        | `'U18W'`    | `CreateClass($TourId, 6, 15, 17, 1, 'U18W', 'U18W,U21W,W', 'Under 18 Women')` | FITA standard       |
+| U15 M        | `'U15M'`    | `CreateClass($TourId, 7, 1, 14, 0, 'U15M', 'U15M,U18M,U21M,M', ...)`          | FITA (types 3,37)   |
+| U15 W        | `'U15W'`    | `CreateClass($TourId, 8, 1, 14, 1, 'U15W', 'U15W,U18W,U21W,W', ...)`          | FITA (types 3,37)   |
+| U12 M        | `'U12M'`    | `CreateClass($TourId, n, 1, 11, 0, 'U12M', 'U12M,U15M,...', ...)`             | **PL custom** (new) |
+| U12 W        | `'U12W'`    | `CreateClass($TourId, n, 1, 11, 1, 'U12W', 'U12W,U15W,...', ...)`             | **PL custom** (new) |
+| Master M     | `'50M'`     | `CreateClass($TourId, 9, 50, 100, 0, '50M', '50M,M', '50+ Men')`              | FITA standard       |
+| Master W     | `'50W'`     | `CreateClass($TourId, 10, 50, 100, 1, '50W', '50W,W', '50+ Women')`           | FITA standard       |
 
-### 10.6 Target Faces → ianseo `TGT_*` Constants
+**Key insight:** The `$ValidClass` parameter (5th) is a comma-separated list of class
+codes the archer "belongs to" for event eligibility. E.g., a U18 archer has
+`'U18M,U21M,M'` meaning they can compete at the U18, U21, or Open level. PL must
+set these chains correctly to enable upward eligibility.
 
-| PZŁucz Target | ianseo Constant       | Notes                    |
-| ------------- | --------------------- | ------------------------ |
-| 122cm full    | TGT_OUT_FULL (5)      | Direct match             |
-| 80cm 10-ring  | TGT_IND_1_big10 (1)   | Check if correct mapping |
-| 80cm 6-ring   | TGT_OUT_6_big10 (10)  | For compound matchplay   |
-| Triple 40cm   | TGT_IND_6_big10 (2)   | Indoor triple            |
-| 40cm full     | TGT_IND_1_small10 (3) | Indoor full 40           |
-| 60cm          | CUSTOM                | Not directly mapped      |
-| Field faces   | TGT_FIELD (6)         | Field scoring            |
-| 3D figures    | TGT_3D (8)            | 3D scoring               |
-| Hit/miss      | TGT_HITMISS (7)       | If needed                |
+**Age ranges** use "years from now" calculation: `$From`/`$To` are relative age
+boundaries, NOT birth years. E.g., `15, 17` means ages 15–17.
+
+**Truly custom classes:** Only **U24** (no WA equivalent) and **U12** (below FITA's
+minimum). U15 and 50+ are already in FITA for certain tournament types.
+
+### 10.4 Elimination Brackets → `EvFinalFirstPhase`
+
+The bracket size is controlled by `EvFinalFirstPhase` in `CreateEventNew()`.
+This maps to `PhId` values in the `Phases` table. Verified actual values from
+`FITA/lib.php`:
+
+| PZŁucz Bracket        | `EvFinalFirstPhase` | Archers in bracket | Status         |
+| --------------------- | ------------------- | ------------------ | -------------- |
+| 104 outdoor indiv.    | **48**              | 104 (48 matches)   | **EXISTING** ✓ |
+| 32 indoor indiv.      | **16**              | 32                 | **EXISTING** ✓ |
+| 24 outdoor team       | **12**              | 24 (12 matches)    | **EXISTING** ✓ |
+| 16 indoor team        | **8**               | 16                 | **EXISTING** ✓ |
+| 16 mixed/field indiv. | **8**               | 16                 | **EXISTING** ✓ |
+
+**Critical correction:** The previous version labeled 104-draw and 24-draw brackets
+as "CUSTOM". In fact, FITA's `lib.php` already uses `$FirstPhase = 48` for outdoor
+individual and `$TeamFirstPhase = 12` for outdoor teams. ianseo's `Grids` and
+`Phases` tables handle these bracket sizes natively. **No custom bracket code needed.**
+
+### 10.5 Match Scoring Mode → `EvMatchMode`
+
+Match scoring is controlled by `EvMatchMode` in `CreateEventNew()`. There are
+**no** `MATCH_SET` or `MATCH_CUMULATIVE` constants — the previous version was
+incorrect.
+
+| PZŁucz Rule                 | `EvMatchMode` | Additional Options                                                           |
+| --------------------------- | ------------- | ---------------------------------------------------------------------------- |
+| Set system (R/B individual) | **1**         | `EvElimEnds=5, EvElimArrows=3, EvElimSO=1`                                   |
+| Cumulative (C individual)   | **0**         | `EvElimEnds=5, EvElimArrows=3, EvElimSO=1`                                   |
+| Set system (R/B team)       | **1**         | `EvElimEnds=4, EvElimArrows=6, EvElimSO=3, EvMaxTeamPerson=3`                |
+| Cumulative (C team)         | **0**         | `EvElimEnds=4, EvElimArrows=6, EvElimSO=3, EvMaxTeamPerson=3`                |
+| Set system (R/B mixed team) | **1**         | `EvElimEnds=4, EvElimArrows=4, EvElimSO=2, EvMaxTeamPerson=2, EvMixedTeam=1` |
+| Cumulative (C mixed team)   | **0**         | Same structure as above with `EvMatchMode=0`                                 |
+
+**Note:** `MATCH_*` constants (`MATCH_ALL_SEP`, `MATCH_NO_SEP`, etc.) control
+**match separation** (whether adjacent targets see each other's scores), not
+the scoring system. These have values 0–255 as a bitmask.
+
+### 10.6 Target Faces → `TGT_*` Constants & `CreateTargetFace()`
+
+| PZŁucz Target                   | `TGT_*` Constant    | Val | `CreateTargetFace()` `$Classes`         | Notes                                                   |
+| ------------------------------- | ------------------- | --- | --------------------------------------- | ------------------------------------------------------- |
+| 122cm full (outdoor R/B)        | `TGT_OUT_FULL`      | 5   | `'REG-R.','REG-B.'`                     | Standard outdoor face for recurve/barebow               |
+| 80cm full (outdoor C qual)      | `TGT_OUT_FULL`      | 5   | `'REG-C.'`                              | Full 10-ring, 80cm diameter                             |
+| 80cm 6-ring (outdoor C elim)    | `TGT_OUT_6_big10`   | 10  | `'REG-C.'` (events only)                | Compound matchplay face; size set via `EvTargetSize=80` |
+| Triple 40cm (indoor R/C senior) | `TGT_IND_6_big10`   | 2   | `'RM,RW,RU24M,RU24W,RU21M,RU21W,CM,CW'` | Vertical triple; different inner-10 for C               |
+| Triple 40cm small-10 (indoor C) | `TGT_IND_6_small10` | 4   | `'CM,CW,CU21M,CU21W'`                   | Compound inner-10 = 2cm (vs 4cm recurve)                |
+| Full 40cm (indoor U18/B)        | `TGT_IND_1_big10`   | 1   | `'REG-[RCB]U18.','REG-B.'`              | Single 40cm face, standard 10-ring                      |
+| 60cm (indoor U15)               | `TGT_OUT_FULL`      | 5   | `'REG-.U15.'`                           | 60cm diameter; may need size param                      |
+| 80cm (indoor U12 at 15m)        | `TGT_OUT_FULL`      | 5   | `'REG-.U12.'`                           | 80cm full face at 15m                                   |
+| Field faces (20/40/60/80cm)     | `TGT_FIELD`         | 6   | All field classes                       | Scoring zones 1–6                                       |
+| 3D figures                      | `TGT_3D`            | 8   | All 3D classes                          | Scoring 11/10/8/5/M                                     |
+
+**Note on `EvTargetSize`:** The physical target diameter is set separately via
+`EvTargetSize` in `CreateEventNew()`. `TGT_*` constants define the scoring ring
+layout, not the physical size. E.g., both 122cm and 80cm outdoor faces use
+`TGT_OUT_FULL` but with different `EvTargetSize` values.
+
+**Note on Golds/X counting:** Set via `EvGolds`, `EvXNine`, `EvGoldsChars`,
+`EvXNineChars` in `CreateEventNew()`:
+
+- Outdoor: `EvGolds='10+X', EvXNine='X', EvGoldsChars='KL', EvXNineChars='K'`
+- Indoor: `EvGolds='10', EvXNine='9', EvGoldsChars='L', EvXNineChars='J'`
 
 ---
 
-## 11. Gaps & Custom Needs
+## 11. Gaps & Custom Needs (Cross-Reviewed)
 
-### 11.1 Non-Standard Bracket Sizes
+> **Cross-review note:** Re-assessed after verifying the ianseo API. Several
+> items previously marked as "CUSTOM" are actually supported natively.
+> Each gap is now rated for implementation difficulty and priority.
 
-PZŁucz uses a **104-draw individual bracket** (outdoor) which is not a standard power-of-2 bracket. This requires custom bracket generation or adaptation.
+### 11.1 U24 Age Class — **Priority: HIGH | Difficulty: LOW**
 
-### 11.2 U24 and U15/U12 Age Classes
+U24 (Młodzieżowcy, 21–23 years) has no WA equivalent. Must be created via
+`CreateClass()` in every PL setup script. Simple addition — just define the
+age range and valid-class chain (`'U24M,M'` / `'U24W,W'`). Only applies to
+Recurve division per PZŁucz rules.
 
-ianseo has no built-in concept of U24 (Młodzieżowcy) or U15/U12 (Młodzicy/Dzieci). These must be created as custom classes.
+### 11.2 U12 Age Class & Children's Round — **Priority: MEDIUM | Difficulty: MEDIUM**
 
-### 11.3 Split-Distance Rounds
+U12 (Dzieci, ≤11 years) is below FITA's minimum. Needs:
 
-The 40m/20m and 25m/15m rounds involve two different distances with different target faces in a single qualification. ianseo may need custom `CreateDistanceNew()` calls or a double-distance round setup.
+- Custom class definition with age range `(1, 11)` and valid chain `'U12M,U15M,...'`
+- Children's Round: 4×18 arrows at 4 distances — handle as sub-rule of type 1 (1440)
+  or as a distinct setup configuration within `Setup_1_PL.php`
+- Indoor U12: 15m instead of 18m — custom distance info entry in `Setup_6_PL.php`
 
-### 11.4 Special Shootings (§2.12)
+### 11.3 Split-Distance Rounds (40m/20m) — **Priority: HIGH | Difficulty: LOW**
 
-Completely unique to PZŁucz. Would require a custom module with:
+`CreateDistanceNew()` already supports multiple distances per category via the
+`$Distances` array parameter. The 40m/20m round for U15 is handled by creating
+two distance entries with different target face configurations. Not a custom
+feature — just a specific setup script configuration.
 
-- Custom target face (32cm on 80cm, themed art)
-- Custom scoring (hits-in-zone + distance-from-center tiebreak)
+### 11.4 Special Shootings (§2.12) — **Priority: LOW | Difficulty: HIGH**
+
+Completely unique to PZŁucz. Requires a custom module with:
+
+- Custom target face (32cm on 80cm background, themed artwork)
+- Custom scoring (count hits in zone + distance-from-center tiebreak)
 - Integration with medal winners from main competition
+- Separate page/menu entry under `PRNT` or custom category
 
-### 11.5 Para-Archery Doubles
+This is a standalone feature module, not part of the standard setup flow.
+Defer until all core tournament types are working.
 
-PZŁucz uses 2-member "doubles" teams for para-archery instead of standard 3-member teams. This affects team scoring calculations.
+### 11.5 Para-Archery Doubles — **Priority: LOW | Difficulty: MEDIUM**
 
-### 11.6 Field/3D Module
+PZŁucz uses 2-member "doubles" teams for para-archery instead of 3-member.
+Implementation: use `EvMaxTeamPerson=2` (same as mixed teams) with
+para-specific divisions. The `CreateEventNew()` API already supports arbitrary
+team sizes via `EvMaxTeamPerson`.
 
-ianseo has basic field (`TGT_FIELD`) and 3D (`TGT_3D`) target type constants, but full field/3D competition management (variable-distance courses, unmarked distance rounds, peg-color routing) would require significant custom development.
+### 11.6 Field/3D Course Management — **Priority: MEDIUM | Difficulty: MEDIUM**
 
-### 11.7 Traditional and Longbow Divisions
+ianseo already has tournament types 11/12/13 for field and `TGT_FIELD`/`TGT_3D`
+target types. The PL module needs setup scripts that create PZŁucz-specific
+classes and divisions for these types. The variable-distance course and peg-color
+routing are managed operationally (not in ianseo software). The scoring system
+is natively supported by `TGT_FIELD` (1–6 zones) and `TGT_3D` (11/10/8/5/M).
 
-Only used in 3D archery. Not present in standard ianseo division sets. Must be created via `CreateDivision()` in 3D-specific setup scripts.
+### 11.7 Indoor Compound Inner-10 — **Priority: HIGH | Difficulty: LOW**
 
-### 11.8 Children's Round (U12)
+Handled natively by ianseo's target face system. Use `TGT_IND_6_small10` (val 4)
+for compound indoor triple face (2cm inner-10) vs. `TGT_IND_6_big10` (val 2) for
+recurve indoor triple face (4cm inner-10). Already differentiated in FITA's setup
+as `$TargetC` vs `$TargetR`. No custom code needed — just correct target face
+assignment in `CreateTargetFace()`.
 
-4 × 18 arrows at 4 distances is not a standard ianseo round. Requires custom setup.
+### 11.8 Best 3 of 4 Team Scoring — **Priority: VERIFIED | Difficulty: DONE**
 
-### 11.9 Indoor Compound Inner-10
+Already implemented in `Rank/Obj_Rank_DivClassTeam_calc.php` and activated via
+the `'Poland-TeamsTop3of4'` sub-rule. The existing implementation queries
+`TeamComponent JOIN Qualifications`, takes top 3 by score, and recomputes team
+totals. Applies to all tournament types where the sub-rule is active.
 
-The compound inner-10 (2cm diameter vs recurve's 4cm) affects scoring and tiebreaking. ianseo may already handle this via target face configuration, but needs verification.
+### 11.9 Mixed Team Formation Rules — **Priority: MEDIUM | Difficulty: MEDIUM**
 
-### 11.10 Best 3 of 4 Team Scoring
+Automatic matching (best M + best W → Team 1, etc.) and the 3-team-per-club
+limit at Polish Championships require custom logic. The `InsertClassEvent()`
+API supports mixed team events (`EvMixedTeam=1`), but the auto-formation and
+club limit enforcement would need a custom rank override or event processing
+script.
 
-Already partially implemented (`Poland-TeamsTop3of4` in `Rank/Obj_Rank_DivClassTeam_calc.php`). Needs verification that it covers all scenarios (outdoor, indoor, field).
+### 11.10 PZŁucz-Specific Tiebreaking — **Priority: HIGH | Difficulty: LOW**
 
-### 11.11 Mixed Team Formation Rules
+Indoor tiebreaking differs from outdoor (10s then 9s, vs 10s then Xs). This is
+controlled by `EvGoldsChars`/`EvXNineChars` in `CreateEventNew()` and the gold/X
+counting per target face in `TargetFaceGoldsXnines()`. Correct configuration in
+the setup script handles this — no custom ranking code needed for standard
+tiebreaks.
 
-The automatic matching (best M + best W, 2nd M + 2nd W, etc.) and the 3-team-per-club limit require custom logic beyond standard ianseo team management.
+### 11.11 Non-Standard Elimination Brackets — **REMOVED**
+
+~~Previously listed as a gap.~~ Verified that ianseo natively supports all PZŁucz
+bracket sizes: 104-draw (`EvFinalFirstPhase=48`), 24-draw team (`12`), 32-draw
+(`16`), and 16-draw (`8`). No custom bracket code needed.
+
+### 11.12 Traditional & Longbow Divisions — **REMOVED**
+
+~~Previously listed as custom.~~ FITA's `CreateStandardDivisions('3D')` already
+creates `'L'` (Longbow) and `'T'` (Traditional) divisions. PL 3D setup scripts
+can call this directly.
 
 ---
 

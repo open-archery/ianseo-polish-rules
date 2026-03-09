@@ -781,3 +781,255 @@ PL/
 
 All PL module code **must** live under `Modules/Sets/PL/`. No modifications to
 core ianseo files, FITA files, or Common files are permitted.
+
+---
+
+## 18. PL-Specific Implementation Notes (Cross-Reviewed)
+
+> **Cross-review note:** This section was added after reading `pzlucz-rules.md`
+> to annotate the ianseo internals with PZŁucz-specific considerations. It
+> consolidates all implementation decisions the Developer agent needs.
+
+### 18.1 Division Strategy
+
+PZŁucz uses the **same division codes** as FITA (`'R'`, `'C'`, `'B'`, `'L'`, `'T'`).
+PL setup scripts should call `CreateDivision()` directly (not reuse FITA's
+`CreateStandardDivisions()` since FITA conditionally includes/excludes divisions
+by type). The PL module must control exactly which divisions appear per tournament
+type:
+
+| Tournament Context | Divisions to Create               |
+| ------------------ | --------------------------------- |
+| Target outdoor     | R, C, B                           |
+| Target indoor      | R, C, B                           |
+| Field              | R, C, B                           |
+| 3D                 | C, B, L, T (no R per PZŁucz §1.3) |
+
+**Para divisions** (when needed): Create as separate divisions with `$IsPara=1`.
+Use codes `'RO'`, `'CO'`, `'W1'`, `'VI'` to avoid collision with standard codes.
+
+### 18.2 Class Strategy
+
+PZŁucz has **more granular age classes** than FITA. The PL module must create its
+own `CreatePLClasses()` function in a PL-specific `lib.php` rather than using
+FITA's `CreateStandardClasses()`, because:
+
+1. **U24** (21–23 years): Not in FITA. Recurve only.
+2. **U12** (≤11 years): Below FITA's minimum. Recurve only target/indoor.
+3. **U15 restrictions**: PZŁucz allows U15 in more types than FITA does.
+4. **Division × Age availability**: PZŁucz restricts some combinations
+   (e.g., no C for U24; no B for U15; no B for U12). These must be enforced
+   via the `$AlDivision` parameter in `CreateClass()`.
+
+**ValidClass chains** (the `$ValidClass` parameter) must include upward eligibility:
+
+```
+U12M → 'U12M,U15M,U18M,U21M,M'
+U15M → 'U15M,U18M,U21M,M'
+U18M → 'U18M,U21M,M'
+U21M → 'U21M,M'
+U24M → 'U24M,M'
+M    → 'M'
+50M  → '50M,M'
+```
+
+### 18.3 Setup Script File Map
+
+Each PL setup script handles one tournament type with PL-specific configuration:
+
+| File              | Type ID | Round               | Priority |
+| ----------------- | ------- | ------------------- | -------- |
+| `Setup_3_PL.php`  | 3       | 70m Round           | **P1**   |
+| `Setup_6_PL.php`  | 6       | Indoor 18m          | **P1**   |
+| `Setup_1_PL.php`  | 1       | 1440 Round          | **P1**   |
+| `Setup_9_PL.php`  | 9       | 720 Round 50m (C/B) | **P2**   |
+| `Setup_10_PL.php` | 10      | 720 Round 60m (R)   | **P2**   |
+| `Setup_11_PL.php` | 11      | Field Unmarked      | **P3**   |
+| `Setup_12_PL.php` | 12      | Field Marked        | **P3**   |
+| `Setup_13_PL.php` | 13      | Field Mixed         | **P3**   |
+
+Each script must:
+
+1. Set all `$tourDet*` variables (see Section 5.2).
+2. Call PL division/class creation functions.
+3. Call `CreateDistanceNew()` with PZŁucz-specific distance/target assignments.
+4. Call `CreateEventNew()` for each individual + team + mixed team event.
+5. Call `InsertClassEvent()` to link events to division/class combos.
+6. Call `CreateTargetFace()` + `TargetFaceGoldsXnines()` for PL target configs.
+7. Call `CreateFinals()` to build bracket structures.
+8. Call `CreateDistanceInformation()` for per-distance scoring details.
+
+### 18.4 Event Configuration Patterns
+
+PZŁucz match rules map directly to `CreateEventNew()` options. Below are the
+event option templates for PL:
+
+**Recurve/Barebow Individual (outdoor):**
+
+```php
+$Options = [
+    'EvFinalFirstPhase' => 48,    // 104-draw bracket
+    'EvMatchMode' => 1,           // Set system
+    'EvElimEnds' => 5,
+    'EvElimArrows' => 3,
+    'EvElimSO' => 1,
+    'EvFinEnds' => 5,
+    'EvFinArrows' => 3,
+    'EvFinSO' => 1,
+    'EvFinalTargetType' => TGT_OUT_FULL,
+    'EvTargetSize' => 122,        // 122cm for R; 122cm for B
+    'EvDistance' => 70,            // varies by class: 70/60/40
+    'EvGolds' => '10+X',
+    'EvXNine' => 'X',
+    'EvGoldsChars' => 'KL',
+    'EvXNineChars' => 'K',
+];
+```
+
+**Compound Individual (outdoor):**
+
+```php
+$Options = [
+    'EvFinalFirstPhase' => 48,
+    'EvMatchMode' => 0,           // Cumulative
+    'EvFinalTargetType' => TGT_OUT_6_big10,  // 6-ring for matchplay
+    'EvTargetSize' => 80,
+    'EvDistance' => 50,
+    // rest same as above
+];
+```
+
+**Team (outdoor, R/B):**
+
+```php
+$Options = [
+    'EvTeamEvent' => 1,
+    'EvFinalFirstPhase' => 12,    // 24-draw bracket
+    'EvMatchMode' => 1,           // Set system
+    'EvMaxTeamPerson' => 3,
+    'EvMixedTeam' => 0,
+    'EvElimEnds' => 4,
+    'EvElimArrows' => 6,          // 2 per archer × 3 archers
+    'EvElimSO' => 3,
+    'EvFinEnds' => 4,
+    'EvFinArrows' => 6,
+    'EvFinSO' => 3,
+];
+```
+
+**Mixed Team (outdoor, R/B):**
+
+```php
+$Options = [
+    'EvTeamEvent' => 1,
+    'EvFinalFirstPhase' => 8,     // 16-draw bracket
+    'EvMatchMode' => 1,
+    'EvMaxTeamPerson' => 2,
+    'EvMixedTeam' => 1,
+    'EvElimArrows' => 4,          // 2 per archer × 2 archers
+    'EvElimSO' => 2,
+    'EvFinArrows' => 4,
+    'EvFinSO' => 2,
+];
+```
+
+**Indoor equivalents:** Same structure but with `EvFinalFirstPhase => 16`
+(individual) or `8` (team), indoor target types, and `EvDistance => 18`.
+
+### 18.5 Distance Configuration per PZŁucz Category
+
+The `CreateDistanceNew()` function uses category filters (SQL `LIKE` patterns).
+PL setup scripts need these distance assignments:
+
+**70m Round (`Setup_3_PL.php`):**
+
+| Category Filter      | Distances | Target Face Notes      |
+| -------------------- | --------- | ---------------------- |
+| `'RM'`, `'RW'`       | `[70]`    | 122cm                  |
+| `'RU24M'`, `'RU24W'` | `[70]`    | 122cm                  |
+| `'RU21M'`, `'RU21W'` | `[70]`    | 122cm                  |
+| `'RU18M'`, `'RU18W'` | `[60]`    | 122cm (60m for U18)    |
+| `'R50M'`, `'R50W'`   | `[60]`    | 122cm (60m for Master) |
+| `'RU15M'`, `'RU15W'` | `[40,20]` | 122cm@40m, 80cm@20m    |
+| `'C%'`               | `[50]`    | 80cm (full or 6-ring)  |
+| `'B%'`               | `[50]`    | 122cm                  |
+
+**Indoor 18m (`Setup_6_PL.php`):**
+
+| Category Filter    | Distances | Target Face   |
+| ------------------ | --------- | ------------- |
+| `'RM'` etc. senior | `[18]`    | Triple 40cm R |
+| `'CM'` etc. senior | `[18]`    | Triple 40cm C |
+| `'_U18_'` R/C      | `[18]`    | Full 40cm     |
+| `'B%'`             | `[18]`    | Full 40cm     |
+| `'_U15_'`          | `[18]`    | 60cm          |
+| `'_U12_'`          | `[15]`    | 80cm (15m!)   |
+
+### 18.6 Rank Overrides Needed
+
+Beyond the existing `Obj_Rank_DivClassTeam_calc.php` (best 3 of 4):
+
+| Override File                      | Purpose                              | Priority |
+| ---------------------------------- | ------------------------------------ | -------- |
+| `Obj_Rank_DivClassTeam_calc.php`   | Best 3 of 4 team scoring             | **DONE** |
+| `Obj_Rank_DivClassTeam_3_calc.php` | If type-specific team scoring needed | Verify   |
+| `Obj_Rank_DivClassTeam_6_calc.php` | Indoor team scoring (if different)   | Verify   |
+
+**Verification needed:** Confirm the existing best-3-of-4 calc works for indoor
+and field team types, not just outdoor. If the logic is identical, the
+type-agnostic file already covers all cases.
+
+### 18.7 `sets.php` Expansion
+
+The current `sets.php` registers only types 1, 3, 6 with one rule. It needs
+expansion:
+
+```php
+$SetType['PL'] = [
+    'descr' => get_text('Setup-PL', 'Install'),
+    'types' => [1, 3, 6, 7, 9, 10, 11, 12, 13],
+    'rules' => [
+        '1'  => ['SetAllClass', 'SetChampionship', 'SetU15Round'],
+        '3'  => ['SetAllClass', 'SetChampionship', 'Poland-TeamsTop3of4'],
+        '6'  => ['SetAllClass', 'SetChampionship'],
+        '9'  => ['SetAllClass', 'SetChampionship'],
+        '10' => ['SetAllClass', 'SetChampionship'],
+        '11' => ['SetAllClass'],
+        '12' => ['SetAllClass'],
+        '13' => ['SetAllClass'],
+    ],
+];
+```
+
+Sub-rule names should be descriptive and map to specific setup variations
+(e.g., `'SetChampionship'` for Polish Championships with full elimination brackets,
+`'SetAllClass'` for all age classes enabled).
+
+### 18.8 Menu Expansion
+
+Current `menu.php` has only "Dyplomy". Future additions:
+
+```php
+if ($on && $_SESSION['TourLocRule'] == 'PL') {
+    $ret['PRNT'][] = 'Dyplomy|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/Diplomas/PrnDiploma.php';
+    // Future:
+    // $ret['PRNT'][] = 'Wyniki PL|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/Printouts/...';
+    // $ret['MODS'][] = 'Licencje|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/License/...';
+}
+```
+
+### 18.9 Implementation Sequence Recommendation
+
+Based on the cross-review, the recommended build order is:
+
+1. **PL `lib.php`**: Create `CreatePLDivisions()` and `CreatePLClasses()` helper
+   functions that encode all PZŁucz division/class rules.
+2. **`Setup_3_PL.php`** (70m Round): Most common PZŁucz format. Uses the helpers
+   above plus FITA's distance/event patterns as reference.
+3. **`Setup_6_PL.php`** (Indoor 18m): Second most common. Tests indoor target
+   face differentiation (triple vs full 40cm vs 60cm).
+4. **`Setup_1_PL.php`** (1440 Round): Tests multi-distance configuration.
+5. **`sets.php` rewrite**: Register all tournament types and sub-rules.
+6. **`Setup_9_PL.php`** / **`Setup_10_PL.php`**: 50m/60m specific rounds.
+7. **Field/3D setup scripts**: Lower priority.
+8. **Special Shootings module**: Separate feature, deferred.
