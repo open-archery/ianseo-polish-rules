@@ -38,13 +38,13 @@ Used at the Polish Championships and regional competitions.
 
 ### Age Categories (Classes)
 
-| Polish class name                 | Code        | Age range          | Sex     |
-| --------------------------------- | ----------- | ------------------ | ------- |
-| Seniorzy / Seniorki               | M / W       | Open (21 and over) | M and W |
-| Młodzieżowiec / Młodzieżowniczka  | U24M / U24W | 21–23 years        | M and W |
-| Junior / Juniorka                 | U21M / U21W | 18–20 years        | M and W |
-| Junior młodszy / Juniorka młodsza | U18M / U18W | 15–17 years        | M and W |
-| Master M / Master K (50+)         | 50M / 50W   | 50 years and over  | M and W |
+| Polish class name                       | Code        | Age range          | Sex     |
+| --------------------------------------- | ----------- | ------------------ | ------- |
+| Seniorzy / Seniorki                     | M / W       | Open (21 and over) | M and W |
+| Młodzieżowiec / Młodzieżowniczka        | U24M / U24W | 21–23 years        | M and W |
+| Junior / Juniorka                       | U21M / U21W | 18–20 years        | M and W |
+| Junior młodszy / Juniorka młodsza       | U18M / U18W | 15–17 years        | M and W |
+| Master mężczyźni / Master kobiety (50+) | 50M / 50W   | 50 years and over  | M and W |
 
 > **Młodzik (U15) and Dziecko (U12) do not participate in the standard 1440 Round.** They have separate shorter rounds (see `Setup_3_PL.php` and `Setup_6_PL.php`).
 
@@ -57,8 +57,8 @@ Used at the Polish Championships and regional competitions.
 | R — Mężczyźni (M, U24M, U21M)                             | 90 m       | 70 m       | 50 m       | 30 m       |
 | R — Kobiety (W, U24W, U21W) and R Junior młodszy M (U18M) | 70 m       | 60 m       | 50 m       | 30 m       |
 | R — Juniorka młodsza K (U18W)                             | 60 m       | 50 m       | 40 m       | 30 m       |
-| R — Master M (50M)                                        | 70 m       | 60 m       | 50 m       | 30 m       |
-| R — Master K (50W)                                        | 60 m       | 50 m       | 40 m       | 30 m       |
+| R — Master mężczyźni (50M)                                | 70 m       | 60 m       | 50 m       | 30 m       |
+| R — Master kobiety (50W)                                  | 60 m       | 50 m       | 40 m       | 30 m       |
 | Łuk bloczkowy (C) — all categories                        | 50 m       | 50 m       | 50 m       | 50 m       |
 | Łuk barebow (B) — all categories                          | 50 m       | 50 m       | 50 m       | 50 m       |
 
@@ -120,8 +120,8 @@ Additionally: **Młodzicy (U15M/U15W)** are active in this format.
 | Senior W (W), U24W, U21W  | 70 m            | 72      |
 | Junior młodszy M (U18M)   | 60 m            | 72      |
 | Juniorka młodsza K (U18W) | 60 m            | 72      |
-| Master M (50M)            | 60 m            | 72      |
-| Master K (50W)            | 60 m            | 72      |
+| Master mężczyźni (50M)    | 60 m            | 72      |
+| Master kobiety (50W)      | 60 m            | 72      |
 | Młodzik M (U15M)          | **40 m + 20 m** | 36 + 36 |
 | Młodziczka K (U15W)       | **40 m + 20 m** | 36 + 36 |
 
@@ -183,6 +183,33 @@ After qualification, **the top 104 archers** in each category advance to matches
 
 > For all categories that do have elimination, the post-elimination placement rules from §4 (Shared Rules → Post-Elimination Placement) apply — each loser receives a unique place, not a shared round-based rank.
 
+### Mixed Team Events (Outdoor)
+
+Mixed teams are formed from qualification results (1 man + 1 woman from the same club, same division, same age category). See §4 Shared Rules → Mixed Team Composition for formation rules.
+
+**Bracket:** Top **16 mixed teams** advance to elimination.
+
+**Match format:**
+
+| Bow type                            | System     | Max ends | Arrows per end          | Win condition         |
+| ----------------------------------- | ---------- | -------- | ----------------------- | --------------------- |
+| Łuk klasyczny (R) / Łuk barebow (B) | Set system | 4 sets   | 4 arrows (2 per archer) | First to 5 set points |
+| Łuk bloczkowy (C)                   | Cumulative | 4 ends   | 4 arrows (2 per archer) | Highest total after 4 |
+
+**Shoot-off:** 2 arrows (1 per archer); higher total wins; if equal → closest arrow to centre.
+
+**Mixed team events per division:**
+
+| Division          | Event codes                          |
+| ----------------- | ------------------------------------ |
+| Łuk klasyczny (R) | RX, RU24X, RU21X, RU18X, R50X, RU15X |
+| Łuk bloczkowy (C) | CX, CU21X, CU18X, C50X, CU15X        |
+| Łuk barebow (B)   | BX, BU21X, BU18X                     |
+
+**Distances:** Same as the corresponding individual elimination distance for each division × category.
+
+> **U15 mixed teams** have **no elimination** (same as U15 individual/team). They are ranked by combined qualification score only.
+
 ---
 
 ## 3. Indoor 18m / Indoor 15m (`Setup_6_PL.php`)
@@ -204,7 +231,7 @@ The Indoor Round is held indoors at a short distance. Each archer shoots **60 ar
 | Młodzieżowiec / Młodzieżowniczka  | U24M / U24W | Recurve only                |
 | Junior / Juniorka                 | U21M / U21W |                             |
 | Junior młodszy / Juniorka młodsza | U18M / U18W |                             |
-| Master M / Master K               | 50M / 50W   |                             |
+| Master mężczyźni / Master kobiety | 50M / 50W   |                             |
 | Młodzik / Młodziczka              | U15M / U15W |                             |
 | Dziecko                           | U12M / U12W | Recurve only; shoot at 15 m |
 
@@ -257,6 +284,26 @@ Set system and cumulative rules: **same as the outdoor round** (see Section 2).
 
 > For all categories with elimination, the post-elimination placement rules from §4 (Shared Rules → Post-Elimination Placement) apply — each loser receives a unique place, not a shared round-based rank.
 
+### Mixed Team Events (Indoor)
+
+Same mixed team formation rules as outdoor (see §4 Shared Rules → Mixed Team Composition).
+
+**Bracket:** Top **16 mixed teams** advance to elimination.
+
+**Match format:** Identical to outdoor mixed teams — set system (R/B) or cumulative (C), 4 arrows per end (2 per archer), shoot-off with 2 arrows.
+
+**Mixed team events per division:**
+
+| Division          | Event codes                          |
+| ----------------- | ------------------------------------ |
+| Łuk klasyczny (R) | RX, RU24X, RU21X, RU18X, R50X, RU15X |
+| Łuk bloczkowy (C) | CX, CU21X, CU18X, C50X, CU15X        |
+| Łuk barebow (B)   | BX, BU21X, BU18X                     |
+
+**Indoor mixed team elimination target faces:** Same as indoor individual elimination — triple 40 cm for Senior/U24/U21 R and C; single 40 cm for U18 and all B; 60 cm for U15.
+
+> **U15 mixed teams** have **no elimination** — ranked by combined qualification score only.
+
 ---
 
 ## 4. Shared Rules
@@ -304,6 +351,29 @@ PZŁucz regulations require **unique individual places** for all athletes after 
 
 Team results are computed from the same qualification scores. Team score = **sum of the 3 best individual scores** from the same club in the same category (even if 4 archers were registered). The "Top 3 of 4" rule is already implemented in the PL ranking module.
 
+### Mixed Team Composition (§2.3.1.2.4)
+
+Mixed teams pair **1 man + 1 woman** from the same club, same division, same age category.
+
+**Formation:**
+
+- Best-ranked man + best-ranked woman from the same club form Mixed Team 1
+- 2nd-best-ranked man + 2nd-best-ranked woman form Mixed Team 2; and so on
+- Maximum **3 mixed teams per club** at the Polish Championships (no limit for Młodzicy U15)
+
+**Roster changes:** The team manager may change the composition up to 30 minutes before the elimination round starts. Medals are awarded to the pair that actually competes.
+
+**Match differences vs standard (3-person) teams:**
+
+| Parameter      | Standard team         | Mixed team            |
+| -------------- | --------------------- | --------------------- |
+| Team size      | 3 (or 3+1 substitute) | 2 (1 man + 1 woman)   |
+| Arrows per end | 6 (2 per archer)      | 4 (2 per archer)      |
+| Shoot-off      | 3 arrows (1 each)     | 2 arrows (1 each)     |
+| Bracket size   | Top 24                | Top 16                |
+| Sets (R/B)     | First to 5 set points | First to 5 set points |
+| Ends (C)       | 4 cumulative          | 4 cumulative          |
+
 ### Out of Scope
 
 The following are explicitly **not** covered by these three scripts:
@@ -325,6 +395,10 @@ The following are explicitly **not** covered by these three scripts:
 6. Confirm U15 has no elimination configuration in type 3
 7. Verify post-elimination placement: losers of the same round receive unique places (sub-ranked by match score, then qualification rank) — not shared ranks
 8. Confirm sub-ranking applies to both individual and team brackets
+9. Verify mixed team events are created for R, C, B with correct event codes (suffix `X`)
+10. Confirm mixed team events use 2-person teams (`EvMaxTeamPerson = 2`), 4 arrows per end, 2-arrow shoot-off
+11. Confirm `EvMixedTeam = 1` is set on all mixed team events
+12. Confirm U15 mixed teams have no elimination (`EvFinalFirstPhase = 0`)
 
 ## Decisions
 
