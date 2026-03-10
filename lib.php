@@ -30,6 +30,17 @@ $PL_CLASS_NAMES = array(
     'U12W' => 'Dziecko dziewczęta',
 );
 
+// Gender-neutral age labels used in mixed team event names.
+$PL_MIXED_CLASS_NAMES = array(
+    ''    => 'Seniorzy',
+    'U24' => 'Młodzieżowcy',
+    'U21' => 'Juniorzy',
+    'U18' => 'Juniorzy młodsi',
+    '50'  => 'Master',
+    'U15' => 'Młodziki',
+    'U12' => 'Dzieci',
+);
+
 // ---------------------------------------------------------------------------
 // Divisions: R (Recurve), C (Compound), B (Barebow)
 // ---------------------------------------------------------------------------
@@ -106,4 +117,26 @@ function InsertStandardEvents($TourId, $TourType) {
     foreach ($rClasses as $cl) { InsertClassEvent($TourId, 1, 3, "R{$cl}", 'R', $cl); }
     foreach ($cClasses as $cl) { InsertClassEvent($TourId, 1, 3, "C{$cl}", 'C', $cl); }
     foreach ($bClasses as $cl) { InsertClassEvent($TourId, 1, 3, "B{$cl}", 'B', $cl); }
+
+    // Mixed Team (Team=1 binds W class; Team=2 binds M class; Number=1)
+    // InsertClassEvent silently skips if the event was never created (e.g. type 1).
+    $rMixedAges = array('', 'U24', 'U21', 'U18', '50');
+    $cMixedAges = array('', 'U21', 'U18', '50');
+    $bMixedAges = array('', 'U21', 'U18');
+    if (in_array($TourType, array(3, 6))) {
+        $rMixedAges[] = 'U15';
+        $cMixedAges[] = 'U15';
+    }
+    foreach ($rMixedAges as $age) {
+        InsertClassEvent($TourId, 1, 1, "R{$age}X", 'R', "{$age}W");
+        InsertClassEvent($TourId, 2, 1, "R{$age}X", 'R', "{$age}M");
+    }
+    foreach ($cMixedAges as $age) {
+        InsertClassEvent($TourId, 1, 1, "C{$age}X", 'C', "{$age}W");
+        InsertClassEvent($TourId, 2, 1, "C{$age}X", 'C', "{$age}M");
+    }
+    foreach ($bMixedAges as $age) {
+        InsertClassEvent($TourId, 1, 1, "B{$age}X", 'B', "{$age}W");
+        InsertClassEvent($TourId, 2, 1, "B{$age}X", 'B', "{$age}M");
+    }
 }

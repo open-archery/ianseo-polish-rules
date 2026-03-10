@@ -223,6 +223,92 @@ foreach (array('M', 'W', 'U21M', 'U21W', 'U18M', 'U18W') as $cl) {
     CreateEventNew($TourId, "B{$cl}", "Łuk barebow - {$PL_CLASS_NAMES[$cl]} zespoły", $i++, $optBT);
 }
 
+// ---- Mixed Team Events -----------------------------------------------------
+$mixFirstPhase = 12;  // top 24 (1/12 finału)
+$i = 1;
+
+// Recurve mixed teams (set system)
+$optRMX = array(
+    'EvTeamEvent'       => 1,
+    'EvMixedTeam'       => 1,
+    'EvMaxTeamPerson'   => 2,
+    'EvFinalFirstPhase' => $mixFirstPhase,
+    'EvFinalTargetType' => TGT_OUT_FULL,
+    'EvMatchMode'       => 1,
+    'EvElimEnds'        => 4, 'EvElimArrows' => 4, 'EvElimSO' => 2,
+    'EvFinEnds'         => 4, 'EvFinArrows'  => 4, 'EvFinSO'  => 2,
+    'EvTargetSize'      => 122, 'EvDistance' => 70,
+    'EvGolds'           => $tourDetGolds,
+    'EvXNine'           => $tourDetXNine,
+    'EvGoldsChars'      => $tourDetGoldsChars,
+    'EvXNineChars'      => $tourDetXNineChars,
+);
+// Senior / U24 / U21: 70 m
+foreach (array('', 'U24', 'U21') as $age) {
+    CreateEventNew($TourId, "R{$age}X",
+        "Łuk klasyczny - {$PL_MIXED_CLASS_NAMES[$age]} zespoły mieszane", $i++, $optRMX);
+}
+// U18 / 50+: 60 m
+$optRMX['EvDistance'] = 60;
+foreach (array('U18', '50') as $age) {
+    CreateEventNew($TourId, "R{$age}X",
+        "Łuk klasyczny - {$PL_MIXED_CLASS_NAMES[$age]} zespoły mieszane", $i++, $optRMX);
+}
+// U15: 40 m, no elimination
+$optRMXU15 = $optRMX;
+$optRMXU15['EvFinalFirstPhase'] = 0;
+$optRMXU15['EvDistance']        = 40;
+$optRMXU15['EvTargetSize']      = 122;
+CreateEventNew($TourId, 'RU15X',
+    "Łuk klasyczny - {$PL_MIXED_CLASS_NAMES['U15']} zespoły mieszane", $i++, $optRMXU15);
+
+// Compound mixed teams (cumulative)
+$optCMX = array(
+    'EvTeamEvent'       => 1,
+    'EvMixedTeam'       => 1,
+    'EvMaxTeamPerson'   => 2,
+    'EvFinalFirstPhase' => $mixFirstPhase,
+    'EvFinalTargetType' => TGT_OUT_5_big10,
+    'EvMatchMode'       => 0,
+    'EvElimEnds'        => 4, 'EvElimArrows' => 4, 'EvElimSO' => 2,
+    'EvFinEnds'         => 4, 'EvFinArrows'  => 4, 'EvFinSO'  => 2,
+    'EvTargetSize'      => 80, 'EvDistance' => 50,
+    'EvGolds'           => $tourDetGolds,
+    'EvXNine'           => $tourDetXNine,
+    'EvGoldsChars'      => $tourDetGoldsChars,
+    'EvXNineChars'      => $tourDetXNineChars,
+);
+foreach (array('', 'U21', 'U18', '50') as $age) {
+    CreateEventNew($TourId, "C{$age}X",
+        "Łuk bloczkowy - {$PL_MIXED_CLASS_NAMES[$age]} zespoły mieszane", $i++, $optCMX);
+}
+// U15 Compound — no elimination
+$optCMXU15 = $optCMX;
+$optCMXU15['EvFinalFirstPhase'] = 0;
+CreateEventNew($TourId, 'CU15X',
+    "Łuk bloczkowy - {$PL_MIXED_CLASS_NAMES['U15']} zespoły mieszane", $i++, $optCMXU15);
+
+// Barebow mixed teams (set system)
+$optBMX = array(
+    'EvTeamEvent'       => 1,
+    'EvMixedTeam'       => 1,
+    'EvMaxTeamPerson'   => 2,
+    'EvFinalFirstPhase' => $mixFirstPhase,
+    'EvFinalTargetType' => TGT_OUT_FULL,
+    'EvMatchMode'       => 1,
+    'EvElimEnds'        => 4, 'EvElimArrows' => 4, 'EvElimSO' => 2,
+    'EvFinEnds'         => 4, 'EvFinArrows'  => 4, 'EvFinSO'  => 2,
+    'EvTargetSize'      => 122, 'EvDistance' => 50,
+    'EvGolds'           => $tourDetGolds,
+    'EvXNine'           => $tourDetXNine,
+    'EvGoldsChars'      => $tourDetGoldsChars,
+    'EvXNineChars'      => $tourDetXNineChars,
+);
+foreach (array('', 'U21', 'U18') as $age) {
+    CreateEventNew($TourId, "B{$age}X",
+        "Łuk barebow - {$PL_MIXED_CLASS_NAMES[$age]} zespoły mieszane", $i++, $optBMX);
+}
+
 // ---- Target Faces ----------------------------------------------------------
 $i = 1;
 // Recurve (incl. Barebow): 122 cm full face
