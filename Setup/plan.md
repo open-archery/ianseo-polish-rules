@@ -1,17 +1,20 @@
 # Implementation Plan — PZŁucz Tournament Setup Scripts
 
+> **Status:** ✅ Fully implemented (all steps completed)
+
 ## Scope
 
 Three setup files for the Polish (PZŁucz) competition style:
 
-| File             | Tournament type | Format                 |
-| ---------------- | --------------- | ---------------------- |
-| `Setup_1_PL.php` | 1 (1440 Round)  | Outdoor, 4 distances   |
-| `Setup_3_PL.php` | 3 (Single-dist) | Outdoor, 1–2 distances |
-| `Setup_6_PL.php` | 6 (Indoor 18m)  | Indoor                 |
+| File             | Tournament type | Format                 | Status  |
+| ---------------- | --------------- | ---------------------- | ------- |
+| `Setup_1_PL.php` | 1 (1440 Round)  | Outdoor, 4 distances   | ✅ Done |
+| `Setup_3_PL.php` | 3 (Single-dist) | Outdoor, 1–2 distances | ✅ Done |
+| `Setup_6_PL.php` | 6 (Indoor 18m)  | Indoor                 | ✅ Done |
 
 Plus a shared `lib.php` with `CreateStandardDivisions`, `CreateStandardClasses`,
-`CreateStandardEvents`, and `InsertStandardEvents` functions used by all three.
+and `InsertStandardEvents` functions used by all three. (`CreateStandardEvents`
+is inlined per-file because distances/targets differ significantly.)
 
 ### Out of Scope
 
@@ -50,7 +53,7 @@ code clearer and avoids a monolithic switch.
 
 ---
 
-## Step 0 — Update `sets.php`
+## Step 0 — Update `sets.php` ✅
 
 Currently `sets.php` only registers types `[1, 3, 6]` with a single sub-rule
 for type 3. We need sub-rules for all three types.
@@ -90,7 +93,7 @@ entry.
 
 ---
 
-## Step 1 — Create `lib.php` (Shared Functions)
+## Step 1 — Create `lib.php` (Shared Functions) ✅
 
 File: `Modules/Sets/PL/lib.php` (new, **replacing** the current non-existent one
 at the PL root — note: there's no PL/lib.php currently, so this is new).
@@ -369,7 +372,7 @@ function InsertStandardEvents($TourId, $TourType) {
 
 ---
 
-## Step 2 — `Setup_1_PL.php` (1440 Round)
+## Step 2 — `Setup_1_PL.php` (1440 Round) ✅
 
 ### 2.1 — Tournament Metadata
 
@@ -599,7 +602,7 @@ UpdateTourDetails($TourId, $tourDetails);
 
 ---
 
-## Step 3 — `Setup_3_PL.php` (Single-Distance Round)
+## Step 3 — `Setup_3_PL.php` (Single-Distance Round) ✅
 
 ### 3.1 — Tournament Metadata
 
@@ -790,7 +793,7 @@ CreateDistanceInformation($TourId, $DistanceInfoArray, 20, 4);
 
 ---
 
-## Step 4 — `Setup_6_PL.php` (Indoor 18m / 15m)
+## Step 4 — `Setup_6_PL.php` (Indoor 18m / 15m) ✅
 
 ### 4.1 — Tournament Metadata
 
@@ -1007,7 +1010,7 @@ UpdateTourDetails($TourId, $tourDetails);
 
 ---
 
-## Step 5 — Update `sets.php`
+## Step 5 — Update `sets.php` ✅
 
 Replace existing `sets.php` content with proper sub-rules:
 
