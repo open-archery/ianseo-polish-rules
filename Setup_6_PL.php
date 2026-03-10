@@ -89,22 +89,24 @@ $optR = array(
     'EvXNineChars'      => $tourDetXNineChars,
 );
 foreach (array('M', 'W', 'U24M', 'U24W', 'U21M', 'U21W', '50M', '50W') as $cl) {
-    CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$cl}", $i++, $optR);
+    CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]}", $i++, $optR);
 }
 
 // U18 Recurve: Single 40 cm
 $optRU18 = $optR;
 $optRU18['EvFinalTargetType'] = TGT_IND_1_big10;
-CreateEventNew($TourId, 'RU18M', 'Łuk klasyczny - Junior młodszy',   $i++, $optRU18);
-CreateEventNew($TourId, 'RU18W', 'Łuk klasyczny - Juniorka młodsza', $i++, $optRU18);
+foreach (array('U18M', 'U18W') as $cl) {
+    CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]}", $i++, $optRU18);
+}
 
 // U15 Recurve: Single 60 cm, no elimination
 $optRU15 = $optR;
 $optRU15['EvFinalFirstPhase'] = 0;
 $optRU15['EvFinalTargetType'] = TGT_IND_1_big10;
 $optRU15['EvTargetSize']      = 60;
-CreateEventNew($TourId, 'RU15M', 'Łuk klasyczny - Młodzik',    $i++, $optRU15);
-CreateEventNew($TourId, 'RU15W', 'Łuk klasyczny - Młodziczka', $i++, $optRU15);
+foreach (array('U15M', 'U15W') as $cl) {
+    CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]}", $i++, $optRU15);
+}
 
 // U12 Recurve: Single 80 cm at 15 m, no elimination
 $optRU12 = $optR;
@@ -112,8 +114,9 @@ $optRU12['EvFinalFirstPhase'] = 0;
 $optRU12['EvFinalTargetType'] = TGT_IND_1_big10;
 $optRU12['EvTargetSize']      = 80;
 $optRU12['EvDistance']        = 15;
-CreateEventNew($TourId, 'RU12M', 'Łuk klasyczny - Dziecko chłopcy', $i++, $optRU12);
-CreateEventNew($TourId, 'RU12W', 'Łuk klasyczny - Dziecko dziewczęta', $i++, $optRU12);
+foreach (array('U12M', 'U12W') as $cl) {
+    CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]}", $i++, $optRU12);
+}
 
 // --- Compound individual (cumulative) ---
 
@@ -132,22 +135,24 @@ $optC = array(
     'EvXNineChars'      => $tourDetXNineChars,
 );
 foreach (array('M', 'W', 'U21M', 'U21W', '50M', '50W') as $cl) {
-    CreateEventNew($TourId, "C{$cl}", "Łuk bloczkowy - {$cl}", $i++, $optC);
+    CreateEventNew($TourId, "C{$cl}", "Łuk bloczkowy - {$PL_CLASS_NAMES[$cl]}", $i++, $optC);
 }
 
 // U18 Compound: Single 40 cm (small 10)
 $optCU18 = $optC;
 $optCU18['EvFinalTargetType'] = TGT_IND_1_small10;
-CreateEventNew($TourId, 'CU18M', 'Łuk bloczkowy - Junior młodszy',   $i++, $optCU18);
-CreateEventNew($TourId, 'CU18W', 'Łuk bloczkowy - Juniorka młodsza', $i++, $optCU18);
+foreach (array('U18M', 'U18W') as $cl) {
+    CreateEventNew($TourId, "C{$cl}", "Łuk bloczkowy - {$PL_CLASS_NAMES[$cl]}", $i++, $optCU18);
+}
 
 // U15 Compound: Single 60 cm (small 10), no elimination
 $optCU15 = $optC;
 $optCU15['EvFinalFirstPhase'] = 0;
 $optCU15['EvFinalTargetType'] = TGT_IND_1_small10;
 $optCU15['EvTargetSize']      = 60;
-CreateEventNew($TourId, 'CU15M', 'Łuk bloczkowy - Młodzik',    $i++, $optCU15);
-CreateEventNew($TourId, 'CU15W', 'Łuk bloczkowy - Młodziczka', $i++, $optCU15);
+foreach (array('U15M', 'U15W') as $cl) {
+    CreateEventNew($TourId, "C{$cl}", "Łuk bloczkowy - {$PL_CLASS_NAMES[$cl]}", $i++, $optCU15);
+}
 
 // --- Barebow individual (set system) ---
 $optB = array(
@@ -164,7 +169,7 @@ $optB = array(
     'EvXNineChars'      => $tourDetXNineChars,
 );
 foreach (array('M', 'W', 'U21M', 'U21W', 'U18M', 'U18W') as $cl) {
-    CreateEventNew($TourId, "B{$cl}", "Łuk barebow - {$cl}", $i++, $optB);
+    CreateEventNew($TourId, "B{$cl}", "Łuk barebow - {$PL_CLASS_NAMES[$cl]}", $i++, $optB);
 }
 
 // ---- Team Events -----------------------------------------------------------
@@ -185,13 +190,13 @@ $optRT = array(
     'EvXNineChars'      => $tourDetXNineChars,
 );
 foreach (array('M', 'W', 'U24M', 'U24W', 'U21M', 'U21W', 'U18M', 'U18W', '50M', '50W') as $cl) {
-    CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$cl} zespoły", $i++, $optRT);
+    CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]} zespoły", $i++, $optRT);
 }
 // U15 + U12 Recurve team — no elimination
 $optRTU15 = $optRT;
 $optRTU15['EvFinalFirstPhase'] = 0;
 foreach (array('U15M', 'U15W', 'U12M', 'U12W') as $cl) {
-    CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$cl} zespoły", $i++, $optRTU15);
+    CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]} zespoły", $i++, $optRTU15);
 }
 
 // Compound team (cumulative, Triple 40 cm small 10)
@@ -209,13 +214,13 @@ $optCT = array(
     'EvXNineChars'      => $tourDetXNineChars,
 );
 foreach (array('M', 'W', 'U21M', 'U21W', 'U18M', 'U18W', '50M', '50W') as $cl) {
-    CreateEventNew($TourId, "C{$cl}", "Łuk bloczkowy - {$cl} zespoły", $i++, $optCT);
+    CreateEventNew($TourId, "C{$cl}", "Łuk bloczkowy - {$PL_CLASS_NAMES[$cl]} zespoły", $i++, $optCT);
 }
 // U15 Compound team — no elimination
 $optCTU15 = $optCT;
 $optCTU15['EvFinalFirstPhase'] = 0;
 foreach (array('U15M', 'U15W') as $cl) {
-    CreateEventNew($TourId, "C{$cl}", "Łuk bloczkowy - {$cl} zespoły", $i++, $optCTU15);
+    CreateEventNew($TourId, "C{$cl}", "Łuk bloczkowy - {$PL_CLASS_NAMES[$cl]} zespoły", $i++, $optCTU15);
 }
 
 // Barebow team (set system, Single 40 cm)
@@ -233,7 +238,7 @@ $optBT = array(
     'EvXNineChars'      => $tourDetXNineChars,
 );
 foreach (array('M', 'W', 'U21M', 'U21W', 'U18M', 'U18W') as $cl) {
-    CreateEventNew($TourId, "B{$cl}", "Łuk barebow - {$cl} zespoły", $i++, $optBT);
+    CreateEventNew($TourId, "B{$cl}", "Łuk barebow - {$PL_CLASS_NAMES[$cl]} zespoły", $i++, $optBT);
 }
 
 // ---- Target Faces ----------------------------------------------------------

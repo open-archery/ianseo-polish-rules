@@ -12,6 +12,24 @@ $tourCollation  = 'polish';
 $tourDetIocCode = 'POL';
 if (empty($SubRule)) $SubRule = '1';
 
+// Human-readable Polish names for each age/gender class code.
+$PL_CLASS_NAMES = array(
+    'M'    => 'Seniorzy',
+    'W'    => 'Seniorki',
+    'U24M' => 'Młodzieżowiec',
+    'U24W' => 'Młodzieżowniczka',
+    'U21M' => 'Junior',
+    'U21W' => 'Juniorka',
+    'U18M' => 'Junior młodszy',
+    'U18W' => 'Juniorka młodsza',
+    '50M'  => 'Master mężczyźni',
+    '50W'  => 'Master kobiety',
+    'U15M' => 'Młodzik',
+    'U15W' => 'Młodziczka',
+    'U12M' => 'Dziecko chłopcy',
+    'U12W' => 'Dziecko dziewczęta',
+);
+
 // ---------------------------------------------------------------------------
 // Divisions: R (Recurve), C (Compound), B (Barebow)
 // ---------------------------------------------------------------------------
@@ -47,16 +65,16 @@ function CreateStandardClasses($TourId, $TourType) {
     CreateClass($TourId, $i++, 18, 20,  1, 'U21W', 'U21W,W',                   'Juniorka',         1, 'R,C,B');
     CreateClass($TourId, $i++, 15, 17,  0, 'U18M', 'U18M,U21M,M',              'Junior młodszy',   1, 'R,C,B');
     CreateClass($TourId, $i++, 15, 17,  1, 'U18W', 'U18W,U21W,W',              'Juniorka młodsza', 1, 'R,C,B');
-    CreateClass($TourId, $i++, 50, 100, 0, '50M',  '50M,M',                    'Master M',         1, 'R,C');
-    CreateClass($TourId, $i++, 50, 100, 1, '50W',  '50W,W',                    'Master K',         1, 'R,C');
+    CreateClass($TourId, $i++, 50, 100, 0, '50M',  '50M,M',                    'Master mężczyźni',         1, 'R,C');
+    CreateClass($TourId, $i++, 50, 100, 1, '50W',  '50W,W',                    'Master kobiety',         1, 'R,C');
 
     if ($hasU15) {
         CreateClass($TourId, $i++, 13, 14, 0, 'U15M', 'U15M,U18M,U21M,M',     'Młodzik',          1, 'R,C');
         CreateClass($TourId, $i++, 13, 14, 1, 'U15W', 'U15W,U18W,U21W,W',     'Młodziczka',       1, 'R,C');
     }
     if ($hasU12) {
-        CreateClass($TourId, $i++, 9, 12, 0, 'U12M', 'U12M,U15M,U18M,U21M,M', 'Dziecko M',        1, 'R');
-        CreateClass($TourId, $i++, 9, 12, 1, 'U12W', 'U12W,U15W,U18W,U21W,W', 'Dziecko K',        1, 'R');
+        CreateClass($TourId, $i++, 9, 12, 0, 'U12M', 'U12M,U15M,U18M,U21M,M', 'Dziecko chłopcy',        1, 'R');
+        CreateClass($TourId, $i++, 9, 12, 1, 'U12W', 'U12W,U15W,U18W,U21W,W', 'Dziecko dziewczęta',        1, 'R');
     }
 }
 

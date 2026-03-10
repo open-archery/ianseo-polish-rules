@@ -83,7 +83,7 @@ $optR = array(
     'EvXNineChars'      => $tourDetXNineChars,
 );
 foreach (array('M', 'W', 'U24M', 'U24W', 'U21M', 'U21W', 'U18M', 'U18W', '50M', '50W') as $cl) {
-    CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny {$cl}", $i++, $optR);
+    CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]}", $i++, $optR);
 }
 
 // Compound individual
@@ -101,7 +101,7 @@ $optC = array(
     'EvXNineChars'      => $tourDetXNineChars,
 );
 foreach (array('M', 'W', 'U21M', 'U21W', 'U18M', 'U18W', '50M', '50W') as $cl) {
-    CreateEventNew($TourId, "C{$cl}", "Łuk bloczkowy - {$cl}", $i++, $optC);
+    CreateEventNew($TourId, "C{$cl}", "Łuk bloczkowy - {$PL_CLASS_NAMES[$cl]}", $i++, $optC);
 }
 
 // Barebow individual
@@ -119,7 +119,7 @@ $optB = array(
     'EvXNineChars'      => $tourDetXNineChars,
 );
 foreach (array('M', 'W', 'U21M', 'U21W', 'U18M', 'U18W') as $cl) {
-    CreateEventNew($TourId, "B{$cl}", "Łuk barebow - {$cl}", $i++, $optB);
+    CreateEventNew($TourId, "B{$cl}", "Łuk barebow - {$PL_CLASS_NAMES[$cl]}", $i++, $optB);
 }
 
 // ---- Team Events ----------------------------------------------------------
@@ -141,7 +141,7 @@ $optRT = array(
     'EvXNineChars'      => $tourDetXNineChars,
 );
 foreach (array('M', 'W', 'U24M', 'U24W', 'U21M', 'U21W', 'U18M', 'U18W', '50M', '50W') as $cl) {
-    CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$cl} zespoły", $i++, $optRT);
+    CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]} zespoły", $i++, $optRT);
 }
 
 // Compound team
@@ -150,13 +150,13 @@ $optCT['EvFinalTargetType'] = TGT_OUT_5_big10;
 $optCT['EvTargetSize']      = 80;
 $optCT['EvMatchMode']       = 0;
 foreach (array('M', 'W', 'U21M', 'U21W', 'U18M', 'U18W', '50M', '50W') as $cl) {
-    CreateEventNew($TourId, "C{$cl}", "Łuk bloczkowy - {$cl} zespoły", $i++, $optCT);
+    CreateEventNew($TourId, "C{$cl}", "Łuk bloczkowy - {$PL_CLASS_NAMES[$cl]} zespoły", $i++, $optCT);
 }
 
 // Barebow team
 $optBT = $optRT;
 foreach (array('M', 'W', 'U21M', 'U21W', 'U18M', 'U18W') as $cl) {
-    CreateEventNew($TourId, "B{$cl}", "Łuk barebow - {$cl} zespoły", $i++, $optBT);
+    CreateEventNew($TourId, "B{$cl}", "Łuk barebow - {$PL_CLASS_NAMES[$cl]} zespoły", $i++, $optBT);
 }
 
 // ---- Target Faces ----------------------------------------------------------
