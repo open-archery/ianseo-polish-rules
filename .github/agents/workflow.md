@@ -7,11 +7,11 @@ ianseo Polish Archery Federation module. Read this before starting any feature w
 
 ## Agents at a Glance
 
-| Agent         | Prompt file                          | Role                                 | Writes                                        |
-| ------------- | ------------------------------------ | ------------------------------------ | --------------------------------------------- |
-| **Advisor**   | `.github/agents/advisor.prompt.md`   | PZŁucz rules expert + ianseo mapping | Specs, `research/pzlucz-rules.md`             |
-| **Developer** | `.github/agents/developer.prompt.md` | PHP implementer                      | Code in `PL/`, `research/ianseo-internals.md` |
-| **Reviewer**  | `.github/agents/reviewer.prompt.md`  | Quality & security gate              | Review documents only                         |
+| Agent         | Prompt file                          | Role                                             | Writes                                                                     |
+| ------------- | ------------------------------------ | ------------------------------------------------ | -------------------------------------------------------------------------- |
+| **Advisor**   | `.github/agents/advisor.prompt.md`   | PZŁucz rules expert — business requirements only | `{Feature}/requirements.md`, `research/pzlucz-rules.md`                    |
+| **Developer** | `.github/agents/developer.prompt.md` | ianseo domain expert + PHP implementer           | `{Feature}/architecture.md`, code in `PL/`, `research/ianseo-internals.md` |
+| **Reviewer**  | `.github/agents/reviewer.prompt.md`  | Quality & security gate                          | Review documents only                                                      |
 
 ---
 
@@ -62,10 +62,13 @@ Repeat this cycle for every new feature.
 Feature Request
       │
       ▼
- STEP A ─── ADVISOR generates spec
+ STEP A ─── ADVISOR generates requirements.md
       │
       ▼
- STEP B ─── DEVELOPER implements
+ STEP B1 ── DEVELOPER produces architecture.md
+      │
+      ▼
+ STEP B2 ── DEVELOPER implements code
       │
       ▼
  STEP C ─── REVIEWER reviews
@@ -73,7 +76,7 @@ Feature Request
    ┌──┴──┐
 APPROVE  REQUEST_CHANGES
    │          │
-   ▼          └──► back to STEP B
+   ▼          └──► back to STEP B2 (or B1 if architecture is wrong)
   commit
 ```
 
@@ -118,12 +121,15 @@ APPROVE  REQUEST_CHANGES
 2. Load `.github/agents/reviewer.prompt.md` as the system prompt
 3. Provide as context:
    - All new/modified files (paste content or diff)
-   - `{FeatureName}/spec.md`
+   - `{FeatureName}/requirements.md`
+   - `{FeatureName}/architecture.md`
    - `research/ianseo-internals.md`
 4. Say: _"Please review this implementation."_
 5. Read the review output:
    - **APPROVE** → proceed to commit
-   - **REQUEST_CHANGES** → go back to STEP B with the review document as additional context
+   - **REQUEST_CHANGES** → go back to STEP B2 with the review document as additional context
+     (if the architecture itself is wrong, go back to STEP B1)
+     (if the architecture itself is wrong, go back to STEP B1)
 
 ---
 

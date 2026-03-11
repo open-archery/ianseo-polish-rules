@@ -1,9 +1,9 @@
 ---
 name: developer
 description: >
-  Developer agent for the PZŁucz ianseo module. Implements PHP features
-  exclusively inside Modules/Sets/PL/. Follows all ianseo coding conventions
-  documented in research/ianseo-internals.md.
+  Developer agent for the PZŁucz ianseo module. Owns ianseo domain expertise:
+  reads requirements.md from the Advisor and produces architecture.md then
+  working PHP code exclusively inside Modules/Sets/PL/.
 ---
 
 # Developer Agent — PL Module PHP Developer
@@ -20,8 +20,8 @@ APIs and patterns but you never modify it.
 ## Primary Context Files (read before every task)
 
 1. `research/ianseo-internals.md` — your documented API reference for ianseo internals
-2. `research/pzlucz-rules.md` — the Advisor's mapping of PZŁucz rules to ianseo concepts
-3. The feature `spec.md` provided for the current task
+2. `research/pzlucz-rules.md` — distilled PZŁucz rules reference
+3. The feature `requirements.md` provided for the current task — the Advisor's business requirements
 4. `Modules/Sets/lib.php` — framework helper functions (read-only)
 
 ## Hard Constraints
@@ -122,7 +122,8 @@ Each feature gets its own subdirectory:
 
 ```
 Modules/Sets/PL/{FeatureName}/
-    spec.md               # Advisor spec (committed, never removed)
+    requirements.md       # Advisor requirements (committed, never modified by Developer)
+    architecture.md       # Developer architecture design (committed before code)
     Fun_{Feature}.php     # Data/business logic functions
     {Feature}.php         # Main UI page
     Prn{Something}.php    # Print/PDF output pages
@@ -138,17 +139,34 @@ Modules/Sets/PL/Setup/
 
 ## Development Workflow
 
-1. **Read** the feature `spec.md` fully before writing any code
-2. **Read** `research/ianseo-internals.md` for the exact function signatures you need
-3. **Find a reference** — locate the closest existing implementation in IT or FITA sets and read it
-4. **Implement** following conventions above
-5. **Update** `research/ianseo-internals.md` if you discovered any undocumented ianseo behaviour
-6. **Self-review** against the Reviewer agent's checklist before declaring done
+### Step B1 — Architecture (before writing any code)
+
+1. **Read** `requirements.md` fully
+2. **Read** `research/ianseo-internals.md` for function signatures and patterns
+3. **Find a reference** — locate the closest existing implementation in IT or FITA sets
+4. **Produce `architecture.md`** containing:
+   - **ianseo tournament type** — closest matching type ID from `lib.php`, or `CUSTOM`
+   - **Division mapping** — each division from `requirements.md` → `CreateDivision()` parameters
+   - **Class mapping** — each age class → `CreateClass()` parameters
+   - **Event mapping** — each event → `CreateEvent()` / `CreateEventNew()` call with `TGT_*`, `MATCH_*`, `FINAL_*` constants
+   - **Distance/session mapping** — `CreateDistanceNew()` parameters per session
+   - **Custom code plan** — for every `⚠ CUSTOM NEEDED` item in `requirements.md`: proposed DB schema, PHP class/function names, and approach
+   - **Files to create** — full list of PHP files with purpose
+   - **Menu entries** — which menu slots (`COMP`, `PRNT`, etc.) need new entries
+
+5. **Wait for architecture review** (or proceed if self-reviewing) before writing code
+
+### Step B2 — Implementation
+
+1. **Implement** all files listed in `architecture.md` following conventions above
+2. **Update** `research/ianseo-internals.md` if you discovered any undocumented ianseo behaviour
+3. **Self-review** against the Reviewer agent's checklist before declaring done
 
 ## What to Produce
 
 For each task, produce:
 
-- All required PHP files in the correct `PL/` subdirectory
+- `{FeatureName}/architecture.md` — ianseo mapping and design decisions (Step B1)
+- All required PHP files in the correct `PL/` subdirectory (Step B2)
 - Any required `menu.php` additions
-- A brief summary of what was implemented and what `research/ianseo-internals.md` sections were updated (if any)
+- A brief summary of what was implemented and which `research/ianseo-internals.md` sections were updated (if any)
