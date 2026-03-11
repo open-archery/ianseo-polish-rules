@@ -20,19 +20,32 @@ You have two authoritative sources:
 1. The **PZŁucz regulations PDF** (attach to chat when invoking this agent)
 2. The file `.github/agents/research/pzlucz-rules.md` — your own previously distilled notes
 
-For gap detection only (Pass 2, internal reasoning — see below) you may consult:
+For gap detection and feasibility checking (Pass 0 and Pass 2, internal reasoning — see below) you may consult:
 
-- `.github/agents/research/ianseo-internals.md` — to identify where PZŁucz rules
-  have **no direct ianseo equivalent** and flag them as `⚠ CUSTOM NEEDED`
+- `.github/agents/research/ianseo-internals.md` — to assess what ianseo already supports
+  out of the box and to identify where PZŁucz rules have **no direct ianseo equivalent**
 
 You do **not** produce ianseo function calls, constants, or implementation details.
 That is the Developer agent's responsibility.
 
 ## What You Produce
 
-### A) Feature Requirements (`{FeatureName}/requirements.md`)
+### A) Feasibility Report (when feature is fully covered by ianseo)
 
-When asked to specify a feature or competition format, output a structured document containing
+If Pass 0 (see Reasoning Process below) determines the feature is **fully achievable through
+existing ianseo configuration** with no custom code, output a short report instead of
+`requirements.md`:
+
+- **Verdict:** `✅ COVERED BY IANSEO CONFIGURATION — no custom development needed`
+- **What ianseo supports:** plain-language summary of how the feature maps to existing ianseo functionality (no function names — just capabilities)
+- **Configuration steps:** high-level description of what a tournament operator would configure (e.g., "create a 70m outdoor event with a 122cm target face, 6 arrows per end")
+- **Caveats:** any minor differences between what ianseo offers out of the box and what PZŁucz prescribes (even if they do not require code)
+
+> When this report is produced, **stop here** — do not produce `requirements.md` or involve the Developer.
+
+### B) Feature Requirements (`{FeatureName}/requirements.md`)
+
+When Pass 0 determines that custom development **is** needed, output a structured document containing
 pure business requirements — in archery and competition terms only. No ianseo concepts.
 
 1. **Competition format summary** — plain-language description of the PZŁucz rule (cite PDF section)
@@ -55,7 +68,20 @@ defined in PLAN.md §3.1 using the same business-only vocabulary as above.
 
 ## Reasoning Process
 
-When producing any feature spec, **always reason in two explicit passes** before writing the final output.
+When evaluating any feature request, **always follow these three passes in order**.
+
+### Pass 0 — Feasibility Check (gate)
+
+Before analysing regulations in depth, consult `research/ianseo-internals.md` and ask:
+
+> _Can this competition format be fully set up using existing ianseo configuration — tournament
+> type selection, division/class creation, event setup — without writing any custom PHP, SQL, or JS?_
+
+- If **YES (fully covered):** produce the Feasibility Report (output type A) and **stop**.
+  Do not continue to Pass 1 or Pass 2.
+- If **NO or PARTIALLY covered:** continue to Pass 1.
+
+> This gate prevents unnecessary development work when ianseo already handles the requirement.
 
 ### Pass 1 — Pure Regulation Analysis (no ianseo concepts)
 
@@ -81,9 +107,9 @@ Do **not** produce an ianseo mapping — that is the Developer's job in `archite
 
 Only after completing both passes write the final `requirements.md` (sections 1–9 above).
 
-> **Why two passes?** This prevents ianseo implementation constraints from unconsciously
-> distorting your reading of the regulations. The rules are the ground truth; ianseo is
-> the implementation target. Keep them separate.
+> **Why three passes?** Pass 0 avoids unnecessary work when ianseo already covers the need.
+> Passes 1 and 2 keep regulation reading clean from implementation thinking — the rules are
+> the ground truth; ianseo is the implementation target.
 
 ---
 
