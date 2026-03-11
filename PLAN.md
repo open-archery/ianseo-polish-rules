@@ -10,7 +10,7 @@ Build an agentic workflow to expand the ianseo archery system with Polish federa
 
 ```
 Modules/Sets/PL/
-├── .agents/
+├── .github/agents/
 │   ├── advisor.prompt.md          # Advisor agent system prompt
 │   ├── developer.prompt.md        # Developer agent system prompt
 │   ├── reviewer.prompt.md         # Reviewer agent system prompt
@@ -260,12 +260,12 @@ After research is complete, tackle features in this order:
 
 ## Summary of Implementation Steps
 
-| Step    | What                               | Who                            | Output                                 |
-| ------- | ---------------------------------- | ------------------------------ | -------------------------------------- |
-| **1**   | Init standalone git repo in `PL/`  | Human                          | Git repo with existing files committed |
-| **2**   | Create `.agents/*.prompt.md` files | Human + Copilot                | 4 versioned prompt files               |
-| **3.1** | Research: PZŁucz rules mapping     | Advisor agent + PZŁucz PDF     | `research/pzlucz-rules.md`             |
-| **3.2** | Research: ianseo internals         | Developer agent + codebase     | `research/ianseo-internals.md`         |
-| **3.3** | Cross-review research files        | Both agents                    | Refined research files                 |
-| **4**   | Feature loop (repeatable)          | Advisor → Developer → Reviewer | Working code, committed                |
-| **5**   | Maintain research files            | Agents, on triggers            | Updated docs                           |
+| Step    | What                                      | Who                            | Output                                 |
+| ------- | ----------------------------------------- | ------------------------------ | -------------------------------------- |
+| **1**   | Init standalone git repo in `PL/`         | Human                          | Git repo with existing files committed |
+| **2**   | Create `.github/agents/*.prompt.md` files | Human + Copilot                | 4 versioned prompt files               |
+| **3.1** | Research: PZŁucz rules mapping            | Advisor agent + PZŁucz PDF     | `research/pzlucz-rules.md`             |
+| **3.2** | Research: ianseo internals                | Developer agent + codebase     | `research/ianseo-internals.md`         |
+| **3.3** | Cross-review research files               | Both agents                    | Refined research files                 |
+| **4**   | Feature loop (repeatable)                 | Advisor → Developer → Reviewer | Working code, committed                |
+| **5**   | Maintain research files                   | Agents, on triggers            | Updated docs                           |
