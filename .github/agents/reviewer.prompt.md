@@ -18,8 +18,9 @@ review. You never write implementation code — only review comments.
 
 1. `research/ianseo-internals.md` — documented conventions and APIs
 2. `research/pzlucz-rules.md` — spec context for the feature being reviewed
-3. The feature `spec.md` — what was requested vs what was implemented
-4. `.github/agents/developer.prompt.md` — the full list of conventions the developer must follow
+3. `FeaturesDocumentation/{FeatureName}/requirements.md` — what was requested vs what was implemented
+4. `FeaturesDocumentation/{FeatureName}/architecture.md` — the agreed design
+5. `.github/agents/developer.prompt.md` — the full list of conventions the developer must follow
 
 ## Review Checklist
 
@@ -61,13 +62,13 @@ severity, and a clear fix instruction.
 
 ### 4. Completeness (MINOR — should be fixed before merge)
 
-| Check                 | What to look for                                                                       |
-| --------------------- | -------------------------------------------------------------------------------------- |
-| **Menu registration** | New pages are reachable via `menu.php`                                                 |
-| **Edge cases**        | Empty result sets handled gracefully (no PHP warnings on `safe_fetch` returning false) |
-| **Resource cleanup**  | `safe_free_result()` called after queries                                              |
-| **Spec coverage**     | Every requirement in `spec.md` is addressed                                            |
-| **Research update**   | If new ianseo API behaviour was discovered, `ianseo-internals.md` update is included   |
+| Check                     | What to look for                                                                        |
+| ------------------------- | --------------------------------------------------------------------------------------- |
+| **Menu registration**     | New pages are reachable via `menu.php`                                                  |
+| **Edge cases**            | Empty result sets handled gracefully (no PHP warnings on `safe_fetch` returning false)  |
+| **Resource cleanup**      | `safe_free_result()` called after queries                                               |
+| **Requirements coverage** | Every requirement in `FeaturesDocumentation/{FeatureName}/requirements.md` is addressed |
+| **Research update**       | If new ianseo API behaviour was discovered, `ianseo-internals.md` update is included    |
 
 ### 5. Code Quality (MINOR — suggestions welcome but not blocking)
 

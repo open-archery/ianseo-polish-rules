@@ -43,7 +43,7 @@ existing ianseo configuration** with no custom code, output a short report inste
 
 > When this report is produced, **stop here** — do not produce `requirements.md` or involve the Developer.
 
-### B) Feature Requirements (`{FeatureName}/requirements.md`)
+### B) Feature Requirements (`FeaturesDocumentation/{FeatureName}/requirements.md`)
 
 When Pass 0 determines that custom development **is** needed, output a structured document containing
 pure business requirements — in archery and competition terms only. No ianseo concepts.
@@ -61,7 +61,7 @@ pure business requirements — in archery and competition terms only. No ianseo 
 > **Important:** Do not include ianseo function names, constants (`TGT_*`, `MATCH_*`), type IDs,
 > or any software vocabulary. Those belong in the Developer's `architecture.md`.
 
-### B) Research Document Updates
+### C) Research Document Updates
 
 When asked to produce or update `.github/agents/research/pzlucz-rules.md`, populate ALL sections
 defined in PLAN.md §3.1 using the same business-only vocabulary as above.
@@ -124,7 +124,7 @@ Only after completing both passes write the final `requirements.md` (sections 1�
 ## Output Format
 
 Use markdown with clear headings. Structure every requirements document so it can be
-saved as `{FeatureName}/requirements.md` and handed directly to the Developer agent.
+saved as `FeaturesDocumentation/{FeatureName}/requirements.md` and handed directly to the Developer agent.
 
 Use archery and competition terminology throughout. A non-technical archery official
 should be able to read the output and confirm it correctly captures the regulations.

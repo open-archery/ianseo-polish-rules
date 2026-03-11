@@ -7,11 +7,11 @@ ianseo Polish Archery Federation module. Read this before starting any feature w
 
 ## Agents at a Glance
 
-| Agent         | Prompt file                          | Role                                             | Writes                                                                     |
-| ------------- | ------------------------------------ | ------------------------------------------------ | -------------------------------------------------------------------------- |
-| **Advisor**   | `.github/agents/advisor.prompt.md`   | PZŁucz rules expert — business requirements only | `{Feature}/requirements.md`, `research/pzlucz-rules.md`                    |
-| **Developer** | `.github/agents/developer.prompt.md` | ianseo domain expert + PHP implementer           | `{Feature}/architecture.md`, code in `PL/`, `research/ianseo-internals.md` |
-| **Reviewer**  | `.github/agents/reviewer.prompt.md`  | Quality & security gate                          | Review documents only                                                      |
+| Agent         | Prompt file                          | Role                                             | Writes                                                                                                     |
+| ------------- | ------------------------------------ | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| **Advisor**   | `.github/agents/advisor.prompt.md`   | PZŁucz rules expert — business requirements only | `FeaturesDocumentation/{Feature}/requirements.md`, `research/pzlucz-rules.md`                              |
+| **Developer** | `.github/agents/developer.prompt.md` | ianseo domain expert + PHP implementer           | `FeaturesDocumentation/{Feature}/architecture.md`, code in `PL/{Feature}/`, `research/ianseo-internals.md` |
+| **Reviewer**  | `.github/agents/reviewer.prompt.md`  | Quality & security gate                          | Review documents only                                                                                      |
 
 ---
 
@@ -121,14 +121,13 @@ APPROVE  REQUEST_CHANGES
 2. Load `.github/agents/reviewer.prompt.md` as the system prompt
 3. Provide as context:
    - All new/modified files (paste content or diff)
-   - `{FeatureName}/requirements.md`
-   - `{FeatureName}/architecture.md`
+   - `FeaturesDocumentation/{FeatureName}/requirements.md`
+   - `FeaturesDocumentation/{FeatureName}/architecture.md`
    - `research/ianseo-internals.md`
 4. Say: _"Please review this implementation."_
 5. Read the review output:
    - **APPROVE** → proceed to commit
    - **REQUEST_CHANGES** → go back to STEP B2 with the review document as additional context
-     (if the architecture itself is wrong, go back to STEP B1)
      (if the architecture itself is wrong, go back to STEP B1)
 
 ---
@@ -177,11 +176,11 @@ See `PLAN.md` §7 for the suggested implementation order.
 
 Current status:
 
-| Priority | Feature                             | Status        |
-| -------- | ----------------------------------- | ------------- |
-| 0        | Research phase                      | ☐ Not started |
-| 1        | Tournament setup scripts (`Setup/`) | ☐ Not started |
-| 2        | Extended `sets.php`                 | ☐ Not started |
-| 3        | Field/3D support                    | ☐ Not started |
-| 4        | Custom printouts                    | ☐ Not started |
-| 5        | License/classification check        | ☐ Not started |
+| Priority | Feature                                                   | Status        |
+| -------- | --------------------------------------------------------- | ------------- |
+| 0        | Research phase                                            | ☐ Not started |
+| 1        | Tournament setup scripts (`FeaturesDocumentation/Setup/`) | ☐ Not started |
+| 2        | Extended `sets.php`                                       | ☐ Not started |
+| 3        | Field/3D support                                          | ☐ Not started |
+| 4        | Custom printouts                                          | ☐ Not started |
+| 5        | License/classification check                              | ☐ Not started |

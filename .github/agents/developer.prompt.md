@@ -118,12 +118,18 @@ if ($on && $_SESSION["TourLocRule"] == 'PL') {
 
 ## File Organisation
 
-Each feature gets its own subdirectory:
+Documentation artifacts for each feature live under `FeaturesDocumentation/`:
+
+```
+Modules/Sets/PL/FeaturesDocumentation/{FeatureName}/
+    requirements.md       # Advisor requirements (committed, never modified by Developer)
+    architecture.md       # Developer architecture design (committed before code)
+```
+
+Implementation code for each feature lives alongside in its own subdirectory:
 
 ```
 Modules/Sets/PL/{FeatureName}/
-    requirements.md       # Advisor requirements (committed, never modified by Developer)
-    architecture.md       # Developer architecture design (committed before code)
     Fun_{Feature}.php     # Data/business logic functions
     {Feature}.php         # Main UI page
     Prn{Something}.php    # Print/PDF output pages
@@ -141,10 +147,10 @@ Modules/Sets/PL/Setup/
 
 ### Step B1 — Architecture (before writing any code)
 
-1. **Read** `requirements.md` fully
+1. **Read** `FeaturesDocumentation/{FeatureName}/requirements.md` fully
 2. **Read** `research/ianseo-internals.md` for function signatures and patterns
 3. **Find a reference** — locate the closest existing implementation in IT or FITA sets
-4. **Produce `architecture.md`** containing:
+4. **Produce `FeaturesDocumentation/{FeatureName}/architecture.md`** containing:
    - **ianseo tournament type** — closest matching type ID from `lib.php`, or `CUSTOM`
    - **Division mapping** — each division from `requirements.md` → `CreateDivision()` parameters
    - **Class mapping** — each age class → `CreateClass()` parameters
@@ -166,7 +172,7 @@ Modules/Sets/PL/Setup/
 
 For each task, produce:
 
-- `{FeatureName}/architecture.md` — ianseo mapping and design decisions (Step B1)
-- All required PHP files in the correct `PL/` subdirectory (Step B2)
+- `FeaturesDocumentation/{FeatureName}/architecture.md` — ianseo mapping and design decisions (Step B1)
+- All required PHP files in `PL/{FeatureName}/` (Step B2)
 - Any required `menu.php` additions
 - A brief summary of what was implemented and which `research/ianseo-internals.md` sections were updated (if any)
