@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * DiplomaConfig.php - Configuration page for PL Diploma settings.
  *
@@ -9,7 +11,7 @@
  * - Head of judges, Organizer
  * - Per-event custom text overrides
  */
-require_once(dirname(dirname(dirname(dirname(__FILE__)))) . '/config.php');
+require_once(dirname(__DIR__, 3) . '/config.php');
 CheckTourSession(true);
 require_once('DiplomaSetup.php');
 require_once('Fun_Diploma.php');
@@ -20,33 +22,37 @@ pl_diploma_ensure_tables();
 // Handle form submission
 $message = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['saveConfig'])) {
-	// Save main config
-	$data = array(
-		'CompetitionName' => isset($_POST['CompetitionName']) ? trim($_POST['CompetitionName']) : '',
-		'Dates' => isset($_POST['Dates']) ? trim($_POST['Dates']) : '',
-		'Location' => isset($_POST['Location']) ? trim($_POST['Location']) : '',
-		'PlaceFrom' => isset($_POST['PlaceFrom']) ? intval($_POST['PlaceFrom']) : 1,
-		'PlaceTo' => isset($_POST['PlaceTo']) ? intval($_POST['PlaceTo']) : 3,
-		'BodyText' => isset($_POST['BodyText']) ? trim($_POST['BodyText']) : '',
-		'HeadJudge' => isset($_POST['HeadJudge']) ? trim($_POST['HeadJudge']) : '',
-		'Organizer' => isset($_POST['Organizer']) ? trim($_POST['Organizer']) : '',
-	);
+    // Save main config
+    $data = [
+        'CompetitionName' => isset($_POST['CompetitionName']) ? trim($_POST['CompetitionName']) : '',
+        'Dates' => isset($_POST['Dates']) ? trim($_POST['Dates']) : '',
+        'Location' => isset($_POST['Location']) ? trim($_POST['Location']) : '',
+        'PlaceFrom' => isset($_POST['PlaceFrom']) ? (int) ($_POST['PlaceFrom']) : 1,
+        'PlaceTo' => isset($_POST['PlaceTo']) ? (int) ($_POST['PlaceTo']) : 3,
+        'BodyText' => isset($_POST['BodyText']) ? trim($_POST['BodyText']) : '',
+        'HeadJudge' => isset($_POST['HeadJudge']) ? trim($_POST['HeadJudge']) : '',
+        'Organizer' => isset($_POST['Organizer']) ? trim($_POST['Organizer']) : '',
+    ];
 
-	// Validate
-	if ($data['PlaceFrom'] < 1) $data['PlaceFrom'] = 1;
-	if ($data['PlaceTo'] < $data['PlaceFrom']) $data['PlaceTo'] = $data['PlaceFrom'];
+    // Validate
+    if ($data['PlaceFrom'] < 1) {
+        $data['PlaceFrom'] = 1;
+    }
+    if ($data['PlaceTo'] < $data['PlaceFrom']) {
+        $data['PlaceTo'] = $data['PlaceFrom'];
+    }
 
-	pl_diploma_save_config($_SESSION['TourId'], $data);
+    pl_diploma_save_config($_SESSION['TourId'], $data);
 
-	// Save event texts
-	$allEvents = pl_diploma_get_events();
-	foreach ($allEvents as $evCode => $ev) {
-		$fieldName = 'EventText_' . $evCode;
-		$text = isset($_POST[$fieldName]) ? trim($_POST[$fieldName]) : '';
-		pl_diploma_save_event_text($_SESSION['TourId'], $evCode, $text);
-	}
+    // Save event texts
+    $allEvents = pl_diploma_get_events();
+    foreach ($allEvents as $evCode => $ev) {
+        $fieldName = 'EventText_' . $evCode;
+        $text = isset($_POST[$fieldName]) ? trim($_POST[$fieldName]) : '';
+        pl_diploma_save_event_text($_SESSION['TourId'], $evCode, $text);
+    }
 
-	$message = 'Konfiguracja została zapisana.';
+    $message = 'Konfiguracja została zapisana.';
 }
 
 // Load current config
@@ -56,31 +62,31 @@ $allEvents = pl_diploma_get_events();
 
 // Pre-fill defaults from session if config is empty
 if (empty($config['CompetitionName'])) {
-	$config['CompetitionName'] = isset($_SESSION['TourName']) ? $_SESSION['TourName'] : '';
+    $config['CompetitionName'] = $_SESSION['TourName'] ?? '';
 }
 if (empty($config['Dates'])) {
-	$from = isset($_SESSION['TourWhenFrom']) ? $_SESSION['TourWhenFrom'] : '';
-	$to = isset($_SESSION['TourWhenTo']) ? $_SESSION['TourWhenTo'] : '';
-	$config['Dates'] = ($from === $to) ? $from : $from . ' - ' . $to;
+    $from = $_SESSION['TourWhenFrom'] ?? '';
+    $to = $_SESSION['TourWhenTo'] ?? '';
+    $config['Dates'] = ($from === $to) ? $from : $from . ' - ' . $to;
 }
 if (empty($config['Location'])) {
-	$config['Location'] = isset($_SESSION['TourWhere']) ? $_SESSION['TourWhere'] : '';
+    $config['Location'] = $_SESSION['TourWhere'] ?? '';
 }
 
 $PAGE_TITLE = 'Konfiguracja dyplomów';
 
-$JS_SCRIPT = array(
-	'<script type="text/javascript">
-	</script>'
-);
+$JS_SCRIPT = [
+    '<script type="text/javascript">
+	</script>',
+];
 
 include('Common/Templates/head.php');
 
 // Success message
 if (!empty($message)) {
-	echo '<div style="background:#d4edda;border:1px solid #28a745;padding:10px;margin:10px 0;border-radius:4px;">';
-	echo htmlspecialchars($message);
-	echo '</div>';
+    echo '<div style="background:#d4edda;border:1px solid #28a745;padding:10px;margin:10px 0;border-radius:4px;">';
+    echo htmlspecialchars($message);
+    echo '</div>';
 }
 
 echo '<form method="post" action="">';
@@ -144,33 +150,33 @@ echo '</table>';
 
 // Event text overrides
 if (count($allEvents)) {
-	echo '<br>';
-	echo '<table class="Tabella">';
-	echo '<tr><th class="SubTitle" colspan="4">Tekst kategorii na dyplomach</th></tr>';
-	echo '<tr>';
-	echo '<th style="width:60px;">Kod</th>';
-	echo '<th style="width:200px;">Nazwa domyślna</th>';
-	echo '<th>Tekst na dyplomie (pozostaw puste = domyślny)</th>';
-	echo '</tr>';
+    echo '<br>';
+    echo '<table class="Tabella">';
+    echo '<tr><th class="SubTitle" colspan="4">Tekst kategorii na dyplomach</th></tr>';
+    echo '<tr>';
+    echo '<th style="width:60px;">Kod</th>';
+    echo '<th style="width:200px;">Nazwa domyślna</th>';
+    echo '<th>Tekst na dyplomie (pozostaw puste = domyślny)</th>';
+    echo '</tr>';
 
-	$groupLabels = array('I' => 'Indywidualnie', 'T' => 'Drużynowo', 'M' => 'Mikst');
-	$currentGroup = null;
-	foreach ($allEvents as $evCode => $ev) {
-		if ($ev['type'] !== $currentGroup) {
-			$currentGroup = $ev['type'];
-			$groupLabel = isset($groupLabels[$currentGroup]) ? $groupLabels[$currentGroup] : $currentGroup;
-			echo '<tr><td colspan="3" style="padding:6px 4px;background:#e9ecef;font-weight:bold;">' . htmlspecialchars($groupLabel) . '</td></tr>';
-		}
-		$currentText = isset($eventTexts[$evCode]) ? $eventTexts[$evCode] : '';
+    $groupLabels = ['I' => 'Indywidualnie', 'T' => 'Drużynowo', 'M' => 'Mikst'];
+    $currentGroup = null;
+    foreach ($allEvents as $evCode => $ev) {
+        if ($ev['type'] !== $currentGroup) {
+            $currentGroup = $ev['type'];
+            $groupLabel = $groupLabels[$currentGroup] ?? $currentGroup;
+            echo '<tr><td colspan="3" style="padding:6px 4px;background:#e9ecef;font-weight:bold;">' . htmlspecialchars($groupLabel) . '</td></tr>';
+        }
+        $currentText = $eventTexts[$evCode] ?? '';
 
-		echo '<tr>';
-		echo '<td style="padding:4px;text-align:center;">' . htmlspecialchars($ev['rawCode']) . '</td>';
-		echo '<td style="padding:4px;">' . htmlspecialchars($ev['name']) . '</td>';
-		echo '<td style="padding:4px;"><input type="text" name="EventText_' . htmlspecialchars($evCode) . '" value="' . htmlspecialchars($currentText) . '" style="width:95%;padding:3px;"></td>';
-		echo '</tr>';
-	}
+        echo '<tr>';
+        echo '<td style="padding:4px;text-align:center;">' . htmlspecialchars($ev['rawCode']) . '</td>';
+        echo '<td style="padding:4px;">' . htmlspecialchars($ev['name']) . '</td>';
+        echo '<td style="padding:4px;"><input type="text" name="EventText_' . htmlspecialchars($evCode) . '" value="' . htmlspecialchars($currentText) . '" style="width:95%;padding:3px;"></td>';
+        echo '</tr>';
+    }
 
-	echo '</table>';
+    echo '</table>';
 }
 
 // Save button
@@ -182,4 +188,3 @@ echo '</div>';
 echo '</form>';
 
 include('Common/Templates/tail.php');
-?>

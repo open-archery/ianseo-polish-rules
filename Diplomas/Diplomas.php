@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Diplomas.php - Main UI page for PL Diploma generation.
  *
@@ -9,7 +11,7 @@
  * - Action buttons to generate diplomas
  * - Custom diploma section with athlete picker
  */
-require_once(dirname(dirname(dirname(dirname(__FILE__)))) . '/config.php');
+require_once(dirname(__DIR__, 3) . '/config.php');
 CheckTourSession(true);
 require_once('DiplomaSetup.php');
 require_once('Fun_Diploma.php');
@@ -25,21 +27,21 @@ $configExists = !empty($config['CompetitionName']);
 $allEvents = pl_diploma_get_events();
 
 // Separate events by type for routing
-$indEvents = array();
-$teamEvents = array();
+$indEvents = [];
+$teamEvents = [];
 foreach ($allEvents as $code => $ev) {
-	if ($ev['type'] === 'I') {
-		$indEvents[$code] = $ev;
-	} else {
-		$teamEvents[$code] = $ev;
-	}
+    if ($ev['type'] === 'I') {
+        $indEvents[$code] = $ev;
+    } else {
+        $teamEvents[$code] = $ev;
+    }
 }
 
 $PAGE_TITLE = 'Dyplomy';
 $IncludeJquery = true;
 
-$JS_SCRIPT = array(
-	'<script type="text/javascript">
+$JS_SCRIPT = [
+    '<script type="text/javascript">
 	var athleteSearchTimeout = null;
 
 	function searchAthletes() {
@@ -173,17 +175,17 @@ $JS_SCRIPT = array(
 			results.style.display = "none";
 		}
 	});
-	</script>'
-);
+	</script>',
+];
 
 include('Common/Templates/head.php');
 
 // Configuration warning
 if (!$configExists) {
-	echo '<div style="background:#fff3cd;border:1px solid #ffc107;padding:10px;margin:10px 0;border-radius:4px;">';
-	echo '<strong>Uwaga:</strong> Konfiguracja dyplomów nie została jeszcze ustawiona. ';
-	echo '<a href="DiplomaConfig.php">Przejdź do konfiguracji</a>';
-	echo '</div>';
+    echo '<div style="background:#fff3cd;border:1px solid #ffc107;padding:10px;margin:10px 0;border-radius:4px;">';
+    echo '<strong>Uwaga:</strong> Konfiguracja dyplomów nie została jeszcze ustawiona. ';
+    echo '<a href="DiplomaConfig.php">Przejdź do konfiguracji</a>';
+    echo '</div>';
 }
 
 echo '<table class="Tabella">';
@@ -194,12 +196,12 @@ echo '</td></tr>';
 
 // Show current config summary
 if ($configExists) {
-	echo '<tr><td colspan="2" style="padding:8px;">';
-	echo '<strong>Zawody:</strong> ' . htmlspecialchars($config['CompetitionName']) . ' | ';
-	echo '<strong>Data:</strong> ' . htmlspecialchars($config['Dates']) . ' | ';
-	echo '<strong>Miejsce:</strong> ' . htmlspecialchars($config['Location']) . ' | ';
-	echo '<strong>Miejsca:</strong> ' . $config['PlaceFrom'] . ' - ' . $config['PlaceTo'];
-	echo '</td></tr>';
+    echo '<tr><td colspan="2" style="padding:8px;">';
+    echo '<strong>Zawody:</strong> ' . htmlspecialchars($config['CompetitionName']) . ' | ';
+    echo '<strong>Data:</strong> ' . htmlspecialchars($config['Dates']) . ' | ';
+    echo '<strong>Miejsce:</strong> ' . htmlspecialchars($config['Location']) . ' | ';
+    echo '<strong>Miejsca:</strong> ' . $config['PlaceFrom'] . ' - ' . $config['PlaceTo'];
+    echo '</td></tr>';
 }
 
 echo '</table>';
@@ -216,28 +218,28 @@ echo '<table class="Tabella" style="width:80%">';
 echo '<tr><td class="Center">';
 
 if (count($allEvents)) {
-	echo 'Wybierz konkurencje:<br>';
-	$selectSize = min(18, count($allEvents) + 4);
-	echo '<select name="Event[]" multiple="multiple" size="' . $selectSize . '" style="min-width:400px;">';
-	echo '<option value=".">-- Wszystkie --</option>';
-	$groupLabels = array('I' => 'Indywidualnie', 'T' => 'Drużynowo', 'M' => 'Mikst');
-	$currentGroup = null;
-	foreach ($allEvents as $code => $ev) {
-		if ($ev['type'] !== $currentGroup) {
-			if ($currentGroup !== null) {
-				echo '</optgroup>';
-			}
-			$currentGroup = $ev['type'];
-			echo '<optgroup label="' . htmlspecialchars($groupLabels[$currentGroup]) . '">';
-		}
-		echo '<option value="' . htmlspecialchars($code) . '" data-type="' . $ev['type'] . '">' . htmlspecialchars($ev['rawCode']) . ' - ' . htmlspecialchars($ev['name']) . '</option>';
-	}
-	if ($currentGroup !== null) {
-		echo '</optgroup>';
-	}
-	echo '</select>';
+    echo 'Wybierz konkurencje:<br>';
+    $selectSize = min(18, count($allEvents) + 4);
+    echo '<select name="Event[]" multiple="multiple" size="' . $selectSize . '" style="min-width:400px;">';
+    echo '<option value=".">-- Wszystkie --</option>';
+    $groupLabels = ['I' => 'Indywidualnie', 'T' => 'Drużynowo', 'M' => 'Mikst'];
+    $currentGroup = null;
+    foreach ($allEvents as $code => $ev) {
+        if ($ev['type'] !== $currentGroup) {
+            if ($currentGroup !== null) {
+                echo '</optgroup>';
+            }
+            $currentGroup = $ev['type'];
+            echo '<optgroup label="' . htmlspecialchars($groupLabels[$currentGroup]) . '">';
+        }
+        echo '<option value="' . htmlspecialchars($code) . '" data-type="' . $ev['type'] . '">' . htmlspecialchars($ev['rawCode']) . ' - ' . htmlspecialchars($ev['name']) . '</option>';
+    }
+    if ($currentGroup !== null) {
+        echo '</optgroup>';
+    }
+    echo '</select>';
 } else {
-	echo '<em>Brak zdefiniowanych konkurencji w tym turnieju.</em>';
+    echo '<em>Brak zdefiniowanych konkurencji w tym turnieju.</em>';
 }
 
 echo '</td></tr>';
@@ -293,20 +295,20 @@ echo '<td style="text-align:right;padding:5px;"><strong>Konkurencja:</strong></t
 echo '<td style="padding:5px;">';
 echo '<select id="customEventCode" name="eventCode" style="width:360px;padding:4px;">';
 echo '<option value="">-- Brak --</option>';
-$groupLabelsCustom = array('I' => 'Indywidualnie', 'T' => 'Drużynowo', 'M' => 'Mikst');
+$groupLabelsCustom = ['I' => 'Indywidualnie', 'T' => 'Drużynowo', 'M' => 'Mikst'];
 $currentGroupCustom = null;
 foreach ($allEvents as $code => $ev) {
-	if ($ev['type'] !== $currentGroupCustom) {
-		if ($currentGroupCustom !== null) {
-			echo '</optgroup>';
-		}
-		$currentGroupCustom = $ev['type'];
-		echo '<optgroup label="' . htmlspecialchars($groupLabelsCustom[$currentGroupCustom]) . '">';
-	}
-	echo '<option value="' . htmlspecialchars($code) . '">' . htmlspecialchars($ev['rawCode']) . ' - ' . htmlspecialchars($ev['name']) . '</option>';
+    if ($ev['type'] !== $currentGroupCustom) {
+        if ($currentGroupCustom !== null) {
+            echo '</optgroup>';
+        }
+        $currentGroupCustom = $ev['type'];
+        echo '<optgroup label="' . htmlspecialchars($groupLabelsCustom[$currentGroupCustom]) . '">';
+    }
+    echo '<option value="' . htmlspecialchars($code) . '">' . htmlspecialchars($ev['rawCode']) . ' - ' . htmlspecialchars($ev['name']) . '</option>';
 }
 if ($currentGroupCustom !== null) {
-	echo '</optgroup>';
+    echo '</optgroup>';
 }
 echo '</select>';
 echo '</td></tr>';
@@ -335,4 +337,3 @@ echo '</td></tr>';
 echo '</table>';
 
 include('Common/Templates/tail.php');
-?>

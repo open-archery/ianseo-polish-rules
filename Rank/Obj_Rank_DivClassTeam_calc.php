@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * Poland-specific team qualification calculator:
  * - Teams may have 3 or 4 athletes.
@@ -47,13 +49,17 @@ class Obj_Rank_DivClassTeam_calc extends Obj_Rank_DivClassTeam
                 ";
 
                 $rc = safe_r_sql($compSql);
-                $sumScore = 0; $sumGold = 0; $sumXnine = 0; $sumHits = 0; $counted = 0;
+                $sumScore = 0;
+                $sumGold = 0;
+                $sumXnine = 0;
+                $sumHits = 0;
+                $counted = 0;
                 if ($rc && safe_num_rows($rc) > 0) {
                     while (($row = safe_fetch($rc)) && $counted < 3) {
-                        $sumScore += (int)$row->QuScore;
-                        $sumGold  += (int)$row->QuGold;
-                        $sumXnine += (int)$row->QuXnine;
-                        $sumHits  += isset($row->QuHits) ? (int)$row->QuHits : 0;
+                        $sumScore += (int) $row->QuScore;
+                        $sumGold  += (int) $row->QuGold;
+                        $sumXnine += (int) $row->QuXnine;
+                        $sumHits  += isset($row->QuHits) ? (int) $row->QuHits : 0;
                         $counted++;
                     }
                 }
@@ -90,26 +96,34 @@ class Obj_Rank_DivClassTeam_calc extends Obj_Rank_DivClassTeam
         ";
 
         $r = safe_r_sql($q);
-        if (!$r) return false;
+        if (!$r) {
+            return false;
+        }
 
         $myEv = '';
         $myTeam = '';
-        $rank = 1; $pos = 0;
-        $scoreOld = 0; $goldOld = 0; $xNineOld = 0;
+        $rank = 1;
+        $pos = 0;
+        $scoreOld = 0;
+        $goldOld = 0;
+        $xNineOld = 0;
 
         if (safe_num_rows($r) > 0) {
             while ($row = safe_fetch($r)) {
-                if ($myEv != $row->TeEvent) {
+                if ($myEv !== $row->TeEvent) {
                     $myEv = $row->TeEvent;
-                    $rank = 1; $pos = 0;
-                    $scoreOld = 0; $goldOld = 0; $xNineOld = 0;
+                    $rank = 1;
+                    $pos = 0;
+                    $scoreOld = 0;
+                    $goldOld = 0;
+                    $xNineOld = 0;
                     $myTeam = '';
                 }
 
-                if ($myTeam != $row->TeCoId) {
+                if ($myTeam !== $row->TeCoId) {
                     $myTeam = $row->TeCoId;
                     ++$pos;
-                    if (!($row->TeScore == $scoreOld && $row->TeGold == $goldOld && $row->TeXnine == $xNineOld)) {
+                    if (!($row->TeScore === $scoreOld && $row->TeGold === $goldOld && $row->TeXnine === $xNineOld)) {
                         $rank = $pos;
                     }
                     $date = date('Y-m-d H:i:s');

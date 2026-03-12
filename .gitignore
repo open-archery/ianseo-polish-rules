@@ -12,6 +12,7 @@ Thumbs.db
 # PHP
 /vendor/
 *.log
+.php-cs-fixer.cache
 
 # Research PDFs (source documents, not committed to repo)
 research/*.pdf

@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * AjaxGetAthletes.php - AJAX endpoint for athlete search (custom diploma picker).
  *
@@ -7,7 +9,7 @@
  *
  * Returns JSON array of matching athletes.
  */
-require_once(dirname(dirname(dirname(dirname(__FILE__)))) . '/config.php');
+require_once(dirname(__DIR__, 3) . '/config.php');
 CheckTourSession(true);
 require_once('Fun_Diploma.php');
 
@@ -16,8 +18,8 @@ header('Content-Type: application/json; charset=utf-8');
 $search = isset($_GET['q']) ? trim($_GET['q']) : '';
 
 if (strlen($search) < 2) {
-	echo json_encode(array());
-	exit;
+    echo json_encode([]);
+    exit;
 }
 
 $athletes = pl_diploma_get_all_athletes($search);
