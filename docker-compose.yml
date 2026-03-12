@@ -1,0 +1,8 @@
+services:
+  app:
+    image: thecodingmachine/php:8.0-v5-cli
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html/
+    environment:
+      PHP_INI_MEMORY_LIMIT: 1g

@@ -1,4 +1,6 @@
 <?php
+
+declare(strict_types=1);
 /**
  * PrnTeamDipl.php - Generate team and mixed team diploma PDFs.
  *
@@ -6,7 +8,7 @@
  *   Event[]  - selected event codes
  *   Source   - 'qualification' or 'finals'
  */
-require_once(dirname(dirname(dirname(dirname(__FILE__)))) . '/config.php');
+require_once(dirname(__DIR__, 3) . '/config.php');
 CheckTourSession(true);
 require_once('DiplomaSetup.php');
 require_once('Fun_Diploma.php');
@@ -20,18 +22,18 @@ $config = pl_diploma_get_config($_SESSION['TourId']);
 $eventTexts = pl_diploma_get_event_texts($_SESSION['TourId']);
 
 // Parse request
-$ThisEvents = isset($_GET['Event']) ? $_GET['Event'] : array();
-$source = isset($_GET['Source']) ? $_GET['Source'] : 'qualification';
+$ThisEvents = $_GET['Event'] ?? [];
+$source = $_GET['Source'] ?? 'qualification';
 
 // Sanitize event codes (composite format: I:CODE, T:CODE, M:CODE)
 foreach ($ThisEvents as &$TempEvent) {
-	$TempEvent = substr($TempEvent, 0, 15);
+    $TempEvent = substr($TempEvent, 0, 15);
 }
 unset($TempEvent);
 
 // Catch 'all' events
-if (count($ThisEvents) == 1 && $ThisEvents[0] == '.') {
-	$ThisEvents = array();
+if (count($ThisEvents) === 1 && $ThisEvents[0] === '.') {
+    $ThisEvents = [];
 }
 
 // Get place range from config
@@ -40,46 +42,46 @@ $placeTo = $config['PlaceTo'];
 
 // Fetch results based on source
 if ($source === 'finals') {
-	$results = pl_diploma_get_team_final_results($ThisEvents, $placeFrom, $placeTo);
+    $results = pl_diploma_get_team_final_results($ThisEvents, $placeFrom, $placeTo);
 } else {
-	$results = pl_diploma_get_team_qual_results($ThisEvents, $placeFrom, $placeTo);
+    $results = pl_diploma_get_team_qual_results($ThisEvents, $placeFrom, $placeTo);
 }
 
 // Check if there are results
 if (empty($results)) {
-	die('Brak wyników do wygenerowania dyplomów.');
+    die('Brak wyników do wygenerowania dyplomów.');
 }
 
 // Generate PDF
 $pdf = PLDiplomaPdf::createInstance('Dyplomy drużynowe');
 
 foreach ($results as $team) {
-	// Determine class text: custom override or default event name
-	$classText = $team['EventName'];
-	$compositeKey = ($team['IsMixed'] ? 'M:' : 'T:') . $team['EventId'];
-	if (isset($eventTexts[$compositeKey]) && !empty($eventTexts[$compositeKey])) {
-		$classText = $eventTexts[$compositeKey];
-	}
+    // Determine class text: custom override or default event name
+    $classText = $team['EventName'];
+    $compositeKey = ($team['IsMixed'] ? 'M:' : 'T:') . $team['EventId'];
+    if (isset($eventTexts[$compositeKey]) && !empty($eventTexts[$compositeKey])) {
+        $classText = $eventTexts[$compositeKey];
+    }
 
-	// Build team member names array
-	$memberNames = array();
-	foreach ($team['Athletes'] as $athlete) {
-		$memberNames[] = $athlete['EnFullName'];
-	}
+    // Build team member names array
+    $memberNames = [];
+    foreach ($team['Athletes'] as $athlete) {
+        $memberNames[] = $athlete['EnFullName'];
+    }
 
-	$pdf->printDiploma(
-		$config['CompetitionName'],
-		$config['Dates'],
-		$config['Location'],
-		$classText,
-		$team['Rank'],
-		'',                // no individual athlete name for team
-		$team['Club'],
-		$memberNames,
-		$config['BodyText'],
-		$config['HeadJudge'],
-		$config['Organizer']
-	);
+    $pdf->printDiploma(
+        $config['CompetitionName'],
+        $config['Dates'],
+        $config['Location'],
+        $classText,
+        $team['Rank'],
+        '',                // no individual athlete name for team
+        $team['Club'],
+        $memberNames,
+        $config['BodyText'],
+        $config['HeadJudge'],
+        $config['Organizer']
+    );
 }
 
 $pdf->Output('dyplomy_druzynowe.pdf', 'I');

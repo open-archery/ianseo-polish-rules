@@ -1,8 +1,11 @@
 <?php
 
-if($on and $_SESSION["TourLocRule"]=='PL'){
-  $ret['PRNT'][] = 'Dyplomy|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/Diplomas/Diplomas.php';
+declare(strict_types=1);
+
+if ($on && $_SESSION["TourLocRule"] === 'PL') {
+    $ret['PRNT'][] = 'Dyplomy|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/Diplomas/Diplomas.php';
 }
+
 /*
 
 You can customize your menus adding lines in this file. The structure is as follows:
@@ -32,12 +35,10 @@ You can customize your menus adding lines in this file. The structure is as foll
 
 * Sub menu:
 Creating a submenu is straight forward: just add a nested array, giving it a (string)key, as in:
-	$ret['XXXX']['YYYY']
+    $ret['XXXX']['YYYY']
 
 * Link to resource
 Each menu item is a string, that joins the text description of the item and the link itself with a pipe (|) symbol:
-	$ret['XXXX'][] = 'Description of the item' . '|' . $CFG->ROOT_DIR . 'Modules/Custom/' . 'Link/To/Your/page.php';
+    $ret['XXXX'][] = 'Description of the item' . '|' . $CFG->ROOT_DIR . 'Modules/Custom/' . 'Link/To/Your/page.php';
 
 */
-
-?>
