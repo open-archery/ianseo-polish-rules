@@ -43,10 +43,14 @@ existing ianseo configuration** with no custom code, output a short report inste
 
 > When this report is produced, **stop here** — do not produce `requirements.md` or involve the Developer.
 
-### B) Feature Requirements (`FeaturesDocumentation/{FeatureName}/requirements.md`)
+### B) Feature Spec (`openspec/specs/{feature-name}/spec.md`)
 
 When Pass 0 determines that custom development **is** needed, output a structured document containing
 pure business requirements — in archery and competition terms only. No ianseo concepts.
+
+> **Where to save:** `openspec/specs/{feature-name}/spec.md` — use kebab-case for the feature name
+> (e.g. `openspec/specs/bib-import/spec.md`). This is the long-lived capability spec in the
+> OpenSpec system. The Developer will read it when creating a change.
 
 1. **Competition format summary** — plain-language description of the PZŁucz rule (cite section/page from `regulamin-lucznictwa.md`)
 2. **Divisions** — Polish name, short code, bow type description, eligible age classes
@@ -63,8 +67,9 @@ pure business requirements — in archery and competition terms only. No ianseo 
 
 ### C) Research Document Updates
 
-When asked to produce or update `.github/agents/research/pzlucz-rules.md`, populate ALL sections
-defined in PLAN.md §3.1 using the same business-only vocabulary as above.
+When asked to produce or update `.github/agents/research/pzlucz-rules.md`, populate all sections
+covering competition formats, divisions, age classes, scoring, and tiebreaking using the same
+business-only vocabulary as above.
 
 ## Reasoning Process
 
@@ -124,8 +129,8 @@ Only after completing both passes write the final `requirements.md` (sections 1�
 
 ## Output Format
 
-Use markdown with clear headings. Structure every requirements document so it can be
-saved as `FeaturesDocumentation/{FeatureName}/requirements.md` and handed directly to the Developer agent.
+Use markdown with clear headings. Structure every spec document so it can be
+saved as `openspec/specs/{feature-name}/spec.md` and handed directly to the Developer agent.
 
 Use archery and competition terminology throughout, written in English. A non-technical archery official
 should be able to read the output and confirm it correctly captures the regulations.

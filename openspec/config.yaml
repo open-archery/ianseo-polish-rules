@@ -1,20 +1,54 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  Project: ianseo Polish Archery Federation (PZŁucz) ruleset module.
+  All code lives exclusively in Modules/Sets/PL/. Never modify ianseo core files.
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  Tech stack: PHP 8.0+, MySQL, TCPDF for PDF generation. No build step.
+
+  Research files (read before any task):
+  - .github/agents/research/ianseo-internals.md — ianseo API reference (DB helpers, session, module registration, ranking, AJAX patterns)
+  - .github/agents/research/pzlucz-rules.md — PZŁucz competition rules mapped to ianseo concepts
+  - .github/agents/research/regulamin-lucznictwa.md — full Polish archery regulations (source of truth)
+
+  Mandatory conventions:
+  - DB tables: PL prefix, CamelCase (e.g. PLDiplomaConfig)
+  - DB columns: table-prefix abbreviation + CamelCase (e.g. PlDcTournament)
+  - PHP functions: pl_ prefix (e.g. pl_get_results())
+  - PHP classes: PL prefix (e.g. PLDiplomaPdf)
+  - Files: CamelCase (e.g. DiplomaConfig.php); Directories: CamelCase (e.g. Diplomas/)
+  - UI language: Polish; code comments: English; all docs: English
+  - Auto-install DB tables via SHOW TABLES LIKE pattern — no install script changes
+  - Session guard: CheckTourSession(true) for UI pages, (false) for AJAX
+  - DB helpers: safe_r_sql, safe_w_sql, safe_fetch, safe_num_rows, safe_free_result, StrSafe_DB
+  - Page template: Common/Templates/head.php / tail.php
+  - Bootstrap path from PL/{sub}/file.php: dirname(dirname(dirname(dirname(__FILE__)))) . '/config.php'
+  - Menu registration in menu.php guarded by: if ($on && $_SESSION["TourLocRule"] == 'PL')
+
+  Agent roles:
+  - Advisor agent (.github/agents/advisor.prompt.md): PZŁucz domain expert — writes specs to openspec/specs/{feature}/spec.md
+  - Developer agent (.github/agents/developer.prompt.md): ianseo PHP implementer — creates change design and code
+  - Reviewer agent (.github/agents/reviewer.prompt.md): code quality gate — reviews before archiving
+
+  Implemented features (specs in openspec/specs/):
+  - tournament-setup: Setup_1/3/6_PL.php + lib.php (✅ done)
+  - post-elim-ranking: Rank/Obj_Rank_Final*_calc.php (✅ done)
+  - sportzona-lookup: Lookup/SportzonaProxy.php + Fun_ClubName.php (✅ done)
+  - bib-import: Import/BibImport.php + Fun_BibImport.php (✅ done)
+  - diplomas: Diplomas/ full module (✅ done)
+
+rules:
+  proposal:
+    - Keep proposals under 400 words
+    - Include a "Non-goals" section
+    - Reference the relevant PZŁucz regulation section (§) if applicable
+    - State which agent role produces the spec (Advisor) vs design (Developer)
+  design:
+    - Must include ianseo hook point or integration approach
+    - Must list all files to create/modify
+    - Include menu.php additions if the feature is user-facing
+  tasks:
+    - Break implementation into atomic tasks (one file or one concern per task)
+    - First task: read research files and existing spec
+    - Last task: self-review against Reviewer agent checklist before commit
+    - Each task should be completable independently

@@ -17,10 +17,10 @@ All review output and all documentation feedback must be written in **English**.
 
 ## Primary Context Files (read before reviewing)
 
-1. `research/ianseo-internals.md` — documented conventions and APIs
-2. `research/pzlucz-rules.md` — spec context for the feature being reviewed
-3. `FeaturesDocumentation/{FeatureName}/requirements.md` — what was requested vs what was implemented
-4. `FeaturesDocumentation/{FeatureName}/architecture.md` — the agreed design
+1. `.github/agents/research/ianseo-internals.md` — documented conventions and APIs
+2. `.github/agents/research/pzlucz-rules.md` — spec context for the feature being reviewed
+3. `openspec/specs/{feature-name}/spec.md` — what was requested vs what was implemented
+4. `openspec/changes/{change-name}/design.md` — the agreed design
 5. `.github/agents/developer.prompt.md` — the full list of conventions the developer must follow
 
 ## Review Checklist
@@ -63,13 +63,13 @@ severity, and a clear fix instruction.
 
 ### 4. Completeness (MINOR — should be fixed before merge)
 
-| Check                     | What to look for                                                                        |
-| ------------------------- | --------------------------------------------------------------------------------------- |
-| **Menu registration**     | New pages are reachable via `menu.php`                                                  |
-| **Edge cases**            | Empty result sets handled gracefully (no PHP warnings on `safe_fetch` returning false)  |
-| **Resource cleanup**      | `safe_free_result()` called after queries                                               |
-| **Requirements coverage** | Every requirement in `FeaturesDocumentation/{FeatureName}/requirements.md` is addressed |
-| **Research update**       | If new ianseo API behaviour was discovered, `ianseo-internals.md` update is included    |
+| Check                     | What to look for                                                                       |
+| ------------------------- | -------------------------------------------------------------------------------------- |
+| **Menu registration**     | New pages are reachable via `menu.php`                                                 |
+| **Edge cases**            | Empty result sets handled gracefully (no PHP warnings on `safe_fetch` returning false) |
+| **Resource cleanup**      | `safe_free_result()` called after queries                                              |
+| **Requirements coverage** | Every requirement in `openspec/specs/{feature-name}/spec.md` is addressed              |
+| **Research update**       | If new ianseo API behaviour was discovered, `ianseo-internals.md` update is included   |
 
 ### 5. Code Quality (MINOR — suggestions welcome but not blocking)
 
@@ -110,5 +110,5 @@ Fix: {exact instruction}
 ## Hard Constraints
 
 - **Never rewrite the code yourself.** Return the review document only.
-- If you are missing the `spec.md` for the feature, state: _"spec.md not provided — cannot verify spec coverage."_
-- If `research/ianseo-internals.md` has not been produced yet, note it as a blocker in the review summary.
+- If you are missing `openspec/specs/{feature-name}/spec.md`, state: _"spec.md not provided — cannot verify spec coverage."_
+- If `.github/agents/research/ianseo-internals.md` has not been produced yet, note it as a blocker in the review summary.

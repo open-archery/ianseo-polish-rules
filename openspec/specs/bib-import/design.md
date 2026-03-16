@@ -22,19 +22,19 @@ DB tables are required.
 
 ### Tables read
 
-| Table          | Purpose                                                      |
-|----------------|--------------------------------------------------------------|
-| `LookUpEntries`| Athlete registry populated by Sportzona sync (IOC = `POL`)  |
-| `Divisions`    | Populate the division dropdown for the operator              |
-| `Classes`      | Age class resolution per athlete                             |
-| `Countries`    | Resolve or create a club record for each athlete             |
-| `Entries`      | Duplicate check                                              |
+| Table           | Purpose                                                    |
+| --------------- | ---------------------------------------------------------- |
+| `LookUpEntries` | Athlete registry populated by Sportzona sync (IOC = `POL`) |
+| `Divisions`     | Populate the division dropdown for the operator            |
+| `Classes`       | Age class resolution per athlete                           |
+| `Countries`     | Resolve or create a club record for each athlete           |
+| `Entries`       | Duplicate check                                            |
 
 ### Tables written
 
-| Table       | Purpose                                    |
-|-------------|---------------------------------------------|
-| `Countries` | Upsert club record if it does not exist     |
+| Table       | Purpose                                          |
+| ----------- | ------------------------------------------------ |
+| `Countries` | Upsert club record if it does not exist          |
 | `Entries`   | Create one row per successfully imported athlete |
 
 ---
@@ -42,6 +42,7 @@ DB tables are required.
 ## Age Class Resolution Algorithm
 
 ### Inputs
+
 - Athlete birth year: `substr($lue->LueCtrlCode, 0, 4)` (LueCtrlCode is `'YYYY-01-01'`)
 - Tournament start year: `substr($_SESSION['TourWhenFrom'], 0, 4)` (not used in
   the SQL query itself, but used to determine the reference date context if
@@ -51,6 +52,7 @@ DB tables are required.
 - Athlete sex: `$lue->LueSex` — `0` = male → `ClSex = 1`; `1` = female → `ClSex = 2`
 
 ### SQL query
+
 ```sql
 SELECT *
 FROM Classes
@@ -68,13 +70,13 @@ the generic senior M class).
 
 ### Edge cases
 
-| Scenario | Handling |
-|----------|----------|
-| No matching class | Import entry with `EnClass = ''`; add to class-unresolved list |
-| Multiple matching classes | Take first result (narrowest range) |
-| `ClFrom` = `'0'` or `''` | Treated as "no lower bound" |
-| `ClTo`   = `'0'` or `''` | Treated as "no upper bound" |
-| `ClAlDivision` = `''`    | Class allows all divisions |
+| Scenario                  | Handling                                                        |
+| ------------------------- | --------------------------------------------------------------- |
+| No matching class         | Import entry with `EnClass = ''`; add to class-unresolved list  |
+| Multiple matching classes | Take first result (narrowest range)                             |
+| `ClFrom` = `'0'` or `''`  | Treated as "no lower bound"                                     |
+| `ClTo` = `'0'` or `''`    | Treated as "no upper bound"                                     |
+| `ClAlDivision` = `''`     | Class allows all divisions                                      |
 | LueCtrlCode is null/empty | Birth year defaults to `'0'`; no class match → class-unresolved |
 
 ---
@@ -126,18 +128,19 @@ ianseo stores **family name** in `EnFirstName` and **given name** in `EnName`.
 This is confirmed by `Partecipants/LookupTableLoad.php` lines 34–41.
 
 Mapping:
+
 - `LueFamilyName` → `EnFirstName`
-- `LueName`       → `EnName`
+- `LueName` → `EnName`
 
 ---
 
 ## Files to Create
 
-| File | Responsibility |
-|------|----------------|
-| `Modules/Sets/PL/Import/BibImport.php` | Main UI page: form rendering, POST handling, result display |
-| `Modules/Sets/PL/Import/Fun_BibImport.php` | Processing functions: lookup, age class resolution, country upsert, entry creation |
-| `FeaturesDocumentation/BibImport/architecture.md` | This document |
+| File                                              | Responsibility                                                                     |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `Modules/Sets/PL/Import/BibImport.php`            | Main UI page: form rendering, POST handling, result display                        |
+| `Modules/Sets/PL/Import/Fun_BibImport.php`        | Processing functions: lookup, age class resolution, country upsert, entry creation |
+| `FeaturesDocumentation/BibImport/architecture.md` | This document                                                                      |
 
 ---
 

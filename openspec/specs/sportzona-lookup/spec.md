@@ -187,47 +187,47 @@ Short name = `{PREFIX_ABBR} {ProperName} {City}`
 
 **Known organizational prefix → abbreviation table** (match longest first):
 
-| Full prefix | Abbreviation |
-|---|---|
-| Akademia Sportu | AS |
-| Akademicki Klub Sportowy | AKS |
-| Budowlany Klub Sportowy | BKS |
-| Cywilno-Wojskowy Klub Sportowy | CWKS |
-| Gminny Ludowy Klub Sportowy | GLKS |
-| Gminny Ośrodek Kultury i Sportu | GOKiS |
-| Górniczy Klub Sportowy | GKS |
-| Integracyjne Centrum Sportu i Rehabilitacji | ICSiR |
-| Klub Łuczniczy | KŁ |
-| Klub Sportowy | KS |
-| Kołobrzeskie Stowarzyszenie Łuczników | KSŁ |
-| Ludowy Uczniowski Klub Sportowy | LUKS |
-| Ludowy Klub Sportowy | LKS |
-| Miejski Klub Sportowy | MKS |
-| Miejsko-Ludowy Klub Sportowy | MLKS |
-| Mokotowski Klub Łuczniczy | MKŁ |
-| Morski Robotniczy Klub Sportowy | MRKS |
-| Młodzieżowy Klub Sportowy | MłKS |
-| Organizacja Środowiskowa Akademickiego Związku Sportowego | OŚAZS |
-| Parafialny Klub Sportowy | PKS |
-| Polski Związek Łuczniczy | PZŁ |
-| Polskie Towarzystwo Gimnastyczne | PTG |
-| Społeczne Towarzystwo Sportowe | STS |
-| Społeczny Klub Sportowy | SKS |
-| Stowarzyszenie Łucznicze | SŁ |
-| Stowarzyszenie Sportowo-Rehabilitacyjne | SSR |
-| Stowarzyszenie Sportowo-Rekreacyjne | SSRek |
-| Stowarzyszenie | St. |
-| Szkolny Klub Sportowy | SKS |
-| Towarzystwo Sportowe | TS |
-| Uczniowski Klub Łuczniczy | UKŁ |
-| Uczniowski Klub Sportowy | UKS |
-| Uczniowski Ludowy Klub Sportowy | ULKS |
-| Warszawski Klub Łuczniczy | WKŁ |
-| Zrzeszenie Sportu i Rehabilitacji | ZSiR |
-| Łucznicze Towarzystwo Sportowe | ŁTS |
-| Łuczniczy Klub Sportowy | ŁKS |
-| Łuczniczy Ludowy Klub Sportowy | ŁLKS |
-| Łuczniczy Uczniowski Klub Sportowy | ŁUKS |
+| Full prefix                                               | Abbreviation |
+| --------------------------------------------------------- | ------------ |
+| Akademia Sportu                                           | AS           |
+| Akademicki Klub Sportowy                                  | AKS          |
+| Budowlany Klub Sportowy                                   | BKS          |
+| Cywilno-Wojskowy Klub Sportowy                            | CWKS         |
+| Gminny Ludowy Klub Sportowy                               | GLKS         |
+| Gminny Ośrodek Kultury i Sportu                           | GOKiS        |
+| Górniczy Klub Sportowy                                    | GKS          |
+| Integracyjne Centrum Sportu i Rehabilitacji               | ICSiR        |
+| Klub Łuczniczy                                            | KŁ           |
+| Klub Sportowy                                             | KS           |
+| Kołobrzeskie Stowarzyszenie Łuczników                     | KSŁ          |
+| Ludowy Uczniowski Klub Sportowy                           | LUKS         |
+| Ludowy Klub Sportowy                                      | LKS          |
+| Miejski Klub Sportowy                                     | MKS          |
+| Miejsko-Ludowy Klub Sportowy                              | MLKS         |
+| Mokotowski Klub Łuczniczy                                 | MKŁ          |
+| Morski Robotniczy Klub Sportowy                           | MRKS         |
+| Młodzieżowy Klub Sportowy                                 | MłKS         |
+| Organizacja Środowiskowa Akademickiego Związku Sportowego | OŚAZS        |
+| Parafialny Klub Sportowy                                  | PKS          |
+| Polski Związek Łuczniczy                                  | PZŁ          |
+| Polskie Towarzystwo Gimnastyczne                          | PTG          |
+| Społeczne Towarzystwo Sportowe                            | STS          |
+| Społeczny Klub Sportowy                                   | SKS          |
+| Stowarzyszenie Łucznicze                                  | SŁ           |
+| Stowarzyszenie Sportowo-Rehabilitacyjne                   | SSR          |
+| Stowarzyszenie Sportowo-Rekreacyjne                       | SSRek        |
+| Stowarzyszenie                                            | St.          |
+| Szkolny Klub Sportowy                                     | SKS          |
+| Towarzystwo Sportowe                                      | TS           |
+| Uczniowski Klub Łuczniczy                                 | UKŁ          |
+| Uczniowski Klub Sportowy                                  | UKS          |
+| Uczniowski Ludowy Klub Sportowy                           | ULKS         |
+| Warszawski Klub Łuczniczy                                 | WKŁ          |
+| Zrzeszenie Sportu i Rehabilitacji                         | ZSiR         |
+| Łucznicze Towarzystwo Sportowe                            | ŁTS          |
+| Łuczniczy Klub Sportowy                                   | ŁKS          |
+| Łuczniczy Ludowy Klub Sportowy                            | ŁLKS         |
+| Łuczniczy Uczniowski Klub Sportowy                        | ŁUKS         |
 
 > The table is non-exhaustive. For unrecognized prefixes the adapter should
 > fall back to using the full name without abbreviation. Operators can extend
@@ -253,15 +253,15 @@ Algorithm:
 
 **Examples:**
 
-| Raw `clubName` | Proper name | City | Code |
-|---|---|---|---|
-| `Miejsko-Ludowy Klub Sportowy "Czarna Strzała" (Bytom)` | Czarna Strzała | Bytom | `CSB` |
-| `Klub Sportowy "Piast" (Nowa Ruda)` | Piast | Nowa Ruda | `PNR` |
-| `Bałtycka Strzała (Gdańsk)` | Bałtycka Strzała | Gdańsk | `BSG` |
-| `Uczniowski Klub Sportowy "Talent" (Wrocław)` | Talent | Wrocław | `TW` → extend → `TWR` |
-| `Klub Sportowy Wanda (Kraków)` | Wanda | Kraków | `W` → extend → `WKR` |
-| `Łuczniczy Klub Sportowy "Sagit" (Humniska)` | Sagit | Humniska | `SH` |
-| `Uczniowski Klub Sportowy "Diana" (Wolbrom)` | Diana | Wolbrom | `DW` |
+| Raw `clubName`                                          | Proper name      | City      | Code                  |
+| ------------------------------------------------------- | ---------------- | --------- | --------------------- |
+| `Miejsko-Ludowy Klub Sportowy "Czarna Strzała" (Bytom)` | Czarna Strzała   | Bytom     | `CSB`                 |
+| `Klub Sportowy "Piast" (Nowa Ruda)`                     | Piast            | Nowa Ruda | `PNR`                 |
+| `Bałtycka Strzała (Gdańsk)`                             | Bałtycka Strzała | Gdańsk    | `BSG`                 |
+| `Uczniowski Klub Sportowy "Talent" (Wrocław)`           | Talent           | Wrocław   | `TW` → extend → `TWR` |
+| `Klub Sportowy Wanda (Kraków)`                          | Wanda            | Kraków    | `W` → extend → `WKR`  |
+| `Łuczniczy Klub Sportowy "Sagit" (Humniska)`            | Sagit            | Humniska  | `SH`                  |
+| `Uczniowski Klub Sportowy "Diana" (Wolbrom)`            | Diana            | Wolbrom   | `DW`                  |
 
 ---
 
@@ -284,11 +284,11 @@ Algorithm:
 
 #### 4.5.5 Summary table update
 
-| ianseo field | Derived from | Example |
-|---|---|---|
-| Country code | §4.5.3 algorithm | `CSB` |
-| Short country name | §4.5.2 algorithm | `MLKS Czarna Strzała Bytom` |
-| Full country description | Raw `clubName` | `Miejsko-Ludowy Klub Sportowy "Czarna Strzała" (Bytom)` |
+| ianseo field             | Derived from     | Example                                                 |
+| ------------------------ | ---------------- | ------------------------------------------------------- |
+| Country code             | §4.5.3 algorithm | `CSB`                                                   |
+| Short country name       | §4.5.2 algorithm | `MLKS Czarna Strzała Bytom`                             |
+| Full country description | Raw `clubName`   | `Miejsko-Ludowy Klub Sportowy "Czarna Strzała" (Bytom)` |
 
 ### 4.6 Paralympic classification
 
@@ -323,7 +323,7 @@ shall be **ignored**. It is not mapped to any ianseo field.
 | Given name          | `firstName`                  | Direct string                                |
 | Gender              | `firstName`                  | Heuristic: ends with "a" → female, else male |
 | Date of birth       | `birthYear`                  | `"{birthYear}-01-01"`                        |
-| Country code        | `clubName`                   | 2–4 char code via §4.5.3 (e.g. `CSB`)       |
+| Country code        | `clubName`                   | 2–4 char code via §4.5.3 (e.g. `CSB`)        |
 | Country description | `clubName`                   | Raw full club name string                    |
 | Short country       | `clubName`                   | Abbreviated short name via §4.5.2            |
 | Paralympic flag     | —                            | Always false                                 |
