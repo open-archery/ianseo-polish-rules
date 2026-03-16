@@ -423,7 +423,7 @@ Losers within same round classified by:
 - **Requirement:** All from same club, same division, same age category
 - **Roster lock:** Registered before qualification starts; fixed for entire competition
 - **Substitution:** In 4-member team, can swap between ends (not within an end)
-- **Scoring rule:** Best 3 of 4 qualification scores determine team ranking (confirmed by existing code `Poland-TeamsTop3of4` in `Rank/Obj_Rank_DivClassTeam_calc.php`)
+- **Scoring rule:** Best 3 of 4 qualification scores determine team ranking
 
 ### 7.2 Mixed Teams (§2.3.1.2.4)
 
@@ -720,12 +720,11 @@ recurve indoor triple face (4cm inner-10). Already differentiated in FITA's setu
 as `$TargetC` vs `$TargetR`. No custom code needed — just correct target face
 assignment in `CreateTargetFace()`.
 
-### 11.8 Best 3 of 4 Team Scoring — **Priority: VERIFIED | Difficulty: DONE**
+### 11.8 Best 3 of 4 Team Scoring — **Priority: HIGH | Difficulty: MEDIUM**
 
-Already implemented in `Rank/Obj_Rank_DivClassTeam_calc.php` and activated via
-the `'Poland-TeamsTop3of4'` sub-rule. The existing implementation queries
-`TeamComponent JOIN Qualifications`, takes top 3 by score, and recomputes team
-totals. Applies to all tournament types where the sub-rule is active.
+In polish rules, teams are defined before the start of the competition, and
+can be composed from 3 or 4 athletes. However, their qualification result is
+based on sum of only 3 best athletes from given team.
 
 ### 11.9 Mixed Team Formation Rules — **Priority: MEDIUM | Difficulty: MEDIUM**
 
