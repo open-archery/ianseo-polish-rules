@@ -5,12 +5,12 @@
  * Identical to the core implementation except calcFromPhase(), which applies
  * PZŁucz §2.6.5 rules:
  *
- *  1. Unique sequential positions for ALL phases >= 4 (quarterfinals and below),
+ *  1. No-bronze-match detection: when the bronze match result is 0-0 (not shot),
+ *     both semifinal losers are awarded shared 3rd place instead of 3rd/4th.
+ *  2. Unique sequential positions for ALL phases >= 4 (quarterfinals and below),
  *     not just the quarterfinals as in the default engine.
- *  2. Secondary tiebreaker is team qualification rank (TeRank ASC) instead of
+ *  3. Secondary tiebreaker is team qualification rank (TeRank ASC) instead of
  *     cumulative score.  The Teams table is joined to supply this value.
- *
- * Bronze-medal-match no-shoot detection is NOT implemented here (deferred).
  */
 	class Obj_Rank_FinalTeam_calc extends Obj_Rank_FinalTeam
 	{
@@ -83,8 +83,12 @@
 	/**
 	 * calcFromPhase()
 	 *
-	 * PL modification (§2.6.5): unique sequential positions for ALL phases >= 4,
-	 * sorted by match score DESC then team qualification rank (TeRank) ASC.
+	 * PL modification (§2.6.5):
+	 *  - No-bronze detection: when the bronze phase losers query returns 0 rows,
+	 *    check if both bronze-match teams scored 0 (match not shot). If so,
+	 *    assign both shared 3rd place.
+	 *  - Unique sequential positions for ALL phases >= 4, sorted by match score
+	 *    DESC then team qualification rank (TeRank) ASC.
 	 *
 	 * All other behaviour (gold/bronze/semi handling, EvWinnerFinalRank offset,
 	 * parent-event chains, SubCodes) is preserved from the core implementation.
@@ -120,8 +124,8 @@
 
 			// Fetch all losers for this phase.
 			// PL changes:
-			//   • LEFT JOIN Teams AS te to obtain the team qualification rank.
-			//   • ORDER BY uses te.TeRank ASC as secondary tiebreaker instead of
+			//   - LEFT JOIN Teams AS te to obtain the team qualification rank.
+			//   - ORDER BY uses te.TeRank ASC as secondary tiebreaker instead of
 			//     cumulative score.
 			$q = "
 				SELECT
@@ -181,7 +185,7 @@
 				{
 					$myRow = safe_fetch($rs);
 
-					// Normalise phase identifier for non-standard bracket sizes (1/24, 1/48, …)
+					// Normalise phase identifier for non-standard bracket sizes (1/24, 1/48, ...)
 					$phase = namePhase($myRow->EvFinalFirstPhase, $realphase);
 
 					// Walk up the parent-event chain (combined/sub-events)
@@ -265,6 +269,59 @@
 
 							$myRow = safe_fetch($rs);
 						}
+					}
+				}
+				else
+				{
+					// No losers returned — may be the bronze match that was never shot (0-0 tie).
+					// Guard: only attempt detection for the bronze phase (normalized phase == 1).
+					// Without this guard, an unplayed gold match (also 0-0) triggers the same
+					// 2-row condition and would incorrectly place both finalists at 3rd.
+					$qEvt = safe_r_sql("SELECT EvFinalFirstPhase FROM Events WHERE EvCode='{$event}' AND EvTournament={$this->tournament} AND EvTeamEvent=1");
+					if (!($qEvt && ($eRow = safe_fetch($qEvt)) && namePhase($eRow->EvFinalFirstPhase, $realphase) == 1))
+						return true; // not the bronze phase — leave ranks empty as normal
+
+					// Detect: both teams in this phase scored 0 with 0 set points.
+					$qDetect = "
+						SELECT tf.TfTeam AS TeamId, tf.TfSubTeam AS SubTeam,
+						       e.EvWinnerFinalRank, e.EvCodeParent
+						FROM TeamFinals AS tf
+							INNER JOIN Grids ON tf.TfMatchNo=GrMatchNo AND GrPhase={$realphase}
+							INNER JOIN Events AS e
+								ON tf.TfEvent=e.EvCode
+								AND tf.TfTournament=e.EvTournament
+								AND e.EvTeamEvent=1
+						WHERE tf.TfTournament={$this->tournament}
+							AND tf.TfEvent='{$event}'
+							AND tf.TfScore=0 AND tf.TfSetScore=0
+					";
+					$rsDetect = safe_r_sql($qDetect);
+					if ($rsDetect && safe_num_rows($rsDetect) == 2)
+					{
+						// Bronze match not shot — both semifinal losers share 3rd place.
+						$row1 = safe_fetch($rsDetect);
+						$row2 = safe_fetch($rsDetect);
+
+						// Resolve parent-event chain (same logic as the rows > 0 branch)
+						$EventToUse = $event;
+						$ParentCode = $row1->EvCodeParent;
+						while ($ParentCode)
+						{
+							$EventToUse = $ParentCode;
+							$t = safe_r_sql("SELECT EvCodeParent FROM Events WHERE EvCode=" . StrSafe_DB($ParentCode));
+							if ($u = safe_fetch($t))
+								$ParentCode = $u->EvCodeParent;
+							else
+								$ParentCode = '';
+						}
+
+						$sharedRank = $row1->EvWinnerFinalRank + 2; // shared 3rd when EvWinnerFinalRank=1
+						$x = $this->writeRow($row1->TeamId, $row1->SubTeam, $EventToUse, $sharedRank);
+						if ($x === false)
+							return false;
+						$x = $this->writeRow($row2->TeamId, $row2->SubTeam, $EventToUse, $sharedRank);
+						if ($x === false)
+							return false;
 					}
 				}
 			}

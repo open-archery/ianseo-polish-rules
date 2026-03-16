@@ -5,12 +5,12 @@
  * Identical to the core implementation except calcFromPhase(), which applies
  * PZŁucz §2.6.5 rules:
  *
- *  1. Unique sequential positions for ALL phases >= 4 (quarterfinals and below),
+ *  1. No-bronze-match detection: when the bronze match result is 0-0 (not shot),
+ *     both semifinal losers are awarded shared 3rd place instead of 3rd/4th.
+ *  2. Unique sequential positions for ALL phases >= 4 (quarterfinals and below),
  *     not just the quarterfinals as in the default engine.
- *  2. Secondary tiebreaker is qualification rank (IndRank ASC) instead of
+ *  3. Secondary tiebreaker is qualification rank (IndRank ASC) instead of
  *     cumulative score.
- *
- * Bronze-medal-match no-shoot detection is NOT implemented here (deferred).
  */
 	class Obj_Rank_FinalInd_calc extends Obj_Rank_FinalInd
 	{
@@ -142,8 +142,12 @@
 	/**
 	 * calcFromPhase()
 	 *
-	 * PL modification (§2.6.5): unique sequential positions for ALL phases >= 4,
-	 * sorted by match score DESC then qualification rank (IndRank) ASC.
+	 * PL modification (§2.6.5):
+	 *  - No-bronze detection: when the bronze phase losers query returns 0 rows,
+	 *    check if both bronze-match athletes scored 0 (match not shot). If so,
+	 *    assign both shared 3rd place.
+	 *  - Unique sequential positions for ALL phases >= 4, sorted by match score
+	 *    DESC then qualification rank (IndRank) ASC.
 	 *
 	 * All other behaviour (gold/bronze/semi handling, EvWinnerFinalRank offset,
 	 * parent-event chains, SubCodes, pool phases, IRM types) is preserved from
@@ -241,7 +245,7 @@
 				{
 					$myRow = safe_fetch($rs);
 
-					// Normalise phase identifier for non-standard bracket sizes (1/24, 1/48, …)
+					// Normalise phase identifier for non-standard bracket sizes (1/24, 1/48, ...)
 					$phase = namePhase($myRow->EvFinalFirstPhase, $realphase);
 
 					// Walk up the parent-event chain (combined/sub-events)
@@ -343,6 +347,58 @@
 
 							$myRow = safe_fetch($rs);
 						}
+					}
+				}
+				else
+				{
+					// No losers returned — may be the bronze match that was never shot (0-0 tie).
+					// Guard: only attempt detection for the bronze phase (normalized phase == 1).
+					// Without this guard, an unplayed gold match (also 0-0) triggers the same
+					// 2-row condition and would incorrectly place both finalists at 3rd.
+					$qEvt = safe_r_sql("SELECT EvFinalFirstPhase FROM Events WHERE EvCode='{$event}' AND EvTournament={$this->tournament} AND EvTeamEvent=0");
+					if (!($qEvt && ($eRow = safe_fetch($qEvt)) && namePhase($eRow->EvFinalFirstPhase, $realphase) == 1))
+						return true; // not the bronze phase — leave ranks empty as normal
+
+					// Detect: both athletes in this phase scored 0 with 0 set points.
+					$qDetect = "
+						SELECT f.FinAthlete AS AthId, e.EvWinnerFinalRank, e.EvCodeParent
+						FROM Finals AS f
+							INNER JOIN Grids ON f.FinMatchNo=GrMatchNo AND GrPhase={$realphase}
+							INNER JOIN Events AS e
+								ON f.FinEvent=e.EvCode
+								AND f.FinTournament=e.EvTournament
+								AND e.EvTeamEvent=0
+						WHERE f.FinTournament={$this->tournament}
+							AND f.FinEvent='{$event}'
+							AND f.FinScore=0 AND f.FinSetScore=0
+					";
+					$rsDetect = safe_r_sql($qDetect);
+					if ($rsDetect && safe_num_rows($rsDetect) == 2)
+					{
+						// Bronze match not shot — both semifinal losers share 3rd place.
+						$row1 = safe_fetch($rsDetect);
+						$row2 = safe_fetch($rsDetect);
+
+						// Resolve parent-event chain (same logic as the rows > 0 branch)
+						$EventToUse = $event;
+						$ParentCode = $row1->EvCodeParent;
+						while ($ParentCode)
+						{
+							$EventToUse = $ParentCode;
+							$t = safe_r_sql("SELECT EvCodeParent FROM Events WHERE EvCode=" . StrSafe_DB($ParentCode));
+							if ($u = safe_fetch($t))
+								$ParentCode = $u->EvCodeParent;
+							else
+								$ParentCode = '';
+						}
+
+						$sharedRank = $row1->EvWinnerFinalRank + 2; // shared 3rd when EvWinnerFinalRank=1
+						$x = $this->writeRow($row1->AthId, $EventToUse, $sharedRank);
+						if ($x === false)
+							return false;
+						$x = $this->writeRow($row2->AthId, $EventToUse, $sharedRank);
+						if ($x === false)
+							return false;
 					}
 				}
 			}
