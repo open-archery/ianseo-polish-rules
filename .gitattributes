@@ -1,0 +1,4 @@
+# Enforce LF line endings for all text files.
+# This prevents CRLF/LF mismatches across editors and OS environments,
+# and ensures Claude Code's Edit tool can match patterns reliably.
+* text=auto eol=lf
