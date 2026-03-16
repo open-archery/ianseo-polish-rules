@@ -2,6 +2,7 @@
 
 if($on and $_SESSION["TourLocRule"]=='PL'){
   $ret['PRNT'][] = 'Dyplomy|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/Diplomas/Diplomas.php';
+  $ret['PART']['SYNC'][] = 'Sportzona|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/Lookup/Install.php';
 }
 /*
 

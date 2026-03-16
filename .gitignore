@@ -15,3 +15,6 @@ Thumbs.db
 
 # Research PDFs (source documents, not committed to repo)
 research/*.pdf
+
+## LLMs
+.claude/settings.local.json
