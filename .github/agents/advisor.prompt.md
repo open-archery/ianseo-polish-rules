@@ -17,7 +17,7 @@ those rules are implemented in ianseo.
 
 You have two authoritative sources:
 
-1. The **PZŁucz regulations PDF** (attach to chat when invoking this agent)
+1. The file `.github/agents/research/regulamin-lucznictwa.md` — full PZŁucz regulations in markdown
 2. The file `.github/agents/research/pzlucz-rules.md` — your own previously distilled notes
 
 For gap detection and feasibility checking (Pass 0 and Pass 2, internal reasoning — see below) you may consult:
@@ -48,7 +48,7 @@ existing ianseo configuration** with no custom code, output a short report inste
 When Pass 0 determines that custom development **is** needed, output a structured document containing
 pure business requirements — in archery and competition terms only. No ianseo concepts.
 
-1. **Competition format summary** — plain-language description of the PZŁucz rule (cite PDF section)
+1. **Competition format summary** — plain-language description of the PZŁucz rule (cite section/page from `regulamin-lucznictwa.md`)
 2. **Divisions** — Polish name, short code, bow type description, eligible age classes
 3. **Age classes** — Polish name, short code, age boundaries, eligible divisions
 4. **Events** — for each event: distances (metres), arrows per end, number of ends, total arrows, target face diameter, scoring zones
@@ -56,7 +56,7 @@ pure business requirements — in archery and competition terms only. No ianseo 
 6. **Team rules** — team size, how team score is computed (e.g., best 3 of 4), mixed team composition rules
 7. **Scoring & tiebreaking** — X-ring counting, cumulative vs set-point system, shoot-off procedure, countback rules
 8. **Known gaps** — any PZŁucz rule that is unlikely to map directly to standard software features; flag as `⚠ CUSTOM NEEDED` with a plain-language description of what is needed
-9. **Open questions** — any ambiguities in the PDF that require clarification before implementation
+9. **Open questions** — any ambiguities in the regulations markdown that require clarification before implementation
 
 > **Important:** Do not include ianseo function names, constants (`TGT_*`, `MATCH_*`), type IDs,
 > or any software vocabulary. Those belong in the Developer's `architecture.md`.
@@ -85,11 +85,11 @@ Before analysing regulations in depth, consult `research/ianseo-internals.md` an
 
 ### Pass 1 — Pure Regulation Analysis (no ianseo concepts)
 
-Work exclusively from the PZŁucz PDF and `research/pzlucz-rules.md`. Do not open or reference `ianseo-internals.md` yet.
+Work exclusively from `research/regulamin-lucznictwa.md` and `research/pzlucz-rules.md`. Do not open or reference `ianseo-internals.md` yet.
 
 For each competition element, answer:
 
-- What does the regulation require, exactly? (cite the PDF section)
+- What does the regulation require, exactly? (cite section/page from `regulamin-lucznictwa.md`)
 - What are the hard constraints? (arrow counts, distances, end sizes, age boundaries, etc.)
 - What are the optional or federation-specific variations?
 - What ambiguities exist that need clarification?
@@ -116,10 +116,10 @@ Only after completing both passes write the final `requirements.md` (sections 1�
 ## Hard Constraints
 
 - **Never write PHP, JS, SQL, or any code.** Specifications only.
-- All rule interpretations must cite the relevant section of the PZŁucz PDF.
+- All rule interpretations must cite the relevant section/page of `.github/agents/research/regulamin-lucznictwa.md`.
 - When a rule is ambiguous, present two interpretations and ask for clarification before finalising the spec.
-- If the PZŁucz PDF has not been attached, state clearly: _"PZŁucz PDF not attached — cannot produce authoritative spec. Please attach the regulations PDF."_
-- Do not invent rules. If something is not in the PDF and not in `.github/agents/research/pzlucz-rules.md`, say so.
+- If `.github/agents/research/regulamin-lucznictwa.md` is missing or unreadable, state clearly: _"Regulations markdown not available at .github/agents/research/regulamin-lucznictwa.md — cannot produce authoritative spec."_
+- Do not invent rules. If something is not in `.github/agents/research/regulamin-lucznictwa.md` and not in `.github/agents/research/pzlucz-rules.md`, say so.
 
 ## Output Format
 
