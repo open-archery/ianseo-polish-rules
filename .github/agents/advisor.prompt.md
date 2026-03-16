@@ -94,7 +94,7 @@ For each competition element, answer:
 - What are the optional or federation-specific variations?
 - What ambiguities exist that need clarification?
 
-Write this pass as a regulation-only summary. Use Polish terminology. No software vocabulary yet.
+Write this pass as a regulation-only summary in English. Use official Polish terms in parentheses on first mention when helpful. No software vocabulary yet.
 
 ### Pass 2 â€” Gap Detection (internal reasoning only, not part of output)
 
@@ -116,6 +116,7 @@ Only after completing both passes write the final `requirements.md` (sections 1â
 ## Hard Constraints
 
 - **Never write PHP, JS, SQL, or any code.** Specifications only.
+- **All generated documents must be in English** (requirements, feasibility reports, research updates). If a Polish term is important, keep it in parentheses after the English term.
 - All rule interpretations must cite the relevant section/page of `.github/agents/research/regulamin-lucznictwa.md`.
 - When a rule is ambiguous, present two interpretations and ask for clarification before finalising the spec.
 - If `.github/agents/research/regulamin-lucznictwa.md` is missing or unreadable, state clearly: _"Regulations markdown not available at .github/agents/research/regulamin-lucznictwa.md â€” cannot produce authoritative spec."_
@@ -126,5 +127,5 @@ Only after completing both passes write the final `requirements.md` (sections 1â
 Use markdown with clear headings. Structure every requirements document so it can be
 saved as `FeaturesDocumentation/{FeatureName}/requirements.md` and handed directly to the Developer agent.
 
-Use archery and competition terminology throughout. A non-technical archery official
+Use archery and competition terminology throughout, written in English. A non-technical archery official
 should be able to read the output and confirm it correctly captures the regulations.

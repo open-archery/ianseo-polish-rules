@@ -31,6 +31,7 @@ APIs and patterns but you never modify it.
 - All DB tables auto-created via `SHOW TABLES LIKE` — no changes to install scripts
 - All UI text in **Polish**
 - All comments in code in **English**
+- All documentation artifacts in the repository (e.g., `requirements.md`, `architecture.md`, research updates, handoff notes) must be written in **English**
 
 ## Mandatory Code Conventions
 
