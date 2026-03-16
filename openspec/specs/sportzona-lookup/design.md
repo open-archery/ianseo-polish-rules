@@ -54,12 +54,12 @@ script that only uses cURL and built-in PHP functions.
 
 ## 2. File List
 
-| File | Purpose |
-|---|---|
-| `Modules/Sets/PL/Lookup/SportzonaProxy.php` | Adapter script. Called by ianseo via GET; internally POSTs to Sportzona; outputs JSON array in ianseo extranet format. |
-| `Modules/Sets/PL/Lookup/Fun_ClubName.php` | Club name transformation library: prefix table, short name algorithm, code algorithm, collision resolution. |
-| `Modules/Sets/PL/Lookup/Install.php` | One-time registration page (browser-accessible, ianseo session guarded). Inserts/updates the `LookUpPaths` row for POL. |
-| `FeaturesDocumentation/SportzonaLookup/architecture.md` | This document. |
+| File                                                    | Purpose                                                                                                                 |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `Modules/Sets/PL/Lookup/SportzonaProxy.php`             | Adapter script. Called by ianseo via GET; internally POSTs to Sportzona; outputs JSON array in ianseo extranet format.  |
+| `Modules/Sets/PL/Lookup/Fun_ClubName.php`               | Club name transformation library: prefix table, short name algorithm, code algorithm, collision resolution.             |
+| `Modules/Sets/PL/Lookup/Install.php`                    | One-time registration page (browser-accessible, ianseo session guarded). Inserts/updates the `LookUpPaths` row for POL. |
+| `FeaturesDocumentation/SportzonaLookup/architecture.md` | This document.                                                                                                          |
 
 ---
 
@@ -130,13 +130,14 @@ Collision resolution is performed at the batch level (not per-club):
 ianseo uses the following `LueStatus` integer values (observed from
 `DoLookupEntriesCheck` in `LookupTableLoad.php`):
 
-| Sportzona condition | `LueStatus` value | Meaning in ianseo |
-|---|---|---|
-| `isArchived = false` AND (`licenceDate` is in the future OR `licenceDate` is absent) | `1` | Active |
-| `isArchived = false` AND `licenceDate` is in the past | `5` | Licence expired |
-| `isArchived = true` | `8` | Archived/inactive |
+| Sportzona condition                                                                  | `LueStatus` value | Meaning in ianseo |
+| ------------------------------------------------------------------------------------ | ----------------- | ----------------- |
+| `isArchived = false` AND (`licenceDate` is in the future OR `licenceDate` is absent) | `1`               | Active            |
+| `isArchived = false` AND `licenceDate` is in the past                                | `5`               | Licence expired   |
+| `isArchived = true`                                                                  | `8`               | Archived/inactive |
 
 Justification:
+
 - `1` (active) is the standard status for a valid participant.
 - `5` (expired) is the value ianseo itself assigns when `ToWhenTo > LueStatusValidUntil`.
   Using it for expired licences matches the semantics already understood by ianseo.
@@ -212,13 +213,13 @@ ianseo LookUpEntries table (populated)
 
 ## 7. Error Handling
 
-| Failure scenario | Adapter behaviour |
-|---|---|
-| cURL fails to connect to Sportzona | Output `[]` with `HTTP/1.1 503` header |
+| Failure scenario                      | Adapter behaviour                      |
+| ------------------------------------- | -------------------------------------- |
+| cURL fails to connect to Sportzona    | Output `[]` with `HTTP/1.1 503` header |
 | Sportzona returns non-200 HTTP status | Output `[]` with `HTTP/1.1 502` header |
-| Sportzona response is malformed JSON | Output `[]` with `HTTP/1.1 502` header |
-| `players` array is missing or empty | Output `[]` (empty array, HTTP 200) |
-| Individual player has no `licence` | Skip the record silently |
+| Sportzona response is malformed JSON  | Output `[]` with `HTTP/1.1 502` header |
+| `players` array is missing or empty   | Output `[]` (empty array, HTTP 200)    |
+| Individual player has no `licence`    | Skip the record silently               |
 
 All error conditions return valid JSON (empty array), so ianseo's
 `json_decode($DataSource)` will succeed and simply import zero records rather

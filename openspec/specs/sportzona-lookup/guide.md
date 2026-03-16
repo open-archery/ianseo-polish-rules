@@ -39,6 +39,7 @@ downloaded registry by their **licence number** (the PZŁucz federation number,
 e.g. `4516`).
 
 Type the licence number in the athlete code field. ianseo pre-fills:
+
 - First name and last name
 - Club name (shown in the "country" field — short form like `MLKS Czarna Strzała Bytom`
   and 2–4 char code like `CSB`)
@@ -82,10 +83,10 @@ normal. Their entries will simply not have a licence code pre-filled.
 
 ## What the lookup does NOT do automatically
 
-| Task | Requires manual action |
-|---|---|
-| Assigning bow type (Recurve, Compound, Barebow) | Yes — always entered at registration |
-| Verifying gender for edge-case names | Yes — heuristic only |
+| Task                                                    | Requires manual action                  |
+| ------------------------------------------------------- | --------------------------------------- |
+| Assigning bow type (Recurve, Compound, Barebow)         | Yes — always entered at registration    |
+| Verifying gender for edge-case names                    | Yes — heuristic only                    |
 | Correcting age-class for athletes born late in the year | Yes — DOB is set to Jan 1 of birth year |
-| Flagging Paralympic athletes | Yes — always false in the registry |
-| Photo or flag synchronisation | Not part of this integration |
+| Flagging Paralympic athletes                            | Yes — always false in the registry      |
+| Photo or flag synchronisation                           | Not part of this integration            |

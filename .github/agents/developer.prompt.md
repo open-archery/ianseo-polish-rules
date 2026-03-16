@@ -19,9 +19,9 @@ APIs and patterns but you never modify it.
 
 ## Primary Context Files (read before every task)
 
-1. `research/ianseo-internals.md` — your documented API reference for ianseo internals
-2. `research/pzlucz-rules.md` — distilled PZŁucz rules reference
-3. The feature `requirements.md` provided for the current task — the Advisor's business requirements
+1. `.github/agents/research/ianseo-internals.md` — your documented API reference for ianseo internals
+2. `.github/agents/research/pzlucz-rules.md` — distilled PZŁucz rules reference
+3. `openspec/specs/{feature-name}/spec.md` — the Advisor's business requirements for the current task
 4. `Modules/Sets/lib.php` — framework helper functions (read-only)
 
 ## Hard Constraints
@@ -119,15 +119,19 @@ if ($on && $_SESSION["TourLocRule"] == 'PL') {
 
 ## File Organisation
 
-Documentation artifacts for each feature live under `FeaturesDocumentation/`:
+Spec and design artifacts live in `openspec/`:
 
 ```
-Modules/Sets/PL/FeaturesDocumentation/{FeatureName}/
-    requirements.md       # Advisor requirements (committed, never modified by Developer)
-    architecture.md       # Developer architecture design (committed before code)
+openspec/specs/{feature-name}/
+    spec.md               # Advisor requirements (committed, never modified by Developer)
+
+openspec/changes/{change-name}/
+    proposal.md           # What and why (created by openspec-propose)
+    design.md             # Developer architecture design (this is what you produce in Step B1)
+    tasks.md              # Implementation tasks (created with proposal)
 ```
 
-Implementation code for each feature lives alongside in its own subdirectory:
+Implementation code for each feature lives in its own subdirectory:
 
 ```
 Modules/Sets/PL/{FeatureName}/
@@ -137,10 +141,10 @@ Modules/Sets/PL/{FeatureName}/
     Ajax{Action}.php      # AJAX endpoints
 ```
 
-Tournament setup scripts go in:
+Tournament setup scripts go in the PL root:
 
 ```
-Modules/Sets/PL/Setup/
+Modules/Sets/PL/
     Setup_{TypeId}_PL.php
 ```
 
@@ -148,10 +152,10 @@ Modules/Sets/PL/Setup/
 
 ### Step B1 — Architecture (before writing any code)
 
-1. **Read** `FeaturesDocumentation/{FeatureName}/requirements.md` fully
-2. **Read** `research/ianseo-internals.md` for function signatures and patterns
+1. **Read** `openspec/specs/{feature-name}/spec.md` fully
+2. **Read** `.github/agents/research/ianseo-internals.md` for function signatures and patterns
 3. **Find a reference** — locate the closest existing implementation in IT or FITA sets
-4. **Produce `FeaturesDocumentation/{FeatureName}/architecture.md`** containing:
+4. **Write `openspec/changes/{change-name}/design.md`** containing:
    - **ianseo tournament type** — closest matching type ID from `lib.php`, or `CUSTOM`
    - **Division mapping** — each division from `requirements.md` → `CreateDivision()` parameters
    - **Class mapping** — each age class → `CreateClass()` parameters
@@ -165,15 +169,15 @@ Modules/Sets/PL/Setup/
 
 ### Step B2 — Implementation
 
-1. **Implement** all files listed in `architecture.md` following conventions above
-2. **Update** `research/ianseo-internals.md` if you discovered any undocumented ianseo behaviour
+1. **Implement** all files listed in `openspec/changes/{change-name}/design.md` following conventions above
+2. **Update** `.github/agents/research/ianseo-internals.md` if you discovered any undocumented ianseo behaviour
 3. **Self-review** against the Reviewer agent's checklist before declaring done
 
 ## What to Produce
 
 For each task, produce:
 
-- `FeaturesDocumentation/{FeatureName}/architecture.md` — ianseo mapping and design decisions (Step B1)
+- `openspec/changes/{change-name}/design.md` — ianseo mapping and design decisions (Step B1)
 - All required PHP files in `PL/{FeatureName}/` (Step B2)
 - Any required `menu.php` additions
-- A brief summary of what was implemented and which `research/ianseo-internals.md` sections were updated (if any)
+- A brief summary of what was implemented and which `.github/agents/research/ianseo-internals.md` sections were updated (if any)
