@@ -349,11 +349,11 @@ Inserts a row into the `Classes` table.
 
 | Param           | Type   | Example                                            |
 | --------------- | ------ | -------------------------------------------------- |
-| `$From` / `$To` | string | Birth-year range (e.g. `'2005'`, `'2009'`)         |
-| `$Sex`          | int    | `1` = Male, `2` = Female                           |
+| `$From` / `$To` | string | **Age range in years** (e.g. `'14'`, `'17'` for U18) stored in `ClAgeFrom`/`ClAgeTo`. At query time ianseo computes `age = year(ToWhenTo) - year(EnDob)` and filters `ClAgeFrom <= age AND ClAgeTo >= age`. **Not birth years.** |
+| `$Sex`          | int    | `0` = Male, `1` = Female, `-1` = Unisex. Stored in `ClSex`. Uses the **same encoding as `EnSex`/`LueSex`** — no conversion needed. ianseo queries as `ClSex IN (-1, {$Sex})`. |
 | `$Id`           | string | `'M'`, `'W'`, `'U21M'`                             |
 | `$ValidClass`   | int    | `1` = valid for ranking                            |
-| `$AlDivision`   | string | Comma-separated allowed divisions (e.g. `'R,C,B'`) |
+| `$AlDivision`   | string | Comma-separated allowed divisions (e.g. `'R,C,B'`), stored in `ClDivisionsAllowed`. Empty string means all divisions allowed. |
 
 #### `CreateSubClass($TourId, $Order, $Id, $Description)`
 
