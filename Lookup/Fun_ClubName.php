@@ -4,75 +4,152 @@
  *
  * Provides:
  *   pl_club_short_name(string $rawName): string  — abbreviated short name
- *   pl_club_code(string $rawName): string         — 2–4 char code (before collision resolution)
- *   pl_resolve_club_codes(array $clubs): array    — collision-resolved map
+ *   pl_club_code_base(string $rawName): string   — 2–4 char code (before collision resolution)
+ *   pl_resolve_club_codes(array $clubs): array   — collision-resolved map
  *
  * No ianseo bootstrap required — this file is included by SportzonaProxy.php
  * which runs outside the ianseo session context.
  */
 
 // ---------------------------------------------------------------------------
-// Prefix → abbreviation table.
-// Sorted longest-first so that more specific prefixes are matched before
-// shorter ones that share a prefix string (e.g. "Łuczniczy Uczniowski Klub
-// Sportowy" must be tried before "Uczniowski Klub Sportowy").
+// Word-level map: each recognized organizational vocabulary word → its
+// abbreviation token.  Empty string means the word is a connector (skip it
+// but do not treat it as the start of the proper name).
+//
+// Matching is case-insensitive.  Hyphenated compound words (e.g.
+// "Miejsko-Ludowy") are listed as single entries because they arrive as one
+// whitespace-delimited token.
 // ---------------------------------------------------------------------------
-function pl_club_prefix_table(): array
+function pl_club_word_map(): array
 {
-    static $table = null;
-    if ($table !== null) {
-        return $table;
+    static $map = null;
+    if ($map !== null) {
+        return $map;
     }
 
-    $raw = [
-        'Organizacja Środowiskowa Akademickiego Związku Sportowego' => 'OŚAZS',
-        'Integracyjne Centrum Sportu i Rehabilitacji'               => 'ICSiR',
-        'Stowarzyszenie Sportowo-Rehabilitacyjne'                   => 'SSR',
-        'Stowarzyszenie Sportowo-Rekreacyjne'                       => 'SSRek',
-        'Kołobrzeskie Stowarzyszenie Łuczników'                     => 'KSŁ',
-        'Zrzeszenie Sportu i Rehabilitacji'                         => 'ZSiR',
-        'Łuczniczy Uczniowski Klub Sportowy'                        => 'ŁUKS',
-        'Uczniowski Ludowy Klub Sportowy'                           => 'ULKS',
-        'Łuczniczy Ludowy Klub Sportowy'                            => 'ŁLKS',
-        'Morski Robotniczy Klub Sportowy'                           => 'MRKS',
-        'Łucznicze Towarzystwo Sportowe'                            => 'ŁTS',
-        'Gminny Ośrodek Kultury i Sportu'                           => 'GOKiS',
-        'Cywilno-Wojskowy Klub Sportowy'                            => 'CWKS',
-        'Ludowy Uczniowski Klub Sportowy'                           => 'LUKS',
-        'Polskie Towarzystwo Gimnastyczne'                          => 'PTG',
-        'Społeczne Towarzystwo Sportowe'                            => 'STS',
-        'Akademicki Klub Sportowy'                                  => 'AKS',
-        'Stowarzyszenie Łucznicze'                                  => 'SŁ',
-        'Łuczniczy Klub Sportowy'                                   => 'ŁKS',
-        'Gminny Ludowy Klub Sportowy'                               => 'GLKS',
-        'Uczniowski Klub Łuczniczy'                                 => 'UKŁ',
-        'Warszawski Klub Łuczniczy'                                 => 'WKŁ',
-        'Mokotowski Klub Łuczniczy'                                 => 'MKŁ',
-        'Uczniowski Klub Sportowy'                                  => 'UKS',
-        'Miejsko-Ludowy Klub Sportowy'                              => 'MLKS',
-        'Społeczny Klub Sportowy'                                   => 'SKS',
-        'Szkolny Klub Sportowy'                                     => 'SKS',
-        'Ludowy Klub Sportowy'                                      => 'LKS',
-        'Budowlany Klub Sportowy'                                   => 'BKS',
-        'Parafialny Klub Sportowy'                                  => 'PKS',
-        'Górniczy Klub Sportowy'                                    => 'GKS',
-        'Miejski Klub Sportowy'                                     => 'MKS',
-        'Młodzieżowy Klub Sportowy'                                 => 'MłKS',
-        'Polski Związek Łuczniczy'                                  => 'PZŁ',
-        'Towarzystwo Sportowe'                                      => 'TS',
-        'Akademia Sportu'                                           => 'AS',
-        'Klub Łuczniczy'                                            => 'KŁ',
-        'Klub Sportowy'                                             => 'KS',
-        'Stowarzyszenie'                                            => 'St.',
+    $map = [
+        // Connectors — part of the prefix zone but contribute no abbreviation
+        'i'                        => 'i',
+        'i/lub'                    => '',
+        'na'                       => '',
+        'dla'                      => '',
+
+        // Organizational vocabulary
+        'Akademia'                 => 'A',
+        'Akademicki'               => 'A',
+        'Akademickie'              => 'A',
+        'Akademickiego'              => 'A',
+        'Budowlany'                => 'B',
+        'Centrum'                  => 'C',
+        'Cywilno-Wojskowy'         => 'CW',
+        'Dzieci'                   => 'D',
+        'Fundacja'                 => 'F',
+        'Gimnastyczne'             => 'G',
+        'Gminny'                   => 'G',
+        'Górniczy'                 => 'G',
+        'Inicjatyw'                => 'I',
+        'Integracyjne'             => 'I',
+        'Klub'                     => 'K',
+        'Kołobrzeskie'             => 'K',
+        'Koła'                     => 'K',
+        'Krajowy'                  => 'K',
+        'Kultury'                  => 'K',
+        'Ligi'                     => 'L',
+        'Ludowy'                   => 'L',
+        'Łucznicze'                => 'Ł',
+        'Łucznicza'                => 'Ł',
+        'Łuczniczy'                => 'Ł',
+        'Łuczników'                => 'Ł',
+        'Miejski'                  => 'M',
+        'Miejsko-Gminny'           => 'MG',
+        'Miejsko-Ludowy'           => 'ML',
+        'Międzyszkolny'            => 'M',
+        'Młodzieżowy'              => 'Mł',
+        'Mokotowski'               => 'Mo',
+        'Morski'                   => 'M',
+        'Niezależnych'             => 'N',
+        'Niepełnosprawnych'        => 'N',
+        'Obrony'                   => 'O',
+        'Organizacja'              => 'O',
+        'Ośrodek'                  => 'O',
+        'Parafialny'               => 'P',
+        'Polski'                   => 'P',
+        'Polskie'                  => 'P',
+        'Promocji'                 => 'P',
+        'Rehabilitacji'            => 'R',
+        'Rehabilitacyjne'          => 'R',
+        'Rekreacyjne'              => 'R',
+        'Robotniczy'               => 'R',
+        'Rzeszowskie'              => 'R',
+        'Sekcja'                   => 'S',
+        'Społeczne'                => 'S',
+        'Społeczno'                => 'S',
+        'Społeczny'                => 'S',
+        'Sportu'                   => 'S',
+        'Sportowe'                 => 'S',
+        'Sportowego'                 => 'S',
+        'Sportowo'                 => 'S',
+        'Sportowo-Rehabilitacyjne' => 'SR',
+        'Sportowo-Rekreacyjne'     => 'SR',
+        'Sportowy'                 => 'S',
+        'Stowarzyszenie'           => 'S',
+        'Szkolne'                  => 'S',
+        'Szkolnego'                => 'S',
+        'Szkolny'                  => 'S',
+        'Środowiskowa'             => 'Ś',
+        'Towarzystwo'              => 'T',
+        'Uczniowski'               => 'U',
+        'Uczniowskie'              => 'U',
+        'Uczniowskiego'            => 'U',
+        'Warszawski'               => 'W',
+        'Wojskowy'                 => 'W',
+        'Związek'                  => 'Z',
+        'Związku'                  => 'Z',
+        'Zrzeszenie'               => 'Z',
     ];
 
-    // Sort by key length descending so longest prefixes are matched first.
-    uksort($raw, function ($a, $b) {
-        return mb_strlen($b, 'UTF-8') - mb_strlen($a, 'UTF-8');
-    });
+    return $map;
+}
 
-    $table = $raw;
-    return $table;
+// ---------------------------------------------------------------------------
+// Look up a single word in the word map (case-insensitive).
+// Returns the abbreviation string (possibly '') if found, null if not in map.
+// ---------------------------------------------------------------------------
+function pl_word_map_lookup(string $word, array $wordMap): ?string
+{
+    $lower = mb_strtolower($word, 'UTF-8');
+    foreach ($wordMap as $mapWord => $mapAbbr) {
+        if (mb_strtolower($mapWord, 'UTF-8') === $lower) {
+            return $mapAbbr;
+        }
+    }
+    return null;
+}
+
+// ---------------------------------------------------------------------------
+// Build a prefix abbreviation from a string of organizational words.
+//
+// Used for the quoted-name path, where everything before the first " is
+// treated as the prefix zone.  Unknown words fall back to their first letter
+// so that e.g. "Beskidzkie Zrzeszenie Sportowo-Rehabilitacyjne" → BZSR.
+// ---------------------------------------------------------------------------
+function pl_build_prefix_abbr(string $prefixText, array $wordMap): string
+{
+    $words = preg_split('/\s+/u', $prefixText, -1, PREG_SPLIT_NO_EMPTY);
+    $parts = [];
+    foreach ($words as $word) {
+        $abbr = pl_word_map_lookup($word, $wordMap);
+        if ($abbr !== null) {
+            // Known word — use its abbreviation ('' for connectors)
+            if ($abbr !== '') {
+                $parts[] = $abbr;
+            }
+        } else {
+            // Unknown word in prefix zone — fall back to first letter
+            $parts[] = mb_strtoupper(mb_substr($word, 0, 1, 'UTF-8'), 'UTF-8');
+        }
+    }
+    return implode('', $parts);
 }
 
 // ---------------------------------------------------------------------------
@@ -86,9 +163,21 @@ function pl_normalize_whitespace(string $s): string
 // ---------------------------------------------------------------------------
 // Parse a raw club name into its structural components.
 //
-// Returns an associative array:
+// Two parsing paths:
+//
+//   QUOTED  — name contains "ProperName" in double quotes.
+//             Everything before the first " is the prefix zone (all words
+//             looked up; unknown words fall back to first letter).
+//             Everything inside quotes (plus any trailing unquoted words
+//             before the city) is the proper name.
+//
+//   UNQUOTED — no quotes.  Words are consumed left to right; each is looked
+//              up in the word map.  The first word NOT in the map signals the
+//              start of the proper name — all remaining words form it.
+//
+// Returns:
 //   'city'       => string  (content of the trailing parentheses, or '')
-//   'abbr'       => string  (matched prefix abbreviation, or '')
+//   'abbr'       => string  (concatenated prefix abbreviation, or '')
 //   'properName' => string  (the distinctive club name)
 //   'full'       => string  (normalized raw name)
 // ---------------------------------------------------------------------------
@@ -107,56 +196,70 @@ function pl_parse_club_name(string $rawName): array
     }
 
     // Extract city from trailing (...)
-    $city = '';
+    $city    = '';
+    $working = $name;
     if (preg_match('/\(([^)]+)\)\s*$/u', $name, $m)) {
-        $city = trim($m[1]);
-        // Remove the trailing (city) from the working string
+        $city    = trim($m[1]);
         $working = trim(preg_replace('/\s*\([^)]+\)\s*$/u', '', $name));
+    }
+
+    $wordMap    = pl_club_word_map();
+    $abbr       = '';
+    $properName = '';
+
+    if (preg_match('/^(.*?)"([^"]+)"(.*)$/u', $working, $m)) {
+        // QUOTED PATH
+        $prefixText = trim($m[1]);
+        $quotedName = trim($m[2]);
+        $afterQuote = trim($m[3]);
+
+        $abbr       = pl_build_prefix_abbr($prefixText, $wordMap);
+        $properName = $afterQuote !== '' ? $quotedName . ' ' . $afterQuote : $quotedName;
     } else {
-        $working = $name;
-    }
+        // UNQUOTED PATH — stop at first unrecognized word
+        $words       = preg_split('/\s+/u', $working, -1, PREG_SPLIT_NO_EMPTY);
+        $abbrParts   = [];
+        $properWords = [];
+        $inProper    = false;
 
-    // Match organizational prefix (longest first)
-    $abbr = '';
-    foreach (pl_club_prefix_table() as $prefix => $abbreviation) {
-        // Case-insensitive prefix match at the start of the string
-        $prefixLen = mb_strlen($prefix, 'UTF-8');
-        if (mb_strtolower(mb_substr($working, 0, $prefixLen, 'UTF-8'), 'UTF-8')
-            === mb_strtolower($prefix, 'UTF-8')
-        ) {
-            $abbr    = $abbreviation;
-            $working = trim(mb_substr($working, $prefixLen, null, 'UTF-8'));
-            break;
+        foreach ($words as $word) {
+            if ($inProper) {
+                $properWords[] = $word;
+                continue;
+            }
+            $lookup = pl_word_map_lookup($word, $wordMap);
+            if ($lookup !== null) {
+                // Known organizational word or connector
+                if ($lookup !== '') {
+                    $abbrParts[] = $lookup;
+                }
+            } else {
+                // First unrecognized word = start of proper name
+                $properWords[] = $word;
+                $inProper      = true;
+            }
         }
-    }
 
-    // Extract proper name from the remaining working string.
-    // If quoted content exists, use it (plus any trailing unquoted words).
-    $properName = $working;
-    if (preg_match('/"([^"]+)"/u', $working, $qm)) {
-        $quoted = $qm[1];
-        // Look for text after the closing quote before end of string
-        $afterQuote = trim(preg_replace('/^.*"[^"]*"\s*/u', '', $working));
-        $properName = $afterQuote !== '' ? $quoted . ' ' . $afterQuote : $quoted;
+        $abbr       = implode('', $abbrParts);
+        $properName = implode(' ', $properWords);
     }
-    $properName = trim($properName);
 
     return [
         'city'       => $city,
         'abbr'       => $abbr,
-        'properName' => $properName,
+        'properName' => trim($properName),
         'full'       => $name,
     ];
 }
 
 // ---------------------------------------------------------------------------
 // Derive the short club name from a raw Sportzona clubName string.
+// Format: "{ABBR} {ProperName} {City}"
 // ---------------------------------------------------------------------------
 function pl_club_short_name(string $rawName): string
 {
     $p = pl_parse_club_name($rawName);
 
-    // Special case: Niezrzeszony
     if ($p['properName'] === 'Niezrzeszony' && $p['city'] === 'Niezrzeszony') {
         return 'Niezrzeszony';
     }
@@ -184,7 +287,6 @@ function pl_club_code_base(string $rawName): string
 {
     $p = pl_parse_club_name($rawName);
 
-    // Special case: Niezrzeszony
     if ($p['properName'] === 'Niezrzeszony' && $p['city'] === 'Niezrzeszony') {
         return 'NIE';
     }
@@ -192,33 +294,29 @@ function pl_club_code_base(string $rawName): string
     $properName = $p['properName'];
     $city       = $p['city'];
 
-    // Split proper name on whitespace and hyphens; filter pure-digit words.
-    $words = preg_split('/[\s\-]+/u', $properName, -1, PREG_SPLIT_NO_EMPTY);
+    // Split proper name on whitespace and hyphens; skip purely numeric words.
+    $words   = preg_split('/[\s\-]+/u', $properName, -1, PREG_SPLIT_NO_EMPTY);
     $letters = '';
     foreach ($words as $word) {
         if (preg_match('/^\d+$/u', $word)) {
-            // Skip purely numeric words (e.g. "11", "25")
-            continue;
+            continue; // skip e.g. "11", "25"
         }
-        // Take the first character (UTF-8 aware)
-        $first = mb_substr($word, 0, 1, 'UTF-8');
-        $letters .= mb_strtoupper($first, 'UTF-8');
+        $letters .= mb_strtoupper(mb_substr($word, 0, 1, 'UTF-8'), 'UTF-8');
         if (mb_strlen($letters, 'UTF-8') >= 4) {
             break;
         }
     }
 
-    // Append first letter of city
+    // Append first letter of city (if still room)
     if ($city !== '' && mb_strlen($letters, 'UTF-8') < 4) {
         $letters .= mb_strtoupper(mb_substr($city, 0, 1, 'UTF-8'), 'UTF-8');
     }
 
-    // If still < 2 chars, extend with additional letters from city
+    // Extend with additional city letters until at least 2 chars
     if ($city !== '') {
         $cityUpper = mb_strtoupper($city, 'UTF-8');
-        $cityLen   = mb_strlen($cityUpper, 'UTF-8');
-        $i = 1; // already used index 0 above
-        while (mb_strlen($letters, 'UTF-8') < 2 && $i < $cityLen) {
+        $i = 1;
+        while (mb_strlen($letters, 'UTF-8') < 2 && $i < mb_strlen($cityUpper, 'UTF-8')) {
             $letters .= mb_substr($cityUpper, $i, 1, 'UTF-8');
             $i++;
         }
@@ -235,10 +333,8 @@ function pl_club_code_base(string $rawName): string
 // ---------------------------------------------------------------------------
 // Resolve code collisions across a set of clubs.
 //
-// Input:  array of raw club name strings (may contain duplicates — each
-//         distinct string is processed once).
-//
-// Output: associative array keyed by raw club name (normalized):
+// Input:  array of raw club name strings.
+// Output: associative array keyed by normalized raw club name:
 //   [
 //     'Miejsko-Ludowy Klub Sportowy "Czarna Strzała" (Bytom)' => [
 //         'code'      => 'CSB',
@@ -248,10 +344,9 @@ function pl_club_code_base(string $rawName): string
 //     ...
 //   ]
 //
-// Collision resolution rule: clubs sharing a base code are sorted
-// alphabetically (case-insensitive) by their normalized full name.
-// The first in that order keeps the base code; subsequent ones receive
-// {CODE}2, {CODE}3, etc.
+// Collision rule: clubs sharing a base code are sorted alphabetically
+// (case-insensitive) by normalized full name.  First keeps the base code;
+// subsequent ones receive {CODE}2, {CODE}3, etc.
 // ---------------------------------------------------------------------------
 function pl_resolve_club_codes(array $clubNames): array
 {
@@ -278,20 +373,18 @@ function pl_resolve_club_codes(array $clubNames): array
     $result = [];
     foreach ($byCode as $baseCode => $names) {
         if (count($names) === 1) {
-            // No collision
-            $n = $names[0];
+            $n          = $names[0];
             $result[$n] = [
                 'code'      => $baseCode,
                 'shortName' => $distinct[$n]['shortName'],
                 'fullName'  => $distinct[$n]['fullName'],
             ];
         } else {
-            // Sort alphabetically by normalized full name (case-insensitive)
             usort($names, function ($a, $b) {
                 return mb_strtolower($a, 'UTF-8') <=> mb_strtolower($b, 'UTF-8');
             });
             foreach ($names as $idx => $n) {
-                $code = $idx === 0 ? $baseCode : $baseCode . ($idx + 1);
+                $code       = $idx === 0 ? $baseCode : $baseCode . ($idx + 1);
                 $result[$n] = [
                     'code'      => $code,
                     'shortName' => $distinct[$n]['shortName'],
