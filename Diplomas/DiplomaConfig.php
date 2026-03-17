@@ -7,7 +7,8 @@
  * - Place range (from/to)
  * - Body text
  * - Head of judges, Organizer
- * - Per-event custom text overrides
+ * - Titles on/off toggle
+ * - Per-event custom text overrides and title prefix/text
  */
 require_once(dirname(dirname(dirname(dirname(__FILE__)))) . '/config.php');
 CheckTourSession(true);
@@ -30,6 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['saveConfig'])) {
 		'BodyText' => isset($_POST['BodyText']) ? trim($_POST['BodyText']) : '',
 		'HeadJudge' => isset($_POST['HeadJudge']) ? trim($_POST['HeadJudge']) : '',
 		'Organizer' => isset($_POST['Organizer']) ? trim($_POST['Organizer']) : '',
+		'TitlesEnabled' => isset($_POST['TitlesEnabled']) ? 1 : 0,
 	);
 
 	// Validate
@@ -38,12 +40,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['saveConfig'])) {
 
 	pl_diploma_save_config($_SESSION['TourId'], $data);
 
-	// Save event texts
+	// Save event texts and title fields
 	$allEvents = pl_diploma_get_events();
 	foreach ($allEvents as $evCode => $ev) {
-		$fieldName = 'EventText_' . $evCode;
-		$text = isset($_POST[$fieldName]) ? trim($_POST[$fieldName]) : '';
-		pl_diploma_save_event_text($_SESSION['TourId'], $evCode, $text);
+		$fieldName        = 'EventText_' . $evCode;
+		$fieldPrefix      = 'TitlePrefix_' . $evCode;
+		$fieldTitleText   = 'TitleText_' . $evCode;
+		$text        = isset($_POST[$fieldName])      ? trim($_POST[$fieldName])      : '';
+		$titlePrefix = isset($_POST[$fieldPrefix])    ? trim($_POST[$fieldPrefix])    : '';
+		$titleText   = isset($_POST[$fieldTitleText]) ? trim($_POST[$fieldTitleText]) : '';
+		pl_diploma_save_event_text($_SESSION['TourId'], $evCode, $text, $titlePrefix, $titleText);
 	}
 
 	$message = 'Konfiguracja została zapisana.';
@@ -122,6 +128,13 @@ echo '<td style="text-align:right;padding:8px;"><strong>Dyplomy do miejsca:</str
 echo '<td style="padding:8px;"><input type="number" name="PlaceTo" value="' . $config['PlaceTo'] . '" min="1" style="width:80px;padding:4px;"></td>';
 echo '</tr>';
 
+// Titles toggle
+$titlesChecked = $config['TitlesEnabled'] ? ' checked' : '';
+echo '<tr>';
+echo '<td style="text-align:right;padding:8px;"><strong>Tytuły na dyplomach:</strong></td>';
+echo '<td style="padding:8px;"><label><input type="checkbox" name="TitlesEnabled" value="1"' . $titlesChecked . '> Włącz tytuły dla miejsc 1–3</label></td>';
+echo '</tr>';
+
 // Body text
 echo '<tr>';
 echo '<td style="text-align:right;padding:8px;vertical-align:top;"><strong>Tekst dyplomu:</strong><br><small>(dodatkowy tekst)</small></td>';
@@ -142,15 +155,19 @@ echo '</tr>';
 
 echo '</table>';
 
-// Event text overrides
+// Event text overrides + title config
 if (count($allEvents)) {
+	$titleYear = pl_diploma_extract_year($config['Dates']);
+
 	echo '<br>';
 	echo '<table class="Tabella">';
-	echo '<tr><th class="SubTitle" colspan="4">Tekst kategorii na dyplomach</th></tr>';
+	echo '<tr><th class="SubTitle" colspan="5">Tekst kategorii i tytuły na dyplomach</th></tr>';
 	echo '<tr>';
 	echo '<th style="width:60px;">Kod</th>';
-	echo '<th style="width:200px;">Nazwa domyślna</th>';
-	echo '<th>Tekst na dyplomie (pozostaw puste = domyślny)</th>';
+	echo '<th style="width:180px;">Nazwa domyślna</th>';
+	echo '<th>Tekst na dyplomie<br><small>(puste = domyślny)</small></th>';
+	echo '<th style="width:160px;">Prefiks tytułu<br><small>(np. Młodzieżowego)</small></th>';
+	echo '<th>Tekst tytułu<br><small>(np. Polski Juniorów)</small></th>';
 	echo '</tr>';
 
 	$groupLabels = array('I' => 'Indywidualnie', 'T' => 'Drużynowo', 'M' => 'Mikst');
@@ -159,14 +176,40 @@ if (count($allEvents)) {
 		if ($ev['type'] !== $currentGroup) {
 			$currentGroup = $ev['type'];
 			$groupLabel = isset($groupLabels[$currentGroup]) ? $groupLabels[$currentGroup] : $currentGroup;
-			echo '<tr><td colspan="3" style="padding:6px 4px;background:#e9ecef;font-weight:bold;">' . htmlspecialchars($groupLabel) . '</td></tr>';
+			echo '<tr><td colspan="5" style="padding:6px 4px;background:#e9ecef;font-weight:bold;">' . htmlspecialchars($groupLabel) . '</td></tr>';
 		}
-		$currentText = isset($eventTexts[$evCode]) ? $eventTexts[$evCode] : '';
+
+		// Current saved values (or empty defaults)
+		$saved = isset($eventTexts[$evCode]) ? $eventTexts[$evCode] : array('customText' => '', 'titlePrefix' => '', 'titleText' => '');
+
+		// Pre-fill title fields from hardcoded defaults when nothing saved yet
+		$defaults = pl_diploma_get_title_defaults($ev['rawCode']);
+		$displayPrefix = ($saved['titlePrefix'] !== '' || $saved['titleText'] !== '')
+			? $saved['titlePrefix']
+			: $defaults['prefix'];
+		$displayTitleText = ($saved['titlePrefix'] !== '' || $saved['titleText'] !== '')
+			? $saved['titleText']
+			: $defaults['text'];
+
+		// Build preview for rank 1 (isTeam/isMixed = false for preview)
+		$preview = '';
+		if (!empty($displayTitleText)) {
+			$isMixedPreview = ($ev['type'] === 'M');
+			$isTeamPreview  = ($ev['type'] === 'T' || $ev['type'] === 'M');
+			$preview = pl_diploma_build_title(1, $displayPrefix, $displayTitleText, $titleYear, $isTeamPreview, $isMixedPreview);
+		}
 
 		echo '<tr>';
 		echo '<td style="padding:4px;text-align:center;">' . htmlspecialchars($ev['rawCode']) . '</td>';
 		echo '<td style="padding:4px;">' . htmlspecialchars($ev['name']) . '</td>';
-		echo '<td style="padding:4px;"><input type="text" name="EventText_' . htmlspecialchars($evCode) . '" value="' . htmlspecialchars($currentText) . '" style="width:95%;padding:3px;"></td>';
+		echo '<td style="padding:4px;"><input type="text" name="EventText_' . htmlspecialchars($evCode) . '" value="' . htmlspecialchars($saved['customText']) . '" style="width:95%;padding:3px;"></td>';
+		echo '<td style="padding:4px;"><input type="text" name="TitlePrefix_' . htmlspecialchars($evCode) . '" value="' . htmlspecialchars($displayPrefix) . '" style="width:95%;padding:3px;"></td>';
+		echo '<td style="padding:4px;">';
+		echo '<input type="text" name="TitleText_' . htmlspecialchars($evCode) . '" value="' . htmlspecialchars($displayTitleText) . '" style="width:95%;padding:3px;">';
+		if (!empty($preview)) {
+			echo '<br><small style="color:#6c757d;">' . htmlspecialchars($preview) . '</small>';
+		}
+		echo '</td>';
 		echo '</tr>';
 	}
 

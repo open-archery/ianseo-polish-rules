@@ -16,7 +16,7 @@ Read the following before writing any code:
 
 ---
 
-## Task 2 — `DiplomaSetup.php`: migrations + new helpers
+## Task 2 — `DiplomaSetup.php`: migrations + new helpers ✓
 
 **File:** `Diplomas/DiplomaSetup.php`
 
@@ -54,7 +54,7 @@ Read the following before writing any code:
 
 ---
 
-## Task 3 — `DiplomaConfig.php`: UI for title config
+## Task 3 — `DiplomaConfig.php`: UI for title config ✓
 
 **File:** `Diplomas/DiplomaConfig.php`
 
@@ -76,7 +76,7 @@ Read the following before writing any code:
 
 ---
 
-## Task 4 — `PLDiplomaPdf.php`: render title line
+## Task 4 — `PLDiplomaPdf.php`: render title line ✓
 
 **File:** `Diplomas/PLDiplomaPdf.php`
 
@@ -96,7 +96,7 @@ Read the following before writing any code:
 
 ---
 
-## Task 5 — `PrnIndividualDipl.php`: pass title to PDF
+## Task 5 — `PrnIndividualDipl.php`: pass title to PDF ✓
 
 **File:** `Diplomas/PrnIndividualDipl.php`
 
@@ -119,7 +119,7 @@ Read the following before writing any code:
 
 ---
 
-## Task 6 — `PrnTeamDipl.php`: pass title to PDF
+## Task 6 — `PrnTeamDipl.php`: pass title to PDF ✓
 
 **File:** `Diplomas/PrnTeamDipl.php`
 
@@ -136,7 +136,7 @@ $evKey  = $evType . ':' . $team['EventId'];
 
 ---
 
-## Task 7 — Add `pl_diploma_extract_year()` helper
+## Task 7 — Add `pl_diploma_extract_year()` helper ✓
 
 **File:** `Diplomas/DiplomaSetup.php`
 
@@ -158,7 +158,7 @@ This can be added in Task 2 alongside the other helpers, or as a follow-up here.
 
 ---
 
-## Task 8 — Self-review
+## Task 8 — Self-review ✓
 
 Before committing, verify against the Reviewer checklist (`.github/agents/reviewer.prompt.md`):
 

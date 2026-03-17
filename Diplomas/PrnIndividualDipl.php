@@ -50,15 +50,35 @@ if (empty($results)) {
 	die('Brak wyników do wygenerowania dyplomów.');
 }
 
+// Pre-compute title year once
+$titleYear = pl_diploma_extract_year($config['Dates']);
+
 // Generate PDF
 $pdf = PLDiplomaPdf::createInstance('Dyplomy indywidualne');
 
 foreach ($results as $individual) {
+	$compositeKey = 'I:' . $individual['IndEvent'];
+
 	// Determine class text: custom override or default event name
 	$classText = $individual['EvEventName'];
-	$compositeKey = 'I:' . $individual['IndEvent'];
-	if (isset($eventTexts[$compositeKey]) && !empty($eventTexts[$compositeKey])) {
-		$classText = $eventTexts[$compositeKey];
+	if (isset($eventTexts[$compositeKey]) && !empty($eventTexts[$compositeKey]['customText'])) {
+		$classText = $eventTexts[$compositeKey]['customText'];
+	}
+
+	// Build title phrase if titles are enabled
+	$titleText = '';
+	if ($config['TitlesEnabled']) {
+		$evData = isset($eventTexts[$compositeKey])
+			? $eventTexts[$compositeKey]
+			: array('titlePrefix' => '', 'titleText' => '');
+		$titleText = pl_diploma_build_title(
+			$individual['Rank'],
+			$evData['titlePrefix'],
+			$evData['titleText'],
+			$titleYear,
+			false,  // individual — not a team
+			false   // not mixed
+		);
 	}
 
 	$pdf->printDiploma(
@@ -72,7 +92,8 @@ foreach ($results as $individual) {
 		array(),           // no team members for individual
 		$config['BodyText'],
 		$config['HeadJudge'],
-		$config['Organizer']
+		$config['Organizer'],
+		$titleText
 	);
 }
 

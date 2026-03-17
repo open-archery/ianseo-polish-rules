@@ -42,8 +42,9 @@ class PLDiplomaPdf extends TCPDF {
 	 * @param string $bodyText Optional additional text
 	 * @param string $headJudge Name of head of judges
 	 * @param string $organizer Name of the organizer
+	 * @param string $titleText Pre-built title phrase e.g. "i zdobywa tytuł Mistrza Polski na rok 2026" (empty = no title line)
 	 */
-	public function printDiploma($competitionName, $dates, $location, $classText, $rank, $athleteName, $clubName, $teamMembers = array(), $bodyText = '', $headJudge = '', $organizer = '') {
+	public function printDiploma($competitionName, $dates, $location, $classText, $rank, $athleteName, $clubName, $teamMembers = array(), $bodyText = '', $headJudge = '', $organizer = '', $titleText = '') {
 		$this->AddPage();
 
 		$pageW = $this->getPageWidth();
@@ -96,6 +97,13 @@ class PLDiplomaPdf extends TCPDF {
 		$this->Ln(2);
 		$this->SetFont('dejavusans', '', 18);
 		$this->Cell($contentW, 10, mb_convert_encoding('w kategorii ' . $classText, 'UTF-8', 'UTF-8'), 0, 1, 'C');
+
+		// Title line for places 1–3 (e.g. "i zdobywa tytuł Mistrza Polski Seniorów na rok 2026")
+		if (!empty($titleText)) {
+			$this->Ln(6);
+			$this->SetFont('dejavusans', 'I', 13);
+			$this->Cell($contentW, 8, $titleText, 0, 1, 'C');
+		}
 
 		// Optional body text
 		if (!empty($bodyText)) {
