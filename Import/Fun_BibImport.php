@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../Lookup/Fun_ClubName.php';
+
 /**
  * Fun_BibImport.php — Processing functions for the BibImport feature.
  *
@@ -289,7 +291,7 @@ function pl_bibimport_run($tourId, $rawInput, $division) {
             $coId = pl_bibimport_upsert_country(
                 $tourId,
                 $lue->LueCountry,
-                $lue->LueCoDescr,
+                pl_club_short_name($lue->LueCoDescr),
                 $countryCache
             );
 
