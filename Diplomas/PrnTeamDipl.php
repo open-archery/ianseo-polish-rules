@@ -50,15 +50,37 @@ if (empty($results)) {
 	die('Brak wyników do wygenerowania dyplomów.');
 }
 
+// Pre-compute title year once
+$titleYear = pl_diploma_extract_year($config['Dates']);
+
 // Generate PDF
 $pdf = PLDiplomaPdf::createInstance('Dyplomy drużynowe');
 
 foreach ($results as $team) {
+	$isMixed = ($team['IsMixed'] == 1);
+	$evType  = $isMixed ? 'M' : 'T';
+	$compositeKey = $evType . ':' . $team['EventId'];
+
 	// Determine class text: custom override or default event name
 	$classText = $team['EventName'];
-	$compositeKey = ($team['IsMixed'] ? 'M:' : 'T:') . $team['EventId'];
-	if (isset($eventTexts[$compositeKey]) && !empty($eventTexts[$compositeKey])) {
-		$classText = $eventTexts[$compositeKey];
+	if (isset($eventTexts[$compositeKey]) && !empty($eventTexts[$compositeKey]['customText'])) {
+		$classText = $eventTexts[$compositeKey]['customText'];
+	}
+
+	// Build title phrase if titles are enabled
+	$titleText = '';
+	if ($config['TitlesEnabled']) {
+		$evData = isset($eventTexts[$compositeKey])
+			? $eventTexts[$compositeKey]
+			: array('titlePrefix' => '', 'titleText' => '');
+		$titleText = pl_diploma_build_title(
+			$team['Rank'],
+			$evData['titlePrefix'],
+			$evData['titleText'],
+			$titleYear,
+			true,     // team event
+			$isMixed  // mixed adds "w mikście", suppresses "Zespołowego"
+		);
 	}
 
 	// Build team member names array
@@ -78,7 +100,8 @@ foreach ($results as $team) {
 		$memberNames,
 		$config['BodyText'],
 		$config['HeadJudge'],
-		$config['Organizer']
+		$config['Organizer'],
+		$titleText
 	);
 }
 
