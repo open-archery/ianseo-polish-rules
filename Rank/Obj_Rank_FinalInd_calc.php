@@ -297,10 +297,10 @@
 
 						if ($realphase == 4)
 						{
-							// QF: account for pool-elimination brackets (EvElimType 3/4) that
-							// have fewer than 8 losers; start as close to the bottom as possible.
-							$MaxRank = ($myRow->EvElimType == 3 || $myRow->EvElimType == 4) ? 4 : 8;
-							$pos = max(4, $MaxRank - safe_num_rows($rs));
+							// QF: always start at position 4 (the 4 slots that advanced past QF).
+							// Using safe_num_rows() to adjust the start caused ranks 7-8 instead
+							// of 5-6 when byes reduced the real loser count below 4.
+							$pos = 4;
 						}
 						elseif ($realphase > 4)
 						{

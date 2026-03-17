@@ -237,7 +237,10 @@
 
 						if ($realphase == 4)
 						{
-							$pos = max(4, 8 - safe_num_rows($rs));
+							// QF: always start at position 4 (the 4 slots that advanced past QF).
+							// Using safe_num_rows() to adjust the start caused ranks 7-8 instead
+							// of 5-6 when byes reduced the real loser count below 4.
+							$pos = 4;
 						}
 						elseif ($realphase > 4)
 						{
