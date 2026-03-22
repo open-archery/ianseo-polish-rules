@@ -3,9 +3,9 @@
  * Club name transformation functions for the PZŁucz Sportzona lookup adapter.
  *
  * Provides:
- *   pl_club_short_name(string $rawName): string  — abbreviated short name
- *   pl_club_code_base(string $rawName): string   — 2–4 char code (before collision resolution)
- *   pl_resolve_club_codes(array $clubs): array   — collision-resolved map
+ *   pl_club_short_name(string $rawName): string       — abbreviated short name
+ *   pl_club_code_base(string $rawName): string        — up to 6 uppercase ASCII chars (before collision resolution)
+ *   pl_resolve_club_codes(array $clubs): array        — collision-resolved map
  *
  * No ianseo bootstrap required — this file is included by SportzonaProxy.php
  * which runs outside the ianseo session context.
@@ -161,6 +161,18 @@ function pl_normalize_whitespace(string $s): string
 }
 
 // ---------------------------------------------------------------------------
+// Strip Polish diacritics: transliterate Polish characters to ASCII.
+// ---------------------------------------------------------------------------
+function pl_strip_polish_diacritics(string $s): string
+{
+    return str_replace(
+        ['Ą', 'Ć', 'Ę', 'Ł', 'Ń', 'Ó', 'Ś', 'Ź', 'Ż', 'ą', 'ć', 'ę', 'ł', 'ń', 'ó', 'ś', 'ź', 'ż'],
+        ['A', 'C', 'E', 'L', 'N', 'O', 'S', 'Z', 'Z', 'a', 'c', 'e', 'l', 'n', 'o', 's', 'z', 'z'],
+        $s
+    );
+}
+
+// ---------------------------------------------------------------------------
 // Parse a raw club name into its structural components.
 //
 // Two parsing paths:
@@ -279,7 +291,19 @@ function pl_club_short_name(string $rawName): string
 }
 
 // ---------------------------------------------------------------------------
-// Derive the base club code (2–4 uppercase chars) from a raw clubName string.
+// Derive the base club code (up to 6 uppercase ASCII chars) from a raw
+// clubName string.
+//
+// Algorithm:
+//   1. Parse into properName and city via pl_parse_club_name().
+//   2. Special case: Niezrzeszony → 'NIE'.
+//   3. Strip Polish diacritics from both parts.
+//   4. Remove all non-alpha characters from each part.
+//   5. Uppercase both.
+//   6. Take first 3 chars from the proper name part.
+//   7. Take first 3 chars from the city part.
+//   8. Concatenate → up to 6 chars (exactly 6 when both parts have ≥ 3 letters).
+//
 // Collision resolution is NOT applied here — use pl_resolve_club_codes() for
 // batch processing.
 // ---------------------------------------------------------------------------
@@ -291,43 +315,10 @@ function pl_club_code_base(string $rawName): string
         return 'NIE';
     }
 
-    $properName = $p['properName'];
-    $city       = $p['city'];
+    $properPart = strtoupper(preg_replace('/[^A-Za-z]/u', '', pl_strip_polish_diacritics($p['properName'])));
+    $cityPart   = strtoupper(preg_replace('/[^A-Za-z]/u', '', pl_strip_polish_diacritics($p['city'])));
 
-    // Split proper name on whitespace and hyphens; skip purely numeric words.
-    $words   = preg_split('/[\s\-]+/u', $properName, -1, PREG_SPLIT_NO_EMPTY);
-    $letters = '';
-    foreach ($words as $word) {
-        if (preg_match('/^\d+$/u', $word)) {
-            continue; // skip e.g. "11", "25"
-        }
-        $letters .= mb_strtoupper(mb_substr($word, 0, 1, 'UTF-8'), 'UTF-8');
-        if (mb_strlen($letters, 'UTF-8') >= 4) {
-            break;
-        }
-    }
-
-    // Append first letter of city (if still room)
-    if ($city !== '' && mb_strlen($letters, 'UTF-8') < 4) {
-        $letters .= mb_strtoupper(mb_substr($city, 0, 1, 'UTF-8'), 'UTF-8');
-    }
-
-    // Extend with additional city letters until at least 2 chars
-    if ($city !== '') {
-        $cityUpper = mb_strtoupper($city, 'UTF-8');
-        $i = 1;
-        while (mb_strlen($letters, 'UTF-8') < 2 && $i < mb_strlen($cityUpper, 'UTF-8')) {
-            $letters .= mb_substr($cityUpper, $i, 1, 'UTF-8');
-            $i++;
-        }
-    }
-
-    // Truncate to 4
-    if (mb_strlen($letters, 'UTF-8') > 4) {
-        $letters = mb_substr($letters, 0, 4, 'UTF-8');
-    }
-
-    return $letters;
+    return substr($properPart, 0, 3) . substr($cityPart, 0, 3);
 }
 
 // ---------------------------------------------------------------------------
