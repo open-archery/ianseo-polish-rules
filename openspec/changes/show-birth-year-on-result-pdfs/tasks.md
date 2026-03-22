@@ -1,25 +1,25 @@
 ## 1. Verify Obj_RankFactory registration pattern
 
-- [ ] 1.1 Read `Common/Rank/Obj_RankFactory.php` and confirm how PL-specific subclasses are discovered/registered for the `DivClass` rank type
+- [x] 1.1 Read `Common/Rank/Obj_RankFactory.php` and confirm how PL-specific subclasses are discovered/registered for the `DivClass` rank type
 
 ## 2. Create Obj_Rank_DivClass_PL rank subclass
 
-- [ ] 2.1 Create `Modules/Sets/PL/Rank/Obj_Rank_DivClass_PL.php` extending `Obj_Rank_DivClass`
-- [ ] 2.2 Override `read()`: call `parent::read()`, then collect all athlete IDs from `rankData['sections'][*]['items']`
-- [ ] 2.3 Run a single `SELECT EnId, EnDob FROM Entries WHERE EnId IN (...)` query and stitch `birthdate` into each item
-- [ ] 2.4 Register the subclass with `Obj_RankFactory` per the pattern confirmed in task 1.1
+- [x] 2.1 Create `Modules/Sets/PL/Rank/Obj_Rank_DivClass_PL.php` extending `Obj_Rank_DivClass`
+- [x] 2.2 Override `read()`: call `parent::read()`, then collect all athlete IDs from `rankData['sections'][*]['items']`
+- [x] 2.3 Run a single `SELECT EnId, EnDob FROM Entries WHERE EnId IN (...)` query and stitch `birthdate` into each item
+- [x] 2.4 Register the subclass with `Obj_RankFactory` per the pattern confirmed in task 1.1
 
 ## 3. Update qualification PDF chunk
 
-- [ ] 3.1 In `DivClasIndividual.inc.php`, shrink the athlete name cell width by 10mm in both `pl_writeGroupHeaderPrnIndividual` and `pl_writeDataRowPrnIndividual`
-- [ ] 3.2 Add "Rok ur." header cell (10mm) immediately after the "Nr lic." header cell
-- [ ] 3.3 Add birth year data cell (10mm) immediately after the `$item['bib']` cell; extract year with `substr($item['birthdate'], 0, 4)` and blank it when year is `'0000'`, `'1900'`, `''`, or `'0'`
+- [x] 3.1 In `DivClasIndividual.inc.php`, shrink the athlete name cell width by 10mm in both `pl_writeGroupHeaderPrnIndividual` and `pl_writeDataRowPrnIndividual`
+- [x] 3.2 Add "Rok ur." header cell (10mm) immediately after the "Nr lic." header cell
+- [x] 3.3 Add birth year data cell (10mm) immediately after the `$item['bib']` cell; extract year with `substr($item['birthdate'], 0, 4)` and blank it when year is `'0000'`, `'1900'`, `''`, or `'0'`
 
 ## 4. Update finals PDF chunk
 
-- [ ] 4.1 In `RankIndividual.inc.php`, shrink the athlete name cell width by 10mm in the header and data row
-- [ ] 4.2 Add "Rok ur." header cell (10mm) immediately after the "Nr lic." header cell
-- [ ] 4.3 Add birth year data cell (10mm) immediately after the `$item['bib']` cell with the same blank-rendering logic
+- [x] 4.1 In `RankIndividual.inc.php`, shrink the athlete name cell width by 10mm in the header and data row
+- [x] 4.2 Add "Rok ur." header cell (10mm) immediately after the "Nr lic." header cell
+- [x] 4.3 Add birth year data cell (10mm) immediately after the `$item['bib']` cell with the same blank-rendering logic
 
 ## 5. Manual verification
 

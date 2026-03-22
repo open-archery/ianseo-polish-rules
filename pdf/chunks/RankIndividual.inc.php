@@ -39,8 +39,9 @@ foreach($PdfData->rankData['sections'] as $section) {
 				// Header vero e proprio
 			   	$pdf->SetFont($pdf->FontStd,'B',7);
 				$pdf->Cell(8, 5, $section['meta']['fields']['rank'], 1, 0, 'C', 1);
-				$pdf->Cell(24+(12*(7-$NumPhases-$ElimCols)), 5, $section['meta']['fields']['athlete'], 1, 0, 'C', 1);
+				$pdf->Cell(14+(12*(7-$NumPhases-$ElimCols)), 5, $section['meta']['fields']['athlete'], 1, 0, 'C', 1);
 				$pdf->Cell(16, 5, 'Nr lic.', 1, 0, 'C', 1);
+				$pdf->Cell(10, 5, 'Rok ur.', 1, 0, 'C', 1);
 				$pdf->Cell(46, 5, $section['meta']['fields']['countryName'], 1, 0, 'C', 1);
 				$pdf->Cell(12, 5, $section['meta']['fields']['qualRank'], 1, 0, 'C', 1);
 				for($i=1; $i<=$ElimCols; $i++)
@@ -58,9 +59,11 @@ foreach($PdfData->rankData['sections'] as $section) {
 		   	$pdf->SetFont($pdf->FontStd,'B',8);
 			$pdf->Cell(8, 4, ($item['rank'] ? $item['rank'] : ''), 1, 0, 'C', 0);
 		   	$pdf->SetFont($pdf->FontStd,'',8);
-			$pdf->Cell(24+(12*(7-$NumPhases-$ElimCols)), 4, $item['athlete'], 'RBT', 0, 'L', 0);
+			$pdf->Cell(14+(12*(7-$NumPhases-$ElimCols)), 4, $item['athlete'], 'RBT', 0, 'L', 0);
 		   	$pdf->SetFont($pdf->FontStd,'',7);
 			$pdf->Cell(16, 4, $item['bib'], 1, 0, 'C', 0);
+			$birthYear = substr($item['birthdate'] ?? '0', 0, 4);
+			$pdf->Cell(10, 4, (($birthYear === '0000' || $birthYear === '1900' || $birthYear === '' || $birthYear === '0') ? '' : $birthYear), 1, 0, 'C', 0);
 			$pdf->Cell(10, 4, $item['countryCode'], 'LTB', 0, 'C', 0);
 			$pdf->Cell(36, 4, $item['countryName'], 'RTB', 0, 'L', 0);
 			$pdf->SetFont($pdf->FontFix,'',7);

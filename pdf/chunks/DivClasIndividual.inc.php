@@ -62,7 +62,7 @@ function pl_writeDataRowPrnIndividual($pdf, $item, $distSize, $addSize, $distanc
 	$pdf->Cell(7, 4 * ($double ? 2 : 1),  ($item['session'] . "- " . $item['target']), 'TLB', 0, 'R', 0);
 	$pdf->SetFont($pdf->FontStd,'',7);
 	//Per gare tipo "internazionali" mette qui le colonne "nascoste"
-	$pdf->Cell(37+ $addSize + ($pdf->HideCols ? 8:0) , 4 * ($double ? 2 : 1),  $item['athlete'], 'TRB', 0, 'L', 0);
+	$pdf->Cell(27+ $addSize + ($pdf->HideCols ? 8:0) , 4 * ($double ? 2 : 1),  $item['athlete'], 'TRB', 0, 'L', 0);
    	if(!$pdf->HideCols)
    	{
 		$pdf->SetFont($pdf->FontStd,'',6);
@@ -71,6 +71,8 @@ function pl_writeDataRowPrnIndividual($pdf, $item, $distSize, $addSize, $distanc
    	}
 	$pdf->SetFont($pdf->FontStd,'',7);
 	$pdf->Cell(16, 4 * ($double ? 2 : 1),  $item['bib'], 'LTB', 0, 'C', 0);
+	$birthYear = substr($item['birthdate'] ?? '0', 0, 4);
+	$pdf->Cell(10, 4 * ($double ? 2 : 1),  (($birthYear === '0000' || $birthYear === '1900' || $birthYear === '' || $birthYear === '0') ? '' : $birthYear), 'LTB', 0, 'C', 0);
 	$pdf->Cell(8, 4 * ($double ? 2 : 1),  $item['countryCode'], 'LTB', 0, 'L', 0);
 	$pdf->Cell(26 + $addSize, 4 * ($double ? 2 : 1),  $item['countryName'], 'RTB', 0, 'L', 0);
 	$pdf->SetFont($pdf->FontFix,'',7);
@@ -232,10 +234,11 @@ function pl_writeGroupHeaderPrnIndividual($pdf, $section, $distSize, $addSize, $
 	}
    	$pdf->SetFont($pdf->FontStd,'B',7);
 	$pdf->Cell(8, 4 * ($double ? 2 : 1),  $section['fields']['rank'], 1, 0, 'C', 1);
-	$pdf->Cell(44 + $addSize + ($pdf->HideCols ? 8:0), 4 * ($double ? 2 : 1),  $section['fields']['athlete'], 1, 0, 'L', 1);
+	$pdf->Cell(34 + $addSize + ($pdf->HideCols ? 8:0), 4 * ($double ? 2 : 1),  $section['fields']['athlete'], 1, 0, 'L', 1);
 	if(!$pdf->HideCols)
 		$pdf->Cell(8, 4 * ($double ? 2 : 1),  $section['fields']['subclass'], 1, 0, 'C', 1);
 	$pdf->Cell(16, 4 * ($double ? 2 : 1),  'Nr lic.', 1, 0, 'C', 1);
+	$pdf->Cell(10, 4 * ($double ? 2 : 1),  'Rok ur.', 1, 0, 'C', 1);
 	$pdf->Cell(34 + $addSize, 4 * ($double ? 2 : 1),  $section['fields']['countryName'], 1, 0, 'L', 1);
 	if(!$double)
 	{
