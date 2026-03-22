@@ -23,7 +23,7 @@
 
 ## 5. Manual verification
 
-- [ ] 5.1 Generate a qualification results PDF for a PL tournament and confirm "Rok ur." column appears with correct values
-- [ ] 5.2 Generate a finals results PDF and confirm the same
+- [x] 5.1 Generate a qualification results PDF for a PL tournament and confirm "Rok ur." column appears with correct values
+- [x] 5.2 Generate a finals results PDF and confirm the same
 - [ ] 5.3 Confirm athletes with unknown DOB (`EnDob = 0` or year `1900`) show an empty cell, not `0` or `0000`
 - [ ] 5.4 Confirm a non-PL tournament PDF is unaffected
