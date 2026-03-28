@@ -32,9 +32,9 @@
 
 ## 5. Verification
 
-- [ ] 5.1 With one tournament selected and athletes across RM/RW: verify PDF has two sections, Day 2 columns blank, Najlepsze 2x70m = Day 1 score
-- [ ] 5.2 With two tournaments and an athlete in both: verify single row, correct point totals, correct best_2x70m
-- [ ] 5.3 With an athlete only in Tournament 2: verify they appear with Day 1 blank/0
-- [ ] 5.4 With an athlete who did not enter eliminations: verify elim Miejsce is blank, Punkty = 0
-- [ ] 5.5 With tied total points: verify higher best_2x70m athlete ranks higher
-- [ ] 5.6 Verify PDF renders without errors when both selects point to the same tournament (edge case)
+- [x] 5.1 With one tournament selected and athletes across RM/RW: verify PDF has two sections, Day 2 columns blank, Najlepsze 2x70m = Day 1 score
+- [x] 5.2 With two tournaments and an athlete in both: verify single row, correct point totals, correct best_2x70m
+- [x] 5.3 With an athlete only in Tournament 2: verify they appear with Day 1 blank/0
+- [x] 5.4 With an athlete who did not enter eliminations: verify elim Miejsce is blank, Punkty = 0
+- [x] 5.5 With tied total points: verify higher best_2x70m athlete ranks higher
+- [x] 5.6 Verify PDF renders without errors when both selects point to the same tournament (edge case)
