@@ -51,7 +51,7 @@ class PLCombinedRankingPdf extends IanseoPdf
 
         // Two-row header with simulated rowspan via SetXY().
         // Fixed columns (Miejsce, Imię Nazwisko, Klub, Nr licencji) and trailing
-        // columns (Najl. 2x70m, Łącznie pkt) span both rows (height = 2×H_HEADER).
+        // columns (Najl. 2x70m/2x50m, Łącznie pkt) span both rows (height = 2×H_HEADER).
         // Dzień 1 / Dzień 2 group labels occupy only row 1 (height = H_HEADER).
         // Sub-column labels occupy only row 2, rendered via SetXY jump.
 
@@ -74,7 +74,8 @@ class PLCombinedRankingPdf extends IanseoPdf
         $this->Cell($dayWidth, self::H_HEADER, 'Dzień 2', 1, 0, 'C', true);
 
         // ── Row 1: trailing spanning columns ─────────────────────────────────
-        $this->Cell(self::W_BEST,  $doubleH, 'Najl. 2x70m', 1, 0, 'C', true);
+        $bestLabel = (strncmp($section['divClass'], 'C', 1) === 0) ? 'Najl. 2x50m' : 'Najl. 2x70m';
+        $this->Cell(self::W_BEST,  $doubleH, $bestLabel, 1, 0, 'C', true);
         $this->Cell(self::W_TOTAL, $doubleH, 'Łącznie pkt',  1, 0, 'C', true);
 
         // ── Row 2: jump back to sub-column area and render sub-headers ────────

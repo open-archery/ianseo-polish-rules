@@ -215,16 +215,33 @@ function pl_combined_ranking_merge(array $data1, array $data2) {
 /**
  * Calculate ranking points from a place.
  *
- * Qualification: points = max(0, 16 - place)          → 1st=15 pts, 15th=1 pt
- * Elimination:   points = max(0, (16 - place) * 2)    → 1st=30 pts, 15th=2 pts
+ * Recurve (and all divisions other than Compound):
+ *   Qualification: points = max(0, 16 - place)       → 1st=15 pts, 15th=1 pt
+ *   Elimination:   points = max(0, (16 - place) * 2) → 1st=30 pts, 15th=2 pts
+ *
+ * Compound ('C') — fixed lookup tables (9 places, 0 beyond 9th):
+ *   Qualification: 1→20, 2→19, 3→18, 4→17, 5→11, 6→10, 7→9, 8→8, 9→1
+ *   Elimination:   1→30, 2→26, 3→25, 4→21, 5→20, 6→18, 7→15, 8→11, 9→5
+ *
  * Null place (athlete absent or not in bracket) → 0 pts.
  *
- * @param int|null $place 1-based finishing place, or null
- * @param string   $type  'qual' or 'elim'
+ * @param int|null $place    1-based finishing place, or null
+ * @param string   $type     'qual' or 'elim'
+ * @param string   $division Division code from Entries.EnDivision (e.g. 'R', 'C')
  * @return int
  */
-function pl_combined_ranking_points($place, $type) {
+function pl_combined_ranking_points($place, $type, $division = 'R') {
     if ($place === null || $place < 1) return 0;
+
+    if ($division === 'C') {
+        $qualTable = [20, 19, 18, 17, 11, 10, 9, 8, 1];
+        $elimTable = [30, 26, 25, 21, 20, 18, 15, 11, 5];
+        $idx = $place - 1;
+        if ($type === 'qual') return $qualTable[$idx] ?? 0;
+        if ($type === 'elim') return $elimTable[$idx] ?? 0;
+        return 0;
+    }
+
     if ($type === 'qual') return max(0, 16 - $place);
     if ($type === 'elim') return max(0, (16 - $place) * 2);
     return 0;
@@ -271,10 +288,22 @@ function pl_combined_ranking_compute(array $merged, array $labels = []) {
     foreach ($groups as $divClass => $athletes) {
         $rows = [];
         foreach ($athletes as $a) {
-            $d1QualPts = pl_combined_ranking_points($a['d1_qual_rank'], 'qual');
-            $d1ElimPts = pl_combined_ranking_points($a['d1_elim_rank'], 'elim');
-            $d2QualPts = pl_combined_ranking_points($a['d2_qual_rank'], 'qual');
-            $d2ElimPts = pl_combined_ranking_points($a['d2_elim_rank'], 'elim');
+            $div = $a['division'];
+
+            // For Compound, athletes who did not enter the bracket receive elimination
+            // points based on their qualification rank (e.g. 9th qualifier → 9th place
+            // elimination → 5 pts), so fall back to qual_rank when elim_rank is absent.
+            $d1ElimRank = $a['d1_elim_rank'];
+            $d2ElimRank = $a['d2_elim_rank'];
+            if ($div === 'C') {
+                if ($d1ElimRank === null) $d1ElimRank = $a['d1_qual_rank'];
+                if ($d2ElimRank === null) $d2ElimRank = $a['d2_qual_rank'];
+            }
+
+            $d1QualPts = pl_combined_ranking_points($a['d1_qual_rank'], 'qual', $div);
+            $d1ElimPts = pl_combined_ranking_points($d1ElimRank,        'elim', $div);
+            $d2QualPts = pl_combined_ranking_points($a['d2_qual_rank'], 'qual', $div);
+            $d2ElimPts = pl_combined_ranking_points($d2ElimRank,        'elim', $div);
             $totalPts  = $d1QualPts + $d1ElimPts + $d2QualPts + $d2ElimPts;
 
             // Best qual score across both tournaments (0 treated as absent).
@@ -288,11 +317,11 @@ function pl_combined_ranking_compute(array $merged, array $labels = []) {
                 'licence'       => $a['licence'],
                 'd1_qual_place' => $a['d1_qual_rank'],
                 'd1_qual_pts'   => $d1QualPts,
-                'd1_elim_place' => $a['d1_elim_rank'],
+                'd1_elim_place' => $d1ElimRank,
                 'd1_elim_pts'   => $d1ElimPts,
                 'd2_qual_place' => $a['d2_qual_rank'],
                 'd2_qual_pts'   => $d2QualPts,
-                'd2_elim_place' => $a['d2_elim_rank'],
+                'd2_elim_place' => $d2ElimRank,
                 'd2_elim_pts'   => $d2ElimPts,
                 'best_2x70m'    => $best2x70m > 0 ? $best2x70m : null,
                 'total_pts'     => $totalPts,

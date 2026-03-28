@@ -92,5 +92,9 @@ For each tournament, the system SHALL retrieve the athlete's final elimination r
 - **THEN** they SHALL receive 5 elimination points
 - **WHEN** a Compound athlete finishes in elimination place 10 or lower
 - **THEN** they SHALL receive 0 elimination points
+
+#### Scenario: Compound athlete not in elimination bracket
 - **WHEN** a Compound athlete has no `Finals` row for that tournament
-- **THEN** their elimination place SHALL be blank and they SHALL receive 0 elimination points
+- **THEN** their elimination place SHALL default to their qualification rank and elimination points SHALL be calculated from that place using the Compound lookup table
+- **WHEN** a Compound athlete ranked 9th in qualification has no `Finals` row
+- **THEN** their elimination place SHALL be shown as 9 and they SHALL receive 5 elimination points
