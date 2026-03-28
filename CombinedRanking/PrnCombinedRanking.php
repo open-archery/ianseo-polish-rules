@@ -212,5 +212,5 @@ function pl_combined_ranking_print(array $sections, $t1Name, $t2Name, array $unr
         $pdf->Cell(0, 10, 'Brak danych do wyświetlenia.', 0, 1, 'C');
     }
 
-    $pdf->Output('ranking_laczony.pdf', 'D');
+    $pdf->Output('ranking_laczony.pdf', 'I');
 }

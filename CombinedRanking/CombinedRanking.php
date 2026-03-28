@@ -108,7 +108,7 @@ require_once 'Common/Templates/head.php';
     <p style="color: green; font-weight: bold;">Dane 10/X/9 zostały zapisane.</p>
 <?php endif; ?>
 
-<form method="POST" action="">
+<form method="POST" action="" target="_blank">
     <table>
         <tr>
             <td><strong>Dzień 1 (Turniej 1):</strong></td>
@@ -208,7 +208,7 @@ require_once 'Common/Templates/head.php';
 <h3>Dyplomy rankingu łączonego</h3>
 <p>Wybierz te same turnieje co powyżej. Data na dyplomie jest niezależna od konfiguracji dyplomów.</p>
 
-<form method="POST" action="PrnCombinedRankingDipl.php">
+<form method="POST" action="PrnCombinedRankingDipl.php" target="_blank">
     <table>
         <tr>
             <td><strong>Dzień 1 (Turniej 1):</strong></td>
