@@ -95,8 +95,14 @@ class PLDiplomaPdf extends TCPDF {
 
 		// "w kategorii {ClassText}"
 		$this->Ln(2);
-		$this->SetFont('dejavusans', '', 18);
-		$this->Cell($contentW, 10, mb_convert_encoding('w kategorii ' . $classText, 'UTF-8', 'UTF-8'), 0, 1, 'C');
+		$categoryLine = 'w kategorii ' . $classText;
+		if ($classText !== strip_tags($classText)) {
+			// classText contains HTML tags — use writeHTML for proper rendering
+			$this->writeHTML('<p style="font-size:18pt;text-align:center;">' . $categoryLine . '</p>');
+		} else {
+			$this->SetFont('dejavusans', '', 18);
+			$this->Cell($contentW, 10, mb_convert_encoding($categoryLine, 'UTF-8', 'UTF-8'), 0, 1, 'C');
+		}
 
 		// Title line for places 1–3 (e.g. "i zdobywa tytuł Mistrza Polski Seniorów na rok 2026")
 		if (!empty($titleText)) {

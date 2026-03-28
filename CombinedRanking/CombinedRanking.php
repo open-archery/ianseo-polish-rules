@@ -101,4 +101,48 @@ require_once 'Common/Templates/head.php';
     </table>
 </form>
 
+<hr>
+
+<h3>Dyplomy rankingu łączonego</h3>
+<p>Wybierz te same turnieje co powyżej. Data na dyplomie jest niezależna od konfiguracji dyplomów.</p>
+
+<form method="POST" action="PrnCombinedRankingDipl.php">
+    <table>
+        <tr>
+            <td><strong>Dzień 1 (Turniej 1):</strong></td>
+            <td>
+                <select name="tour1" style="min-width: 350px;">
+                    <?php foreach ($tournaments as $t): ?>
+                        <option value="<?= (int)$t['ToId'] ?>"
+                            <?= ($t['ToId'] === $currentTourId) ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($t['ToName']) ?>
+                            (<?= htmlspecialchars(substr($t['ToWhenFrom'], 0, 10)) ?>)
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <td><strong>Dzień 2 (Turniej 2):</strong></td>
+            <td>
+                <select name="tour2" style="min-width: 350px;">
+                    <option value="">— brak —</option>
+                    <?php foreach ($tournaments as $t): ?>
+                        <option value="<?= (int)$t['ToId'] ?>">
+                            <?= htmlspecialchars($t['ToName']) ?>
+                            (<?= htmlspecialchars(substr($t['ToWhenFrom'], 0, 10)) ?>)
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <td></td>
+            <td style="padding-top: 12px;">
+                <input type="submit" value="Generuj dyplomy">
+            </td>
+        </tr>
+    </table>
+</form>
+
 <?php require_once 'Common/Templates/tail.php'; ?>
