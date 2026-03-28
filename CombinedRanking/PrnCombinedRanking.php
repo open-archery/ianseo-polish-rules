@@ -31,11 +31,11 @@ class PLCombinedRankingPdf extends IanseoPdf
     /**
      * Render one division+class section.
      *
-     * @param array  $section  Section data from pl_combined_ranking_compute()
-     * @param string $t1Name   Tournament 1 name (Day 1 label)
-     * @param string $t2Name   Tournament 2 name (Day 2 label), empty when not used
+     * @param array  $section             Section data from pl_combined_ranking_compute()
+     * @param array  $unresolvedLicences  Flat set of licences with unresolved QF ties
+     *                                   (keyed by licence string → true); empty = none
      */
-    public function renderSection(array $section)
+    public function renderSection(array $section, array $unresolvedLicences = [])
     {
 
         // ── Title row ────────────────────────────────────────────────────────
@@ -108,9 +108,13 @@ class PLCombinedRankingPdf extends IanseoPdf
 
             $fill = true;
 
-            // Rank (bold)
+            // Rank (bold); append * when this athlete's QF tie is unresolved
+            $rankDisplay = $row['rank'];
+            if (!empty($unresolvedLicences[$row['licence']])) {
+                $rankDisplay = $row['rank'] . '*';
+            }
             $this->SetFont($this->FontStd, 'B', 8);
-            $this->Cell(self::W_RANK, self::H_DATA, $row['rank'], 1, 0, 'C', $fill);
+            $this->Cell(self::W_RANK, self::H_DATA, $rankDisplay, 1, 0, 'C', $fill);
 
             // Name, Club, Licence
             $this->SetFont($this->FontStd, '', 8);
@@ -152,17 +156,38 @@ class PLCombinedRankingPdf extends IanseoPdf
             $this->SetFont($this->FontStd, 'B', 8);
             $this->Cell(self::W_TOTAL, self::H_DATA, $row['total_pts'], 1, 1, 'R', $fill);
         }
+
+        // Footnote when any athlete in this section has an unresolved QF tie.
+        if (!empty($unresolvedLicences)) {
+            $hasFootnote = false;
+            foreach ($section['rows'] as $row) {
+                if (!empty($unresolvedLicences[$row['licence']])) {
+                    $hasFootnote = true;
+                    break;
+                }
+            }
+            if ($hasFootnote) {
+                $this->SetFont($this->FontStd, 'I', 7);
+                $totalWidth = self::W_RANK + self::W_NAME + self::W_CLUB + self::W_LIC
+                            + 8 * self::W_CELL + self::W_BEST + self::W_TOTAL;
+                $this->Cell($totalWidth, 4,
+                    '* Remis nierozstrzygnięty — brak danych 10/X/9',
+                    0, 1, 'L', false);
+            }
+        }
     }
 }
 
 /**
  * Generate and stream the combined ranking PDF to the browser.
  *
- * @param array  $sections Array from pl_combined_ranking_compute()
- * @param string $t1Name   Tournament 1 name
- * @param string $t2Name   Tournament 2 name (empty when not used)
+ * @param array  $sections            Array from pl_combined_ranking_compute()
+ * @param string $t1Name              Tournament 1 name
+ * @param string $t2Name              Tournament 2 name (empty when not used)
+ * @param array  $unresolvedLicences  Flat set [licence => true] of athletes with
+ *                                    unresolved QF ties; empty = none
  */
-function pl_combined_ranking_print(array $sections, $t1Name, $t2Name) {
+function pl_combined_ranking_print(array $sections, $t1Name, $t2Name, array $unresolvedLicences = []) {
     $title = 'Ranking łączony';
     if ($t1Name !== '') $title .= ' — ' . $t1Name;
     if ($t2Name !== '') $title .= ' / ' . $t2Name;
@@ -176,7 +201,7 @@ function pl_combined_ranking_print(array $sections, $t1Name, $t2Name) {
         if (!empty($section['rows'])) {
             $pdf->AddPage();
             $firstSection = false;
-            $pdf->renderSection($section);
+            $pdf->renderSection($section, $unresolvedLicences);
         }
     }
 

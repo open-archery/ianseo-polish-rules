@@ -201,12 +201,14 @@ function pl_combined_ranking_merge(array $data1, array $data2) {
             'licence'       => $licence,
             'division'      => $base['division'],
             'class'         => $base['class'],
-            'd1_qual_rank'  => $a1 ? $a1['qual_rank']  : null,
-            'd1_qual_score' => $a1 ? $a1['qual_score'] : null,
-            'd1_elim_rank'  => $a1 ? $a1['elim_rank']  : null,
-            'd2_qual_rank'  => $a2 ? $a2['qual_rank']  : null,
-            'd2_qual_score' => $a2 ? $a2['qual_score'] : null,
-            'd2_elim_rank'  => $a2 ? $a2['elim_rank']  : null,
+            'd1_qual_rank'   => $a1 ? $a1['qual_rank']   : null,
+            'd1_qual_score'  => $a1 ? $a1['qual_score']  : null,
+            'd1_elim_rank'   => $a1 ? $a1['elim_rank']   : null,
+            'd1_in_bracket'  => $a1 ? $a1['in_bracket']  : false,
+            'd2_qual_rank'   => $a2 ? $a2['qual_rank']   : null,
+            'd2_qual_score'  => $a2 ? $a2['qual_score']  : null,
+            'd2_elim_rank'   => $a2 ? $a2['elim_rank']   : null,
+            'd2_in_bracket'  => $a2 ? $a2['in_bracket']  : false,
         ];
     }
     return $merged;
@@ -315,14 +317,16 @@ function pl_combined_ranking_compute(array $merged, array $labels = []) {
                 'name'          => $a['name'],
                 'club'          => $a['club'],
                 'licence'       => $a['licence'],
-                'd1_qual_place' => $a['d1_qual_rank'],
-                'd1_qual_pts'   => $d1QualPts,
-                'd1_elim_place' => $d1ElimRank,
-                'd1_elim_pts'   => $d1ElimPts,
-                'd2_qual_place' => $a['d2_qual_rank'],
-                'd2_qual_pts'   => $d2QualPts,
-                'd2_elim_place' => $d2ElimRank,
-                'd2_elim_pts'   => $d2ElimPts,
+                'd1_qual_place'  => $a['d1_qual_rank'],
+                'd1_qual_pts'    => $d1QualPts,
+                'd1_elim_place'  => $d1ElimRank,
+                'd1_elim_pts'    => $d1ElimPts,
+                'd1_in_bracket'  => $a['d1_in_bracket'] ?? false,
+                'd2_qual_place'  => $a['d2_qual_rank'],
+                'd2_qual_pts'    => $d2QualPts,
+                'd2_elim_place'  => $d2ElimRank,
+                'd2_elim_pts'    => $d2ElimPts,
+                'd2_in_bracket'  => $a['d2_in_bracket'] ?? false,
                 'best_2x70m'    => $best2x70m > 0 ? $best2x70m : null,
                 'total_pts'     => $totalPts,
             ];
@@ -348,5 +352,243 @@ function pl_combined_ranking_compute(array $merged, array $labels = []) {
         ];
     }
 
+    return $sections;
+}
+
+// ─── QF Tiebreak: storage ─────────────────────────────────────────────────────
+
+/**
+ * Auto-install the PLQfTiebreak table if it does not exist.
+ * Called on every combined ranking page load (cheap SHOW TABLES check).
+ */
+function pl_combined_ranking_install_qf_table() {
+    $rs = safe_r_sql("SHOW TABLES LIKE 'PLQfTiebreak'");
+    $exists = ($rs && safe_num_rows($rs) > 0);
+    if ($rs) safe_free_result($rs);
+    if ($exists) return;
+
+    safe_w_sql("
+        CREATE TABLE PLQfTiebreak (
+            PlQtId         INT UNSIGNED    NOT NULL AUTO_INCREMENT,
+            PlQtTournament INT UNSIGNED    NOT NULL,
+            PlQtEnCode     VARCHAR(20)     NOT NULL,
+            PlQtArrows     TINYINT UNSIGNED NOT NULL DEFAULT 0,
+            PRIMARY KEY (PlQtId),
+            UNIQUE KEY uq_tour_code (PlQtTournament, PlQtEnCode)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8
+    ");
+}
+
+/**
+ * Load stored 10/X/9 counts for the given pair of tournaments.
+ *
+ * @param int $t1Id Tournament 1 ID (0 = not selected)
+ * @param int $t2Id Tournament 2 ID (0 = not selected)
+ * @return array Keyed [$tourId][$enCode] => int (arrow count)
+ */
+function pl_combined_ranking_load_qf_counts($t1Id, $t2Id) {
+    $t1Id = intval($t1Id);
+    $t2Id = intval($t2Id);
+    $ids  = array_filter([$t1Id, $t2Id]);
+    if (empty($ids)) return [];
+
+    $inClause = implode(',', $ids);
+    $rs = safe_r_sql("
+        SELECT PlQtTournament, PlQtEnCode, PlQtArrows
+        FROM PLQfTiebreak
+        WHERE PlQtTournament IN ({$inClause})
+    ");
+    $result = [];
+    while ($row = safe_fetch($rs)) {
+        $result[(int)$row->PlQtTournament][$row->PlQtEnCode] = (int)$row->PlQtArrows;
+    }
+    safe_free_result($rs);
+    return $result;
+}
+
+/**
+ * Persist a 10/X/9 count for one athlete in one tournament.
+ * Overwrites any previously stored value for the same pair.
+ *
+ * @param int    $tourId Tournament ID
+ * @param string $enCode Athlete licence (Entries.EnCode)
+ * @param int    $arrows 10/X/9 arrow count
+ */
+function pl_combined_ranking_save_qf_count($tourId, $enCode, $arrows) {
+    $tourId = intval($tourId);
+    $enCode = StrSafe_DB($enCode);
+    $arrows = max(0, intval($arrows));
+    safe_w_sql("
+        INSERT INTO PLQfTiebreak (PlQtTournament, PlQtEnCode, PlQtArrows)
+        VALUES ({$tourId}, {$enCode}, {$arrows})
+        ON DUPLICATE KEY UPDATE PlQtArrows = {$arrows}
+    ");
+}
+
+// ─── QF Tiebreak: detection and correction ────────────────────────────────────
+
+/**
+ * Detect unresolved Compound QF place ties across the computed sections.
+ *
+ * A tie is unresolved when two or more Compound athletes in the same section
+ * share an elimination place in the QF-loser range (5–8), both have confirmed
+ * bracket participation (d1/d2_in_bracket), and at least one is missing a
+ * stored 10/X/9 count for that tournament.
+ *
+ * Returns ALL athletes in each unresolved tied group (not only those missing
+ * counts), so the UI can show the full context.  Each entry also carries a
+ * `has_count` flag and the stored count value for convenience.
+ *
+ * @param array  $sections  Result of pl_combined_ranking_compute()
+ * @param array  $qfCounts  Result of pl_combined_ranking_load_qf_counts()
+ * @param int    $t1Id      Tournament 1 ID
+ * @param int    $t2Id      Tournament 2 ID (0 = not selected)
+ * @param string $t1Name    Tournament 1 display name
+ * @param string $t2Name    Tournament 2 display name
+ * @return array  List of tie entries:
+ *   ['athlete', 'licence', 'tourId', 'tourName', 'place', 'has_count', 'count']
+ */
+function pl_combined_ranking_detect_qf_ties(array $sections, array $qfCounts, $t1Id, $t2Id, $t1Name, $t2Name) {
+    $ties    = [];
+    $tourMap = [];
+    if ($t1Id > 0) $tourMap[$t1Id] = ['name' => $t1Name, 'col' => 'd1'];
+    if ($t2Id > 0) $tourMap[$t2Id] = ['name' => $t2Name, 'col' => 'd2'];
+
+    foreach ($sections as $section) {
+        if (strncmp($section['divClass'], 'C', 1) !== 0) continue; // Compound only
+
+        foreach ($tourMap as $tourId => $info) {
+            $col           = $info['col'];
+            $placeProp     = $col . '_elim_place';
+            $inBracketProp = $col . '_in_bracket';
+
+            // Group genuine bracket participants by QF-range place.
+            $byPlace = [];
+            foreach ($section['rows'] as $row) {
+                $place     = $row[$placeProp]     ?? null;
+                $inBracket = $row[$inBracketProp] ?? false;
+                if ($place === null || $place < 5 || $place > 8 || !$inBracket) continue;
+                $byPlace[$place][] = $row;
+            }
+
+            foreach ($byPlace as $place => $athletes) {
+                if (count($athletes) < 2) continue; // not a tie
+
+                // Only flag as unresolved when at least one count is missing.
+                $anyMissing = false;
+                foreach ($athletes as $a) {
+                    if (!isset($qfCounts[$tourId][$a['licence']])) {
+                        $anyMissing = true;
+                        break;
+                    }
+                }
+                if (!$anyMissing) continue;
+
+                foreach ($athletes as $a) {
+                    $hasCount = isset($qfCounts[$tourId][$a['licence']]);
+                    $ties[] = [
+                        'athlete'   => $a['name'],
+                        'licence'   => $a['licence'],
+                        'tourId'    => $tourId,
+                        'tourName'  => $info['name'],
+                        'place'     => $place,
+                        'has_count' => $hasCount,
+                        'count'     => $hasCount ? $qfCounts[$tourId][$a['licence']] : null,
+                    ];
+                }
+            }
+        }
+    }
+    return $ties;
+}
+
+/**
+ * Apply stored 10/X/9 counts to resolve Compound QF place ties in sections.
+ *
+ * For each tied group where ALL athletes have stored counts, reassigns their
+ * elimination places in descending count order (highest count = best place),
+ * recalculates elimination points and total points, then re-sorts and
+ * re-ranks the section.
+ *
+ * Groups where at least one count is missing are left unchanged.
+ *
+ * @param array $sections  Result of pl_combined_ranking_compute()
+ * @param array $qfCounts  Result of pl_combined_ranking_load_qf_counts()
+ * @param int   $t1Id      Tournament 1 ID
+ * @param int   $t2Id      Tournament 2 ID (0 = not selected)
+ * @return array Updated sections
+ */
+function pl_combined_ranking_apply_qf_counts(array $sections, array $qfCounts, $t1Id, $t2Id) {
+    $tourMap = [];
+    if ($t1Id > 0) $tourMap[$t1Id] = 'd1';
+    if ($t2Id > 0) $tourMap[$t2Id] = 'd2';
+
+    foreach ($sections as &$section) {
+        if (strncmp($section['divClass'], 'C', 1) !== 0) continue;
+
+        $modified = false;
+
+        foreach ($tourMap as $tourId => $col) {
+            $placeProp     = $col . '_elim_place';
+            $ptsProp       = $col . '_elim_pts';
+            $inBracketProp = $col . '_in_bracket';
+
+            // Build: place → [row indices] for genuine QF-range bracket participants.
+            $byPlace = [];
+            foreach ($section['rows'] as $idx => $row) {
+                $place     = $row[$placeProp]     ?? null;
+                $inBracket = $row[$inBracketProp] ?? false;
+                if ($place === null || $place < 5 || $place > 8 || !$inBracket) continue;
+                $byPlace[$place][] = $idx;
+            }
+
+            foreach ($byPlace as $place => $indices) {
+                if (count($indices) < 2) continue;
+
+                // Only apply when ALL athletes in the group have stored counts.
+                $allHaveCounts = true;
+                foreach ($indices as $idx) {
+                    if (!isset($qfCounts[$tourId][$section['rows'][$idx]['licence']])) {
+                        $allHaveCounts = false;
+                        break;
+                    }
+                }
+                if (!$allHaveCounts) continue;
+
+                // Sort indices by stored count DESC (higher count = better place).
+                $rowsSnap = $section['rows']; // snapshot for closure
+                usort($indices, function($ia, $ib) use ($rowsSnap, $qfCounts, $tourId) {
+                    $ca = $qfCounts[$tourId][$rowsSnap[$ia]['licence']] ?? 0;
+                    $cb = $qfCounts[$tourId][$rowsSnap[$ib]['licence']] ?? 0;
+                    return $cb - $ca; // DESC
+                });
+
+                // Assign sequential places from the shared rank and recalculate pts.
+                $newPlace = $place;
+                foreach ($indices as $idx) {
+                    $section['rows'][$idx][$placeProp] = $newPlace;
+                    $newPts = pl_combined_ranking_points($newPlace, 'elim', 'C');
+                    $oldPts = $section['rows'][$idx][$ptsProp];
+                    $section['rows'][$idx][$ptsProp]    = $newPts;
+                    $section['rows'][$idx]['total_pts'] += ($newPts - $oldPts);
+                    $newPlace++;
+                    $modified = true;
+                }
+            }
+        }
+
+        if ($modified) {
+            usort($section['rows'], function($a, $b) {
+                if ($b['total_pts'] !== $a['total_pts']) return $b['total_pts'] - $a['total_pts'];
+                return ($b['best_2x70m'] ?? 0) - ($a['best_2x70m'] ?? 0);
+            });
+            $rank = 1;
+            foreach ($section['rows'] as &$row) {
+                $row['rank'] = $rank++;
+            }
+            unset($row);
+        }
+    }
+    unset($section);
     return $sections;
 }
