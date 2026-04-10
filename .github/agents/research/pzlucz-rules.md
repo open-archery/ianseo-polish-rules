@@ -405,13 +405,34 @@ Same structure as outdoor teams (3 or 4 members, set/cumulative system).
 - Individual athletes have separate targets (no sharing)
 - Agents (not athletes) retrieve arrows and verify scoring
 
-### 6.8 Post-Elimination Classification (§2.6.5)
+### 6.8 Post-Elimination Classification (§2.6.5 & §2.6.6)
 
-Losers within same round classified by:
+**Athletes who did not advance to the elimination round (§2.6.5):**
 
-1. Set points (for set system) or total points (for cumulative)
-2. If tie → qualification ranking
-3. If still tie → same rank position
+Athletes, teams, and mixed teams that did not qualify for the elimination bracket retain
+exactly the positions they held at the end of the qualification round.
+
+**Position ranges for eliminated athletes (§2.6.6.1):**
+
+| Eliminated in | Final positions |
+|---|---|
+| Quarter-finals (1/4) | 5–8 |
+| Round of 16 (1/8) | 9–16 |
+| Round of 32 (1/16) | 17–32 |
+| Round of 24 (1/24) | 33–56 |
+| Round of 48 (1/48) | 57–104 |
+| Round of 32 (1/32) | 33–64 |
+| Round of 64 (1/64) | 65–128 |
+
+Note: The 1/24 and 1/48 brackets apply to the 104-athlete draw; 1/32 and 1/64 apply
+to the 128-athlete draw. Both bracket systems can be active in the same championship
+(different categories may use different draw sizes).
+
+**Tiebreaking within the same eliminated phase (§2.6.6.2):**
+
+1. Average arrow value in the last match (shoot-off arrows excluded)
+2. Average arrow value in the shoot-off (if the match ended without a shoot-off, value = 0)
+3. Qualification score
 
 ---
 
