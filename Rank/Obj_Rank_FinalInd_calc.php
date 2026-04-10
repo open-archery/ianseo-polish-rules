@@ -3,14 +3,18 @@
  * Obj_Rank_FinalInd_calc — Poland (PL) override
  *
  * Identical to the core implementation except calcFromPhase(), which applies
- * PZŁucz §2.6.5 rules:
+ * PZŁucz §2.6.5–§2.6.6 rules:
  *
  *  1. No-bronze-match detection: when the bronze match result is 0-0 (not shot),
  *     both semifinal losers are awarded shared 3rd place instead of 3rd/4th.
  *  2. Unique sequential positions for ALL phases >= 4 (quarterfinals and below),
  *     not just the quarterfinals as in the default engine.
- *  3. Secondary tiebreaker is qualification rank (IndRank ASC) instead of
- *     cumulative score.
+ *  3. Tiebreaking within a phase uses three criteria (§2.6.6.2):
+ *       a. Average arrow value in the match (FinScore / arrows, shoot-off excluded)
+ *       b. Average arrow value in the shoot-off (0 if no shoot-off)
+ *       c. Qualification score (IndScore)
+ *  4. FinAverageMatch and FinAverageTie are written to Finals for every phase,
+ *     matching ianseo rev 114 core behaviour.
  */
 	class Obj_Rank_FinalInd_calc extends Obj_Rank_FinalInd
 	{
@@ -142,16 +146,18 @@
 	/**
 	 * calcFromPhase()
 	 *
-	 * PL modification (§2.6.5):
+	 * PL modification (§2.6.5–§2.6.6):
 	 *  - No-bronze detection: when the bronze phase losers query returns 0 rows,
 	 *    check if both bronze-match athletes scored 0 (match not shot). If so,
 	 *    assign both shared 3rd place.
-	 *  - Unique sequential positions for ALL phases >= 4, sorted by match score
-	 *    DESC then qualification rank (IndRank) ASC.
+	 *  - Unique sequential positions for ALL phases >= 4, sorted by:
+	 *      1. Average arrow value in the match (FinScore / arrows shot, descending)
+	 *      2. Average arrow value in the shoot-off (0 if none, descending)
+	 *      3. Qualification score (IndScore, descending)
+	 *  - FinAverageMatch and FinAverageTie are written to Finals for all phases.
 	 *
 	 * All other behaviour (gold/bronze/semi handling, EvWinnerFinalRank offset,
-	 * parent-event chains, SubCodes, pool phases, IRM types) is preserved from
-	 * the core implementation.
+	 * parent-event chains, SubCodes) is preserved from the core implementation.
 	 *
 	 * @param string $event     Event code
 	 * @param int    $realphase Raw phase number (from Grids.GrPhase)
@@ -181,20 +187,25 @@
 				return false;
 
 			// Fetch all losers for this phase.
-			// PL change to ORDER BY: qualification rank (i.IndRank ASC) as secondary
-			// tiebreaker instead of cumulative score.
+			// Arrow-count helpers (DiEndArrows, DiArrows), arrow content fields, and
+			// qualification score are fetched here; averages are computed in PHP.
+			// ORDER BY is match number only — sorting for sub-ranking is done in PHP.
 			$q = "
 				SELECT
-					EvElimType, EvWinnerFinalRank, SubCodes, EvCodeParent,
+					EvWinnerFinalRank, SubCodes, EvCodeParent,
 					GrPhase, EvFinalFirstPhase,
+					IF((EvMatchArrowsNo & GrBitPhase)=0, EvFinArrows, EvElimArrows) AS DiEndArrows,
+					IF((EvMatchArrowsNo & GrBitPhase)=0, EvFinArrows*EvFinEnds, EvElimArrows*EvElimEnds) AS DiArrows,
 					LEAST(f.FinMatchNo, f2.FinMatchNo) AS MatchNo,
-					f.FinAthlete  AS AthId,    i.IndRank  AS AthRank,
-					f2.FinAthlete AS OppAthId, i2.IndRank AS OppAthRank,
-					f.FinIrmType  AS IrmType,  f2.FinIrmType AS OppIrmType,
-					IF(EvMatchMode=0, f.FinScore, f.FinSetScore) AS Score,
-					f.FinScore  AS CumScore,  f.FinTie  AS Tie,
-					IF(EvMatchMode=0, f2.FinScore, f2.FinSetScore) AS OppScore,
-					f2.FinScore AS OppCumScore, f2.FinTie AS OppTie
+					f.FinAthlete   AS AthId,    i.IndRank   AS AthRank,
+					f2.FinAthlete  AS OppAthId, i2.IndRank  AS OppAthRank,
+					f.FinIrmType   AS IrmType,  f2.FinIrmType AS OppIrmType,
+					f.FinScore     AS Score,
+					f.FinArrowstring  AS Arrowstring,  f.FinSetPoints  AS SetPoints,  f.FinTiebreak  AS Tiebreak,
+					f2.FinScore    AS OppScore,
+					f2.FinArrowstring AS OppArrowstring, f2.FinSetPoints AS OppSetPoints, f2.FinTiebreak AS OppTiebreak,
+					COALESCE(qq.QuScore, 0) AS QualScore,
+					f.FinMatchNo   AS RealMatchNo, f2.FinMatchNo AS OppRealMatchNo
 				FROM
 					Finals AS f
 					INNER JOIN Finals AS f2
@@ -225,6 +236,7 @@
 						  AND EvTournament={$this->tournament}
 						GROUP BY EvCodeParent, EvFinalFirstPhase
 					) Secondary ON SubMainCode=EvCode AND SubFirstPhase=GrPhase/2
+					LEFT JOIN Qualifications AS qq ON qq.QuId=f.FinAthlete
 				WHERE
 					f.FinTournament={$this->tournament}
 					AND f.FinEvent='{$event}'
@@ -234,8 +246,7 @@
 					     OR (f.FinIrmType>0 AND f.FinIrmType<20
 					         AND f2.FinIrmType>0 AND f2.FinIrmType<20))
 				ORDER BY
-					IF(EvMatchMode=0, f.FinScore, f.FinSetScore) DESC,
-					i.IndRank ASC
+					LEAST(f.FinMatchNo, f2.FinMatchNo)
 			";
 			$rs = safe_r_sql($q);
 
@@ -265,6 +276,7 @@
 					{
 						// Gold match: assign 1st and 2nd.
 						// Bronze match: assign 3rd and 4th.
+						// Also write FinAverageMatch/FinAverageTie for both athletes.
 						$toWrite = array();
 
 						if ($phase == 0)
@@ -278,6 +290,23 @@
 							$toWrite[] = array('event' => $EventToUse, 'id' => $myRow->AthId,    'rank' => $myRow->EvWinnerFinalRank + 3);
 						}
 
+						// Compute and store averages for both athletes in this match
+						$avgMatch = round($myRow->Score / (strlen(trim($myRow->Arrowstring))
+							?: (strlen(preg_replace("/\d/", "", $myRow->SetPoints))
+								? (strlen(preg_replace("/\d/", "", $myRow->SetPoints)) + 1) * $myRow->DiEndArrows
+								: ($myRow->DiArrows ?: 1))), 3);
+						$avgTie = round(valutaArrowString($myRow->Tiebreak)
+							/ (strlen(trim($myRow->Tiebreak)) ?: 1), 3);
+						$oppAvgMatch = round($myRow->OppScore / (strlen(trim($myRow->OppArrowstring))
+							?: (strlen(preg_replace("/\d/", "", $myRow->OppSetPoints))
+								? (strlen(preg_replace("/\d/", "", $myRow->OppSetPoints)) + 1) * $myRow->DiEndArrows
+								: ($myRow->DiArrows ?: 1))), 3);
+						$oppAvgTie = round(valutaArrowString($myRow->OppTiebreak)
+							/ (strlen(trim($myRow->OppTiebreak)) ?: 1), 3);
+
+						safe_w_sql("UPDATE Finals SET FinAverageMatch='{$avgMatch}', FinAverageTie='{$avgTie}' WHERE FinTournament={$this->tournament} AND FinEvent='{$EventToUse}' AND FinMatchNo='{$myRow->RealMatchNo}'");
+						safe_w_sql("UPDATE Finals SET FinAverageMatch='{$oppAvgMatch}', FinAverageTie='{$oppAvgTie}' WHERE FinTournament={$this->tournament} AND FinEvent='{$EventToUse}' AND FinMatchNo='{$myRow->OppRealMatchNo}'");
+
 						foreach ($toWrite as $values)
 						{
 							$x = $this->writeRow($values['id'], $values['event'], $values['rank']);
@@ -289,11 +318,34 @@
 					{
 						// Semifinals: rankings are assigned when bronze/gold results arrive.
 						// Sub-events: ranking is handled by the parent event's calcFromPhase.
+						// Write averages for all participants in this phase.
+						while ($myRow)
+						{
+							$avgMatch = round($myRow->Score / (strlen(trim($myRow->Arrowstring))
+								?: (strlen(preg_replace("/\d/", "", $myRow->SetPoints))
+									? (strlen(preg_replace("/\d/", "", $myRow->SetPoints)) + 1) * $myRow->DiEndArrows
+									: ($myRow->DiArrows ?: 1))), 3);
+							$avgTie = round(valutaArrowString($myRow->Tiebreak)
+								/ (strlen(trim($myRow->Tiebreak)) ?: 1), 3);
+							$oppAvgMatch = round($myRow->OppScore / (strlen(trim($myRow->OppArrowstring))
+								?: (strlen(preg_replace("/\d/", "", $myRow->OppSetPoints))
+									? (strlen(preg_replace("/\d/", "", $myRow->OppSetPoints)) + 1) * $myRow->DiEndArrows
+									: ($myRow->DiArrows ?: 1))), 3);
+							$oppAvgTie = round(valutaArrowString($myRow->OppTiebreak)
+								/ (strlen(trim($myRow->OppTiebreak)) ?: 1), 3);
+
+							safe_w_sql("UPDATE Finals SET FinAverageMatch='{$avgMatch}', FinAverageTie='{$avgTie}' WHERE FinTournament={$this->tournament} AND FinEvent='{$EventToUse}' AND FinMatchNo='{$myRow->RealMatchNo}'");
+							safe_w_sql("UPDATE Finals SET FinAverageMatch='{$oppAvgMatch}', FinAverageTie='{$oppAvgTie}' WHERE FinTournament={$this->tournament} AND FinEvent='{$EventToUse}' AND FinMatchNo='{$myRow->OppRealMatchNo}'");
+
+							$myRow = safe_fetch($rs);
+						}
 					}
 					else
 					{
-						// PL §2.6.5: unique sequential positions for ALL phases >= 4,
-						// sorted by match score DESC, then qualification rank ASC.
+						// PL §2.6.6: unique sequential positions for ALL phases >= 4.
+						// Sort by: avg match arrow value DESC, avg shoot-off arrow value DESC,
+						// qualification score DESC. Uses PHP-side sorting to apply the
+						// arrow-count derivation formula (cannot be expressed cleanly in SQL).
 
 						if ($realphase == 4)
 						{
@@ -311,41 +363,73 @@
 							return false;
 						}
 
-						$rank        = $pos + 1;
-						$scoreOld    = 0;
-						$qualRankOld = -1;
-
+						// Collect all losers, compute averages, write to Finals
+						$matchData = array();
 						while ($myRow)
+						{
+							$arrows = strlen(trim($myRow->Arrowstring))
+								?: (strlen(preg_replace("/\d/", "", $myRow->SetPoints))
+									? (strlen(preg_replace("/\d/", "", $myRow->SetPoints)) + 1) * $myRow->DiEndArrows
+									: ($myRow->DiArrows ?: 1));
+							$avgMatch = round($myRow->Score / $arrows, 3);
+							$avgTie   = round(valutaArrowString($myRow->Tiebreak)
+								/ (strlen(trim($myRow->Tiebreak)) ?: 1), 3);
+
+							$oppArrows = strlen(trim($myRow->OppArrowstring))
+								?: (strlen(preg_replace("/\d/", "", $myRow->OppSetPoints))
+									? (strlen(preg_replace("/\d/", "", $myRow->OppSetPoints)) + 1) * $myRow->DiEndArrows
+									: ($myRow->DiArrows ?: 1));
+							$oppAvgMatch = round($myRow->OppScore / $oppArrows, 3);
+							$oppAvgTie   = round(valutaArrowString($myRow->OppTiebreak)
+								/ (strlen(trim($myRow->OppTiebreak)) ?: 1), 3);
+
+							safe_w_sql("UPDATE Finals SET FinAverageMatch='{$avgMatch}', FinAverageTie='{$avgTie}' WHERE FinTournament={$this->tournament} AND FinEvent='{$EventToUse}' AND FinMatchNo='{$myRow->RealMatchNo}'");
+							safe_w_sql("UPDATE Finals SET FinAverageMatch='{$oppAvgMatch}', FinAverageTie='{$oppAvgTie}' WHERE FinTournament={$this->tournament} AND FinEvent='{$EventToUse}' AND FinMatchNo='{$myRow->OppRealMatchNo}'");
+
+							$matchData[] = array(
+								'id'         => $myRow->AthId,
+								'avgMatch'   => $avgMatch,
+								'avgTie'     => $avgTie,
+								'qualScore'  => (int) $myRow->QualScore,
+								'winnerRank' => $myRow->EvWinnerFinalRank,
+								'irmType'    => $myRow->IrmType,
+							);
+
+							$myRow = safe_fetch($rs);
+						}
+
+						// Sort: avg match score DESC, avg shoot-off score DESC, qual score DESC
+						usort($matchData, function ($a, $b) {
+							if ($a['avgMatch'] !== $b['avgMatch']) return $b['avgMatch'] <=> $a['avgMatch'];
+							if ($a['avgTie']   !== $b['avgTie'])   return $b['avgTie']   <=> $a['avgTie'];
+							return $b['qualScore'] <=> $a['qualScore'];
+						});
+
+						// Assign unique sequential ranks; share only when all three criteria identical
+						$rank = $pos + 1;
+						$prev = null;
+
+						foreach ($matchData as $m)
 						{
 							++$pos;
 
-							// Assign a new (higher) rank whenever score or qual-rank changes
-							if (!($myRow->Score == $scoreOld && $myRow->AthRank == $qualRankOld))
-								$rank = $pos;
-
-							// DSQ in QF goes to last place (preserved core behaviour)
-							if ($phase == 4 && $myRow->IrmType == 15)
-								$rank = 8;
-
-							$scoreOld    = $myRow->Score;
-							$qualRankOld = $myRow->AthRank;
-
-							// Pool-phase rank override (EvElimType 3 = WA compound pool,
-							// EvElimType 4 = WA recurve pool)
-							if (($myRow->EvElimType == 3 || $myRow->EvElimType == 4)
-								&& $myRow->GrPhase > $myRow->EvFinalFirstPhase
-								&& $myRow->MatchNo >= 8)
+							if ($prev === null
+								|| $m['avgMatch']  !== $prev['avgMatch']
+								|| $m['avgTie']    !== $prev['avgTie']
+								|| $m['qualScore'] !== $prev['qualScore'])
 							{
-								$rank = ($myRow->EvElimType == 3)
-									? getPoolLooserRank($myRow->MatchNo)
-									: getPoolLooserRankWA($myRow->MatchNo);
+								$rank = $pos;
 							}
 
-							$x = $this->writeRow($myRow->AthId, $event, $rank + $myRow->EvWinnerFinalRank - 1);
+							// DSQ in QF goes to last place (preserved core behaviour)
+							if ($phase == 4 && $m['irmType'] == 15)
+								$rank = 8;
+
+							$x = $this->writeRow($m['id'], $event, $rank + $m['winnerRank'] - 1);
 							if ($x === false)
 								return false;
 
-							$myRow = safe_fetch($rs);
+							$prev = $m;
 						}
 					}
 				}
@@ -370,6 +454,7 @@
 								AND e.EvTeamEvent=0
 						WHERE f.FinTournament={$this->tournament}
 							AND f.FinEvent='{$event}'
+							AND f.FinAthlete > 0
 							AND f.FinScore=0 AND f.FinSetScore=0
 					";
 					$rsDetect = safe_r_sql($qDetect);
