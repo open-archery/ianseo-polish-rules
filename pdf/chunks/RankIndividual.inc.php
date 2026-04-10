@@ -76,23 +76,14 @@ foreach($PdfData->rankData['sections'] as $section) {
 					$pdf->Cell(12, 4,  number_format($item['elims']['e2']['score'],0,$PdfData->NumberDecimalSeparator,$PdfData->NumberThousandsSeparator) . '-' . substr('00' . $item['elims']['e2']['rank'],-2,2), 1, 0, 'R', 0);
 			}
 //Risultati  delle varie fasi
-			foreach($item['finals'] as $k=>$v)
-			{
-				if($v['tie']==2)
-					$pdf->Cell(12, 4,  $PdfData->Bye, 1, 0, 'R', 0);
-				else
-				{
-					if($k==4 && $section['meta']['matchMode']!=0 && $item['rank']>=5)
-					{
-						$pdf->Cell(8, 4, '(' . $v['score'] . ')', 'LTB', 0, 'R', 0);
-						$pdf->Cell(4, 4, $v['setScore'], 'RTB', 0, 'R', 0);
-					}
-					else
-					{
-						$pdf->Cell(12 - (strlen($v['tiebreak'])>0 && $k<=1 ? 6 : 0), 4, ($section['meta']['matchMode']==0 ? $v['score'] : $v['setScore']) . ($k<=1 && $v['tie']==1 && strlen($v['tiebreak'])==0 ? '*' : ''), ($k<=1 && strlen($v['tiebreak'])>0 ? 'LTB' : 1), 0, 'R', 0);
-						if(strlen($v['tiebreak'])>0 && $k<=1)
-							$pdf->Cell(6, 4,  "T.".str_replace('|',',',$v['tiebreak']), 'RTB', 0, 'R', 0);
-					}
+			$cntPhases=0;
+			foreach($item['finals'] as $k=>$v) {
+				$cntPhases++;
+				if($v['tie']==2) {
+					$pdf->Cell(12, 4, $PdfData->Bye, 1, 0, 'R', 0);
+				} else {
+					$pdf->Cell(5, 4, (($cntPhases<count($item['finals']) or floatval($v['avgTie'])==0) ? '' : ($v['avgTie'] ? number_format($v['avgTie'],3) : str_replace('|', ',', $v['tiebreak']))), 'LBT', 0, 'R', 0);
+					$pdf->Cell(7, 4, ($v['avgMatch'] ? number_format($v['avgMatch'],3, $pdf->NumberDecimalSeparator) : $v['score']), 'RBT', 0, 'R', 0);
 				}
 			}
 			$pdf->Cell(0.1, 4,'',0,1,'C',0);

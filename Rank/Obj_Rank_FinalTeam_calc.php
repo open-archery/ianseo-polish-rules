@@ -3,14 +3,18 @@
  * Obj_Rank_FinalTeam_calc — Poland (PL) override
  *
  * Identical to the core implementation except calcFromPhase(), which applies
- * PZŁucz §2.6.5 rules:
+ * PZŁucz §2.6.5–§2.6.6 rules:
  *
  *  1. No-bronze-match detection: when the bronze match result is 0-0 (not shot),
  *     both semifinal losers are awarded shared 3rd place instead of 3rd/4th.
  *  2. Unique sequential positions for ALL phases >= 4 (quarterfinals and below),
  *     not just the quarterfinals as in the default engine.
- *  3. Secondary tiebreaker is team qualification rank (TeRank ASC) instead of
- *     cumulative score.  The Teams table is joined to supply this value.
+ *  3. Tiebreaking within a phase uses three criteria (§2.6.6.2):
+ *       a. Average arrow value in the match (TfScore / arrows, shoot-off excluded)
+ *       b. Average arrow value in the shoot-off (0 if no shoot-off)
+ *       c. Team qualification score (TeScore)
+ *  4. TfAverageMatch and TfAverageTie are written to TeamFinals for every phase,
+ *     matching ianseo rev 114 core behaviour.
  */
 	class Obj_Rank_FinalTeam_calc extends Obj_Rank_FinalTeam
 	{
@@ -83,12 +87,15 @@
 	/**
 	 * calcFromPhase()
 	 *
-	 * PL modification (§2.6.5):
+	 * PL modification (§2.6.5–§2.6.6):
 	 *  - No-bronze detection: when the bronze phase losers query returns 0 rows,
 	 *    check if both bronze-match teams scored 0 (match not shot). If so,
 	 *    assign both shared 3rd place.
-	 *  - Unique sequential positions for ALL phases >= 4, sorted by match score
-	 *    DESC then team qualification rank (TeRank) ASC.
+	 *  - Unique sequential positions for ALL phases >= 4, sorted by:
+	 *      1. Average arrow value in the match (TfScore / arrows shot, descending)
+	 *      2. Average arrow value in the shoot-off (0 if none, descending)
+	 *      3. Team qualification score (TeScore, descending)
+	 *  - TfAverageMatch and TfAverageTie are written to TeamFinals for all phases.
 	 *
 	 * All other behaviour (gold/bronze/semi handling, EvWinnerFinalRank offset,
 	 * parent-event chains, SubCodes) is preserved from the core implementation.
@@ -123,20 +130,23 @@
 				return false;
 
 			// Fetch all losers for this phase.
-			// PL changes:
-			//   - LEFT JOIN Teams AS te to obtain the team qualification rank.
-			//   - ORDER BY uses te.TeRank ASC as secondary tiebreaker instead of
-			//     cumulative score.
+			// Arrow-count helpers (DiEndArrows, DiArrows), arrow content fields, and
+			// team qualification score are fetched here; averages are computed in PHP.
+			// ORDER BY is match number only — sorting for sub-ranking is done in PHP.
 			$q = "
 				SELECT
 					EvWinnerFinalRank, EvCodeParent, SubCodes, EvFinalFirstPhase,
+					IF((EvMatchArrowsNo & GrBitPhase)=0, EvFinArrows, EvElimArrows) AS DiEndArrows,
+					IF((EvMatchArrowsNo & GrBitPhase)=0, EvFinArrows*EvFinEnds, EvElimArrows*EvElimEnds) AS DiArrows,
+					LEAST(tf.TfMatchNo, tf2.TfMatchNo) AS MatchNo,
 					tf.TfTeam    AS TeamId,     tf.TfSubTeam  AS SubTeam,
 					tf2.TfTeam   AS OppTeamId,  tf2.TfSubTeam AS OppSubTeam,
-					te.TeRank    AS TeamQualRank,
-					IF(EvMatchMode=0, tf.TfScore, tf.TfSetScore)  AS Score,
-					tf.TfScore   AS CumScore,   tf.TfTie       AS Tie,
-					IF(EvMatchMode=0, tf2.TfScore, tf2.TfSetScore) AS OppScore,
-					tf2.TfScore  AS OppCumScore, tf2.TfTie     AS OppTie
+					te.TeScore   AS QualScore,
+					tf.TfScore   AS Score,
+					tf.TfArrowstring  AS Arrowstring,  tf.TfSetPoints  AS SetPoints,  tf.TfTiebreak  AS Tiebreak,
+					tf2.TfScore  AS OppScore,
+					tf2.TfArrowstring AS OppArrowstring, tf2.TfSetPoints AS OppSetPoints, tf2.TfTiebreak AS OppTiebreak,
+					tf.TfMatchNo  AS RealMatchNo, tf2.TfMatchNo AS OppRealMatchNo
 				FROM
 					TeamFinals AS tf
 					INNER JOIN TeamFinals AS tf2
@@ -174,8 +184,7 @@
 					     OR (tf.TfIrmType>0 AND tf.TfIrmType<20
 					         AND tf2.TfIrmType>0 AND tf2.TfIrmType<20))
 				ORDER BY
-					IF(EvMatchMode=0, tf.TfScore, tf.TfSetScore) DESC,
-					te.TeRank ASC
+					LEAST(tf.TfMatchNo, tf2.TfMatchNo)
 			";
 			$rs = safe_r_sql($q);
 
@@ -205,6 +214,7 @@
 					{
 						// Gold match: assign 1st and 2nd.
 						// Bronze match: assign 3rd and 4th.
+						// Also write TfAverageMatch/TfAverageTie for both teams.
 						$toWrite = array();
 
 						if ($phase == 0)
@@ -218,6 +228,23 @@
 							$toWrite[] = array('event' => $EventToUse, 'id' => $myRow->TeamId,    'subteam' => $myRow->SubTeam,    'rank' => $myRow->EvWinnerFinalRank + 3);
 						}
 
+						// Compute and store averages for both teams in this match
+						$avgMatch = round($myRow->Score / (strlen(trim($myRow->Arrowstring))
+							?: (strlen(preg_replace("/\d/", "", $myRow->SetPoints))
+								? (strlen(preg_replace("/\d/", "", $myRow->SetPoints)) + 1) * $myRow->DiEndArrows
+								: ($myRow->DiArrows ?: 1))), 3);
+						$avgTie = round(valutaArrowString($myRow->Tiebreak)
+							/ (strlen(trim($myRow->Tiebreak)) ?: 1), 3);
+						$oppAvgMatch = round($myRow->OppScore / (strlen(trim($myRow->OppArrowstring))
+							?: (strlen(preg_replace("/\d/", "", $myRow->OppSetPoints))
+								? (strlen(preg_replace("/\d/", "", $myRow->OppSetPoints)) + 1) * $myRow->DiEndArrows
+								: ($myRow->DiArrows ?: 1))), 3);
+						$oppAvgTie = round(valutaArrowString($myRow->OppTiebreak)
+							/ (strlen(trim($myRow->OppTiebreak)) ?: 1), 3);
+
+						safe_w_sql("UPDATE TeamFinals SET TfAverageMatch='{$avgMatch}', TfAverageTie='{$avgTie}' WHERE TfTournament={$this->tournament} AND TfEvent='{$EventToUse}' AND TfMatchNo='{$myRow->RealMatchNo}'");
+						safe_w_sql("UPDATE TeamFinals SET TfAverageMatch='{$oppAvgMatch}', TfAverageTie='{$oppAvgTie}' WHERE TfTournament={$this->tournament} AND TfEvent='{$EventToUse}' AND TfMatchNo='{$myRow->OppRealMatchNo}'");
+
 						foreach ($toWrite as $values)
 						{
 							$x = $this->writeRow($values['id'], $values['subteam'], $values['event'], $values['rank']);
@@ -229,17 +256,38 @@
 					{
 						// Semifinals: rankings are assigned when bronze/gold results arrive.
 						// Sub-events: ranking is handled by the parent event's calcFromPhase.
+						// Write averages for all participants in this phase.
+						while ($myRow)
+						{
+							$avgMatch = round($myRow->Score / (strlen(trim($myRow->Arrowstring))
+								?: (strlen(preg_replace("/\d/", "", $myRow->SetPoints))
+									? (strlen(preg_replace("/\d/", "", $myRow->SetPoints)) + 1) * $myRow->DiEndArrows
+									: ($myRow->DiArrows ?: 1))), 3);
+							$avgTie = round(valutaArrowString($myRow->Tiebreak)
+								/ (strlen(trim($myRow->Tiebreak)) ?: 1), 3);
+							$oppAvgMatch = round($myRow->OppScore / (strlen(trim($myRow->OppArrowstring))
+								?: (strlen(preg_replace("/\d/", "", $myRow->OppSetPoints))
+									? (strlen(preg_replace("/\d/", "", $myRow->OppSetPoints)) + 1) * $myRow->DiEndArrows
+									: ($myRow->DiArrows ?: 1))), 3);
+							$oppAvgTie = round(valutaArrowString($myRow->OppTiebreak)
+								/ (strlen(trim($myRow->OppTiebreak)) ?: 1), 3);
+
+							safe_w_sql("UPDATE TeamFinals SET TfAverageMatch='{$avgMatch}', TfAverageTie='{$avgTie}' WHERE TfTournament={$this->tournament} AND TfEvent='{$EventToUse}' AND TfMatchNo='{$myRow->RealMatchNo}'");
+							safe_w_sql("UPDATE TeamFinals SET TfAverageMatch='{$oppAvgMatch}', TfAverageTie='{$oppAvgTie}' WHERE TfTournament={$this->tournament} AND TfEvent='{$EventToUse}' AND TfMatchNo='{$myRow->OppRealMatchNo}'");
+
+							$myRow = safe_fetch($rs);
+						}
 					}
 					else
 					{
-						// PL §2.6.5: unique sequential positions for ALL phases >= 4,
-						// sorted by match score DESC, then team qualification rank ASC.
+						// PL §2.6.6: unique sequential positions for ALL phases >= 4.
+						// Sort by: avg match arrow value DESC, avg shoot-off arrow value DESC,
+						// team qualification score DESC. Uses PHP-side sorting to apply the
+						// arrow-count derivation formula (cannot be expressed cleanly in SQL).
 
 						if ($realphase == 4)
 						{
 							// QF: always start at position 4 (the 4 slots that advanced past QF).
-							// Using safe_num_rows() to adjust the start caused ranks 7-8 instead
-							// of 5-6 when byes reduced the real loser count below 4.
 							$pos = 4;
 						}
 						elseif ($realphase > 4)
@@ -251,26 +299,69 @@
 							return false;
 						}
 
-						$rank        = $pos + 1;
-						$scoreOld    = 0;
-						$qualRankOld = -1;
-
+						// Collect all losers, compute averages, write to TeamFinals
+						$matchData = array();
 						while ($myRow)
+						{
+							$arrows = strlen(trim($myRow->Arrowstring))
+								?: (strlen(preg_replace("/\d/", "", $myRow->SetPoints))
+									? (strlen(preg_replace("/\d/", "", $myRow->SetPoints)) + 1) * $myRow->DiEndArrows
+									: ($myRow->DiArrows ?: 1));
+							$avgMatch = round($myRow->Score / $arrows, 3);
+							$avgTie   = round(valutaArrowString($myRow->Tiebreak)
+								/ (strlen(trim($myRow->Tiebreak)) ?: 1), 3);
+
+							$oppArrows = strlen(trim($myRow->OppArrowstring))
+								?: (strlen(preg_replace("/\d/", "", $myRow->OppSetPoints))
+									? (strlen(preg_replace("/\d/", "", $myRow->OppSetPoints)) + 1) * $myRow->DiEndArrows
+									: ($myRow->DiArrows ?: 1));
+							$oppAvgMatch = round($myRow->OppScore / $oppArrows, 3);
+							$oppAvgTie   = round(valutaArrowString($myRow->OppTiebreak)
+								/ (strlen(trim($myRow->OppTiebreak)) ?: 1), 3);
+
+							safe_w_sql("UPDATE TeamFinals SET TfAverageMatch='{$avgMatch}', TfAverageTie='{$avgTie}' WHERE TfTournament={$this->tournament} AND TfEvent='{$EventToUse}' AND TfMatchNo='{$myRow->RealMatchNo}'");
+							safe_w_sql("UPDATE TeamFinals SET TfAverageMatch='{$oppAvgMatch}', TfAverageTie='{$oppAvgTie}' WHERE TfTournament={$this->tournament} AND TfEvent='{$EventToUse}' AND TfMatchNo='{$myRow->OppRealMatchNo}'");
+
+							$matchData[] = array(
+								'id'         => $myRow->TeamId,
+								'subteam'    => $myRow->SubTeam,
+								'avgMatch'   => $avgMatch,
+								'avgTie'     => $avgTie,
+								'qualScore'  => (int) $myRow->QualScore,
+								'winnerRank' => $myRow->EvWinnerFinalRank,
+							);
+
+							$myRow = safe_fetch($rs);
+						}
+
+						// Sort: avg match score DESC, avg shoot-off score DESC, qual score DESC
+						usort($matchData, function ($a, $b) {
+							if ($a['avgMatch'] !== $b['avgMatch']) return $b['avgMatch'] <=> $a['avgMatch'];
+							if ($a['avgTie']   !== $b['avgTie'])   return $b['avgTie']   <=> $a['avgTie'];
+							return $b['qualScore'] <=> $a['qualScore'];
+						});
+
+						// Assign unique sequential ranks; share only when all three criteria identical
+						$rank = $pos + 1;
+						$prev = null;
+
+						foreach ($matchData as $m)
 						{
 							++$pos;
 
-							// Assign a new (higher) rank whenever score or qual-rank changes
-							if (!($myRow->Score == $scoreOld && $myRow->TeamQualRank == $qualRankOld))
+							if ($prev === null
+								|| $m['avgMatch']  !== $prev['avgMatch']
+								|| $m['avgTie']    !== $prev['avgTie']
+								|| $m['qualScore'] !== $prev['qualScore'])
+							{
 								$rank = $pos;
+							}
 
-							$scoreOld    = $myRow->Score;
-							$qualRankOld = $myRow->TeamQualRank;
-
-							$x = $this->writeRow($myRow->TeamId, $myRow->SubTeam, $event, $rank + $myRow->EvWinnerFinalRank - 1);
+							$x = $this->writeRow($m['id'], $m['subteam'], $event, $rank + $m['winnerRank'] - 1);
 							if ($x === false)
 								return false;
 
-							$myRow = safe_fetch($rs);
+							$prev = $m;
 						}
 					}
 				}
@@ -296,6 +387,7 @@
 								AND e.EvTeamEvent=1
 						WHERE tf.TfTournament={$this->tournament}
 							AND tf.TfEvent='{$event}'
+							AND tf.TfTeam > 0
 							AND tf.TfScore=0 AND tf.TfSetScore=0
 					";
 					$rsDetect = safe_r_sql($qDetect);
