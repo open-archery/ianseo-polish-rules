@@ -24,7 +24,7 @@
 
 ## 3. Verify
 
-- [ ] 3.1 Run a PL outdoor tournament through the full ranking calculation; confirm QF losers receive unique places 5–8 ordered by average match score
-- [ ] 3.2 Confirm that `FinAverageMatch` and `FinAverageTie` are populated in `Finals` for gold, bronze, semifinal, and QF participants after recalculation
-- [ ] 3.3 Confirm no-bronze-match detection still works: a 0-0 bronze match assigns shared 3rd to both semifinal losers
-- [ ] 3.4 Confirm team bracket sub-ranking produces unique places using `TeScore` as third tiebreaker
+- [x] 3.1 Run a PL outdoor tournament through the full ranking calculation; confirm QF losers receive unique places 5–8 ordered by average match score
+- [x] 3.2 Confirm that `FinAverageMatch` and `FinAverageTie` are populated in `Finals` for gold, bronze, semifinal, and QF participants after recalculation
+- [x] 3.3 Confirm no-bronze-match detection still works: a 0-0 bronze match assigns shared 3rd to both semifinal losers
+- [x] 3.4 Confirm team bracket sub-ranking produces unique places using `TeScore` as third tiebreaker
