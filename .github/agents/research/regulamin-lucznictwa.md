@@ -1465,17 +1465,33 @@ potrójnej w układzie liniowym środki wszystkich trzech tarcz powinny znajdowa
 
 2.6.4.2.4. Dopóki nie zostaną podane oficjalne wyniki, zawodnicy powinni zostać na torach łuczniczych. Jeśli zawodnik jest nieobecny w czasie ogłoszenia oficjalnych wyników, oddaje on baraż walkowerem
 
-2.6.5. Zawodnicy oraz zespoły po strzelaniach eliminacyjnych powinni zostać sklasyfikowani jak następuje
+2.6.5.  Zawodnicy oraz zespoły, miksty, które nie awansowały do rundy eliminacyjnej zostają sklasyfikowani na tych samych pozycjach co na zakończenie rundy kwalifikacyjnej. 
 
-2.6.5.1. Zawodnicy, którzy odpadli w: . 1/4 są klasyfikowani kolejno na miejscach od 5 do 8 . 1/8 są klasyfikowani kolejno na miejscach od 9 do 16 . 1/16 są klasyfikowani kolejno na miejscach od 17 do 32 . 1/24 są klasyfikowani kolejno na miejscach od 33 do 56 . 1/32 są klasyfikowani kolejno na miejscach od 33 do 64 . 1/48 są klasyfikowani kolejno na miejscach od 57 do 104 . 1/64 są klasyfikowani kolejno na miejscach od 65 do 128
+2.6.6. Zawodnicy oraz zespoły i miksty po strzelaniach eliminacyjnych powinni zostać sklasyfikowani jak następuje 
 
-2.6.5.1. O kolejności wśród zawodników lub zespołów, którzy odpadli w danej fazie decyduje
+2.6.6.1. Zawodnicy, którzy odpadli w:
 
-- W przypadku pojedynków z punktacją setową, liczba zdobytych punktów setowych, a w przypadku remisu wynik uzyskany w rundzie kwalifikacyjnej
+- 1/4 są klasyfikowani kolejno na miejscach od 5 do 8
 
-- W przypadku pojedynków z punktowaniem narastającym, liczba zdobytych punktów, a w przypadku remisu - wynik uzyskany w rundzie kwalifikacyjnej
+- 1/8 są klasyfikowani kolejno na miejscach od 9 do 16
 
-- Jeśli w dalszym ciągu jest remis, zawodnicy powinni zostać sklasyfikowani na tym samym miejscu
+- 1/16 są klasyfikowani kolejno na miejscach od 17 do 32
+
+- 1/24 są klasyfikowani kolejno na miejscach od 33 do 56
+
+- 1/48 są klasyfikowani kolejno na miejscach od 57 do 104
+
+- 1/32 są klasyfikowani kolejno na miejscach od 33 do 64
+
+- 1/64 są klasyfikowani kolejno na miejscach od 65 do 128
+
+2.6.6.2. O kolejności wśród zawodników, zespołów lub mikstów, którzy odpadli w danej fazie decyduje
+
+- Średnia wartość trafienia w ostatnim pojedynku (bez uwzględniania barażu)
+
+- Średnia wartość trafienia w barażu (jeśli pojedynek zakończył się bez barażu, należy przyjąć wartość 0 jako średnią) 
+
+- Wynik w kwalifikacjach
 
 ---
 
