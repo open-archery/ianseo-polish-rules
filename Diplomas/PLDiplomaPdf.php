@@ -114,7 +114,7 @@ class PLDiplomaPdf extends TCPDF {
 
 
 		// -- Bottom: signature lines --
-		$signY = 220;
+		$signY = 200;
 		$this->SetY($signY);
 		$this->SetFont('dejavusans', '', 10);
 
@@ -146,7 +146,7 @@ class PLDiplomaPdf extends TCPDF {
 			$this->Cell($halfW, 5, $organizer, 0, 0, 'C');
 		}
 
-    $this->SetY(250);
+    $this->SetY(230);
     // Date and location at the bottom center
 		$this->SetFont('dejavusans', '', 12);
     $this->Cell($contentW, 8, $location . ', ' . $dates, 0, 1, 'C');
