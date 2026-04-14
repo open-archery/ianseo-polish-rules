@@ -2,8 +2,9 @@
 /**
  * Install.php — one-time registration of the Sportzona lookup path.
  *
- * Inserts (or updates) the LookUpPaths row that tells ianseo to use
- * SportzonaProxy.php as the athlete data source for IOC code 'POL'.
+ * Creates the LookUpPaths table if it does not yet exist, then inserts (or
+ * updates) the row that tells ianseo to use SportzonaProxy.php as the athlete
+ * data source for IOC code 'POL'.
  *
  * Must be run once by an authenticated ianseo administrator with a tournament
  * open. It is idempotent — re-running it is safe.
@@ -16,14 +17,28 @@ $PAGE_TITLE = 'Instalacja: Sportzona Lookup (POL)';
 include $CFG->DOCUMENT_PATH . 'Common/Templates/head.php';
 
 $lupPath   = '%Modules/Sets/PL/Lookup/SportzonaProxy.php';
-$lupOrigin = 'Sportzona';
+$lupOrigin = 'POL';   // varchar(3) column — must be ≤ 3 chars; 'POL' matches the IOC code
 $lupIoc    = 'POL';
 
 $installed = false;
 $error     = '';
 
 if (!empty($_POST['install'])) {
-    // Execute the upsert
+    // Ensure the table exists (ianseo may not have run its full migration chain)
+    safe_w_sql("CREATE TABLE IF NOT EXISTS `LookUpPaths` (
+        `LupIocCode`      VARCHAR(5)   NOT NULL,
+        `LupOrigin`       VARCHAR(3)   NOT NULL DEFAULT '',
+        `LupPath`         VARCHAR(255) NOT NULL DEFAULT '',
+        `LupPhotoPath`    VARCHAR(255) NOT NULL DEFAULT '',
+        `LupFlagsPath`    VARCHAR(255) NOT NULL DEFAULT '',
+        `LupLastUpdate`   DATETIME     NULL,
+        `LupRankingPath`  VARCHAR(255) NOT NULL DEFAULT '',
+        `LupClubNamesPath` VARCHAR(255) NOT NULL DEFAULT '',
+        `LupRecordsPath`  VARCHAR(255) NOT NULL DEFAULT '',
+        PRIMARY KEY (`LupIocCode`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8");
+
+    // Upsert the POL row
     $sql = "INSERT INTO LookUpPaths (LupIocCode, LupPath, LupOrigin)
             VALUES (" . StrSafe_DB($lupIoc) . ", " . StrSafe_DB($lupPath) . ", " . StrSafe_DB($lupOrigin) . ")
             ON DUPLICATE KEY UPDATE
