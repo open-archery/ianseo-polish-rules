@@ -30,12 +30,22 @@ A single page accessible from the ianseo menu under the PL module. It presents:
    current tournament. The operator selects one division that applies to the
    entire batch being imported.
 
-2. **Licence number textarea** — a plain text area where the operator pastes one
+2. **Session selector** — a mandatory dropdown listing all qualification sessions
+   (`SesType = 'Q'`) for the current tournament, ordered by `SesOrder` ascending.
+   Each option displays the session number and name (e.g. "1 – Sesja poranna").
+   No "unassigned" option is offered; the operator must select a session before
+   submitting. If the tournament has no `Q` sessions the form is hidden and a
+   warning instructs the operator to configure sessions first. If a POST is
+   submitted with a session value that does not match any Q session in the
+   tournament the import is rejected with a validation error and no athletes are
+   imported.
+
+3. **Licence number textarea** — a plain text area where the operator pastes one
    licence number per line. Blank lines and leading/trailing whitespace on each
    line must be tolerated and ignored. Non-numeric or otherwise malformed tokens
    should be treated as unmatched (reported, not errored).
 
-3. **Import button** — triggers processing. After submission the page reloads
+4. **Import button** — triggers processing. After submission the page reloads
    showing the result report (see §5) without redirecting away, so the operator
    can review what happened.
 
@@ -102,6 +112,14 @@ Create a new entry in the tournament with the following field mapping:
 | Country / club         | Country record resolved/created in Step 4 |
 | Federation code        | `'POL'`                                   |
 | Status                 | Copied from lookup status                 |
+
+### Step 6 — Qualifications row creation
+
+For each successfully created entry, insert a row into the `Qualifications` table
+with `QuId = EnId` and `QuSession` set to the session number selected in the
+form. This insert must occur inside the same transaction as the `Entries` insert
+so that a DB error in either write rolls back the entire batch with no partial
+data left.
 
 ---
 
@@ -182,5 +200,5 @@ athlete — the operator is responsible for consistency.
 - Importing multiple divisions in a single run
 - Uploading a file (textarea only for now)
 - Editing or overwriting existing entries
-- Assigning target or session numbers
+- Assigning target numbers
 - Photo import
