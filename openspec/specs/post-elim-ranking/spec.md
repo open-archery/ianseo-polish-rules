@@ -1,7 +1,7 @@
 # Post-Elimination Ranking — Feature Requirements
 
 > **Feature:** Unique placement of athletes/teams after elimination rounds
-> **Source:** PZŁucz regulations §2.6.5 (Post-Elimination Classification)
+> **Source:** PZŁucz regulations §2.6.5–§2.6.6 (Post-Elimination Classification)
 > **Scope:** Individual and team elimination brackets, target archery and indoor formats (Field/3D excluded for now)
 
 ---
@@ -66,19 +66,36 @@ condition automatically from the match data.
 
 ## 3. Requirement 2 — Unique Places for Same-Round Losers
 
-### Rule (§2.6.5)
+### Rule (§2.6.6)
 
 All athletes eliminated in the **same round** of the bracket must receive
-**unique individual places**, sub-ranked by the following criteria (in order):
+**unique individual places**, sub-ranked by the following criteria (in order)
+(§2.6.6.2):
 
-1. **Match score** — higher match result is ranked higher:
-   - For set-system matches (Recurve, Barebow): higher set-point total
-   - For cumulative-system matches (Compound): higher cumulative score
-2. **Qualification ranking** — if match scores are equal, the athlete with the
-   better (lower) qualification rank is placed higher
-3. **Same place** — only if **both** match score and qualification rank are
-   identical do the athletes share a position (this is extremely rare and
-   effectively impossible since qualification ranks are themselves unique)
+1. **Average arrow value in the last match** (shoot-off excluded) — the
+   total match score divided by the number of arrows shot in the match
+   (excluding any shoot-off arrows), higher is better
+2. **Average arrow value in the shoot-off** — total shoot-off score divided
+   by number of shoot-off arrows; if the match ended without a shoot-off,
+   this value is 0, higher is better
+3. **Qualification score** — total score from the qualification round,
+   higher is better
+4. **Same place** — only if all three criteria are identical do athletes
+   share a position (practically impossible)
+
+### Position ranges (§2.6.6.1)
+
+| Eliminated in | Final positions |
+| ------------- | --------------- |
+| 1/4           | 5–8             |
+| 1/8           | 9–16            |
+| 1/16          | 17–32           |
+| 1/24          | 33–56           |
+| 1/48          | 57–104          |
+| 1/32          | 33–64           |
+| 1/64          | 65–128          |
+
+Within each range, athletes are placed sequentially using the criteria in §2.6.6.2 above.
 
 ### Resulting placement example
 
@@ -109,7 +126,7 @@ All athletes eliminated in the **same round** of the bracket must receive
 | 1/8 final losers (8)   | all 9 (shared)    | 9, 10, 11, 12, 13, 14, 15, 16 |
 | 1/16 final losers (16) | all 17 (shared)   | 17, 18, …, 32                 |
 | 1/24 final losers (24) | all 33 (shared)   | 33, 34, …, 56                 |
-| 1/48 final losers (48) | all 49 (shared)   | 57, 58, …, 104                |
+| 1/48 final losers (48) | all 57 (shared)   | 57, 58, …, 104                |
 
 **No-bronze variant (0-0 tie in bronze match):**
 
@@ -136,24 +153,30 @@ All athletes eliminated in the **same round** of the bracket must receive
 
 ---
 
-## 4. Tiebreaking Detail
+## 4. Tiebreaking Detail (§2.6.6.2)
 
 ### 4.1 Individual Matches
 
-For losers eliminated in the same round, compare:
+For losers eliminated in the same round, compare in order:
 
-| Priority | Criterion          | Set system (R, B)                    | Cumulative system (C)    |
-| -------- | ------------------ | ------------------------------------ | ------------------------ |
-| 1        | Match score        | Set-point total (0–6)                | Cumulative arrow total   |
-| 2        | Qualification rank | Lower qual rank = better             | Lower qual rank = better |
-| 3        | Share position     | Last resort (practically impossible) | Last resort              |
+| Priority | Criterion                           | How computed                                         |
+| -------- | ----------------------------------- | ---------------------------------------------------- |
+| 1        | Average arrow value in match        | Total match score ÷ arrows shot (shoot-off excluded) |
+| 2        | Average arrow value in shoot-off    | Shoot-off total ÷ shoot-off arrows; 0 if no shoot-off |
+| 3        | Qualification score                 | Total score from the qualification round             |
+| 4        | Share position                      | Last resort (practically impossible)                 |
+
+The criteria apply identically for set-system (R, B) and cumulative-system (C) events.
+The "match score" in criterion 1 is always the cumulative arrow total, not set points —
+the average is computed from `FinScore` (all arrows summed) divided by the number of
+arrows actually shot, regardless of match format.
 
 ### 4.2 Team Matches
 
-Same logic applies, using:
+Same criteria apply, using:
 
-- Team match set-point total or team cumulative score
-- Team qualification ranking
+- Team cumulative match score and team shoot-off score from `TeamFinals`
+- Team qualification score (`TeScore` in `Teams`)
 
 ---
 
@@ -169,9 +192,14 @@ shooting order, or match format — only the ranking numbers assigned to losers.
 
 The sub-ranking does **not** introduce new scoring. It reuses existing data:
 
-- **Set points** — already recorded per match (for R, B divisions)
-- **Cumulative score** — already recorded per match (for C division)
-- **Qualification rank** — already recorded per athlete/team
+- **Match score (`FinScore` / `TfScore`)** — cumulative arrow total, already
+  recorded per match for all divisions
+- **Arrow count** — derived from `FinArrowstring` or `FinSetPoints` (already
+  recorded), with configured arrows-per-match as fallback
+- **Shoot-off score (`FinTie` / `TfTie`)** and **shoot-off arrows
+  (`FinTiebreak` / `TfTiebreak`)** — already recorded when a shoot-off occurs
+- **Qualification score (`IndScore` / `TeScore`)** — already stored on
+  `Individuals` / `Teams` from the qualification ranking step
 
 No additional data collection is required.
 
@@ -181,17 +209,27 @@ No additional data collection is required.
 
 ### ⚠ CUSTOM NEEDED — Unique placement of same-round losers
 
-ianseo's default ranking engine assigns the same rank to all losers of the
-same elimination round (e.g., all 1/8-final losers get 9th place). The PZŁucz
-requirement for unique places with sub-ranking by match score and
-qualification rank is **not available out of the box**.
+ianseo's default ranking engine (as of rev 114, aligned with WA rules) sorts
+same-round losers by average arrow value in the match and average arrow value
+in the shoot-off, but still assigns the **same rank** to all losers with
+identical scores. The PZŁucz requirement for unique sequential places is
+**not available out of the box**.
 
 A custom ranking override is needed to:
 
 1. Identify all losers in a given round
-2. Sort them by match score (set points or cumulative), then by qualification
-   rank
-3. Assign sequential unique rank numbers starting from the correct position
+2. Sort by average match arrow value, then shoot-off average, then
+   qualification score
+3. Assign **sequential unique rank numbers** starting from the correct
+   position — no two athletes share a place unless all three criteria
+   are identical
+
+### ⚠ CUSTOM NEEDED — Qualification score as third tiebreaker
+
+ianseo natively handles criteria 1 (average match score) and 2 (average
+shoot-off score) after the rev 114 update. It does not add a third
+tiebreaker. PZŁucz §2.6.6.2 requires qualification score as the third
+criterion, which the custom override must add.
 
 ### ⚠ CUSTOM NEEDED — No-bronze-medal-match handling
 
@@ -219,6 +257,12 @@ must:
    get **shared 3rd** (not unique 3rd and 4th) when the bronze match is 0-0.
    Unique sub-ranking starts from the quarterfinals downward.
 
+4. **Average vs total match score:** ✅ Confirmed — §2.6.6.2 uses average
+   arrow value (score ÷ arrows), not raw total. This matters for set-system
+   matches where different archers shoot different numbers of sets/arrows.
+   Aligns with ianseo rev 114 / WA rules, with qualification score added as
+   third tiebreaker.
+
 ---
 
 ## Verification Checklist
@@ -227,16 +271,18 @@ must:
    places 1, 2, 3, 4 as usual
 2. With bronze match **0-0 tie** (not shot): gold match produces 1st and
    2nd; both semifinal losers get 3rd (shared); no 4th place assigned
-3. Losers of the same 1/4-final round get unique places (e.g., 5, 6, 7, 8)
-   based on match score then qualification rank — not all "5th"
-4. Losers of the same 1/8-final round get unique places (e.g., 9–16) — not
+3. Losers of the same 1/4-final round get unique places (5, 6, 7, 8)
+   based on average arrow value — not all "5th"
+4. Losers of the same 1/8-final round get unique places (9–16) — not
    all "9th"
-5. Set-system matches (R, B): sub-ranking uses set-point total; higher set
-   points → better rank
-6. Cumulative matches (C): sub-ranking uses cumulative score; higher score →
-   better rank
-7. When match scores are equal, lower qualification rank → better place
-8. Team brackets follow the same sub-ranking logic
-9. Mixed-team brackets follow the same sub-ranking logic
-10. Feature works across target archery and indoor PL tournament types
+5. Primary criterion: average arrow value in the match (total score ÷ arrows
+   shot); higher average → better rank, for both set-system (R, B) and
+   cumulative (C) events
+6. Secondary criterion: average arrow value in the shoot-off; higher → better;
+   0 when no shoot-off occurred
+7. Tertiary criterion: qualification score; higher → better
+8. When all three criteria are equal, athletes share a position (last resort)
+9. Team brackets follow the same sub-ranking logic using team scores
+10. Mixed-team brackets follow the same sub-ranking logic
+11. Feature works across target archery and indoor PL tournament types
     (1440, 70m, Indoor — Field/3D excluded for now)
