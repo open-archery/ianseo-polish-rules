@@ -242,8 +242,8 @@
 						$oppAvgTie = round(valutaArrowString($myRow->OppTiebreak)
 							/ (strlen(trim($myRow->OppTiebreak)) ?: 1), 3);
 
-						if (safe_w_sql("UPDATE TeamFinals SET TfAverageMatch='{$avgMatch}', TfAverageTie='{$avgTie}' WHERE TfTournament={$this->tournament} AND TfEvent='{$EventToUse}' AND TfMatchNo='{$myRow->RealMatchNo}'") === false) return false;
-						if (safe_w_sql("UPDATE TeamFinals SET TfAverageMatch='{$oppAvgMatch}', TfAverageTie='{$oppAvgTie}' WHERE TfTournament={$this->tournament} AND TfEvent='{$EventToUse}' AND TfMatchNo='{$myRow->OppRealMatchNo}'") === false) return false;
+						safe_w_sql("UPDATE TeamFinals SET TfAverageMatch='{$avgMatch}', TfAverageTie='{$avgTie}' WHERE TfTournament={$this->tournament} AND TfEvent='{$EventToUse}' AND TfMatchNo='{$myRow->RealMatchNo}'");
+						safe_w_sql("UPDATE TeamFinals SET TfAverageMatch='{$oppAvgMatch}', TfAverageTie='{$oppAvgTie}' WHERE TfTournament={$this->tournament} AND TfEvent='{$EventToUse}' AND TfMatchNo='{$myRow->OppRealMatchNo}'");
 
 						foreach ($toWrite as $values)
 						{
@@ -272,8 +272,8 @@
 							$oppAvgTie = round(valutaArrowString($myRow->OppTiebreak)
 								/ (strlen(trim($myRow->OppTiebreak)) ?: 1), 3);
 
-							if (safe_w_sql("UPDATE TeamFinals SET TfAverageMatch='{$avgMatch}', TfAverageTie='{$avgTie}' WHERE TfTournament={$this->tournament} AND TfEvent='{$EventToUse}' AND TfMatchNo='{$myRow->RealMatchNo}'") === false) return false;
-							if (safe_w_sql("UPDATE TeamFinals SET TfAverageMatch='{$oppAvgMatch}', TfAverageTie='{$oppAvgTie}' WHERE TfTournament={$this->tournament} AND TfEvent='{$EventToUse}' AND TfMatchNo='{$myRow->OppRealMatchNo}'") === false) return false;
+							safe_w_sql("UPDATE TeamFinals SET TfAverageMatch='{$avgMatch}', TfAverageTie='{$avgTie}' WHERE TfTournament={$this->tournament} AND TfEvent='{$EventToUse}' AND TfMatchNo='{$myRow->RealMatchNo}'");
+							safe_w_sql("UPDATE TeamFinals SET TfAverageMatch='{$oppAvgMatch}', TfAverageTie='{$oppAvgTie}' WHERE TfTournament={$this->tournament} AND TfEvent='{$EventToUse}' AND TfMatchNo='{$myRow->OppRealMatchNo}'");
 
 							$myRow = safe_fetch($rs);
 						}
@@ -319,8 +319,8 @@
 							$oppAvgTie   = round(valutaArrowString($myRow->OppTiebreak)
 								/ (strlen(trim($myRow->OppTiebreak)) ?: 1), 3);
 
-							if (safe_w_sql("UPDATE TeamFinals SET TfAverageMatch='{$avgMatch}', TfAverageTie='{$avgTie}' WHERE TfTournament={$this->tournament} AND TfEvent='{$EventToUse}' AND TfMatchNo='{$myRow->RealMatchNo}'") === false) return false;
-							if (safe_w_sql("UPDATE TeamFinals SET TfAverageMatch='{$oppAvgMatch}', TfAverageTie='{$oppAvgTie}' WHERE TfTournament={$this->tournament} AND TfEvent='{$EventToUse}' AND TfMatchNo='{$myRow->OppRealMatchNo}'") === false) return false;
+							safe_w_sql("UPDATE TeamFinals SET TfAverageMatch='{$avgMatch}', TfAverageTie='{$avgTie}' WHERE TfTournament={$this->tournament} AND TfEvent='{$EventToUse}' AND TfMatchNo='{$myRow->RealMatchNo}'");
+							safe_w_sql("UPDATE TeamFinals SET TfAverageMatch='{$oppAvgMatch}', TfAverageTie='{$oppAvgTie}' WHERE TfTournament={$this->tournament} AND TfEvent='{$EventToUse}' AND TfMatchNo='{$myRow->OppRealMatchNo}'");
 
 							$matchData[] = array(
 								'id'         => $myRow->TeamId,
