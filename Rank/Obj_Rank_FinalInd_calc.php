@@ -204,7 +204,7 @@
 					f.FinArrowstring  AS Arrowstring,  f.FinSetPoints  AS SetPoints,  f.FinTiebreak  AS Tiebreak,
 					f2.FinScore    AS OppScore,
 					f2.FinArrowstring AS OppArrowstring, f2.FinSetPoints AS OppSetPoints, f2.FinTiebreak AS OppTiebreak,
-					COALESCE(qq.QuScore, 0) AS QualScore,
+					COALESCE(i.IndScore, 0) AS QualScore,
 					f.FinMatchNo   AS RealMatchNo, f2.FinMatchNo AS OppRealMatchNo
 				FROM
 					Finals AS f
@@ -236,7 +236,6 @@
 						  AND EvTournament={$this->tournament}
 						GROUP BY EvCodeParent, EvFinalFirstPhase
 					) Secondary ON SubMainCode=EvCode AND SubFirstPhase=GrPhase/2
-					LEFT JOIN Qualifications AS qq ON qq.QuId=f.FinAthlete
 				WHERE
 					f.FinTournament={$this->tournament}
 					AND f.FinEvent='{$event}'
@@ -304,8 +303,8 @@
 						$oppAvgTie = round(valutaArrowString($myRow->OppTiebreak)
 							/ (strlen(trim($myRow->OppTiebreak)) ?: 1), 3);
 
-						safe_w_sql("UPDATE Finals SET FinAverageMatch='{$avgMatch}', FinAverageTie='{$avgTie}' WHERE FinTournament={$this->tournament} AND FinEvent='{$EventToUse}' AND FinMatchNo='{$myRow->RealMatchNo}'");
-						safe_w_sql("UPDATE Finals SET FinAverageMatch='{$oppAvgMatch}', FinAverageTie='{$oppAvgTie}' WHERE FinTournament={$this->tournament} AND FinEvent='{$EventToUse}' AND FinMatchNo='{$myRow->OppRealMatchNo}'");
+						if (safe_w_sql("UPDATE Finals SET FinAverageMatch='{$avgMatch}', FinAverageTie='{$avgTie}' WHERE FinTournament={$this->tournament} AND FinEvent='{$EventToUse}' AND FinMatchNo='{$myRow->RealMatchNo}'") === false) return false;
+						if (safe_w_sql("UPDATE Finals SET FinAverageMatch='{$oppAvgMatch}', FinAverageTie='{$oppAvgTie}' WHERE FinTournament={$this->tournament} AND FinEvent='{$EventToUse}' AND FinMatchNo='{$myRow->OppRealMatchNo}'") === false) return false;
 
 						foreach ($toWrite as $values)
 						{
@@ -334,8 +333,8 @@
 							$oppAvgTie = round(valutaArrowString($myRow->OppTiebreak)
 								/ (strlen(trim($myRow->OppTiebreak)) ?: 1), 3);
 
-							safe_w_sql("UPDATE Finals SET FinAverageMatch='{$avgMatch}', FinAverageTie='{$avgTie}' WHERE FinTournament={$this->tournament} AND FinEvent='{$EventToUse}' AND FinMatchNo='{$myRow->RealMatchNo}'");
-							safe_w_sql("UPDATE Finals SET FinAverageMatch='{$oppAvgMatch}', FinAverageTie='{$oppAvgTie}' WHERE FinTournament={$this->tournament} AND FinEvent='{$EventToUse}' AND FinMatchNo='{$myRow->OppRealMatchNo}'");
+							if (safe_w_sql("UPDATE Finals SET FinAverageMatch='{$avgMatch}', FinAverageTie='{$avgTie}' WHERE FinTournament={$this->tournament} AND FinEvent='{$EventToUse}' AND FinMatchNo='{$myRow->RealMatchNo}'") === false) return false;
+							if (safe_w_sql("UPDATE Finals SET FinAverageMatch='{$oppAvgMatch}', FinAverageTie='{$oppAvgTie}' WHERE FinTournament={$this->tournament} AND FinEvent='{$EventToUse}' AND FinMatchNo='{$myRow->OppRealMatchNo}'") === false) return false;
 
 							$myRow = safe_fetch($rs);
 						}
@@ -383,8 +382,8 @@
 							$oppAvgTie   = round(valutaArrowString($myRow->OppTiebreak)
 								/ (strlen(trim($myRow->OppTiebreak)) ?: 1), 3);
 
-							safe_w_sql("UPDATE Finals SET FinAverageMatch='{$avgMatch}', FinAverageTie='{$avgTie}' WHERE FinTournament={$this->tournament} AND FinEvent='{$EventToUse}' AND FinMatchNo='{$myRow->RealMatchNo}'");
-							safe_w_sql("UPDATE Finals SET FinAverageMatch='{$oppAvgMatch}', FinAverageTie='{$oppAvgTie}' WHERE FinTournament={$this->tournament} AND FinEvent='{$EventToUse}' AND FinMatchNo='{$myRow->OppRealMatchNo}'");
+							if (safe_w_sql("UPDATE Finals SET FinAverageMatch='{$avgMatch}', FinAverageTie='{$avgTie}' WHERE FinTournament={$this->tournament} AND FinEvent='{$EventToUse}' AND FinMatchNo='{$myRow->RealMatchNo}'") === false) return false;
+							if (safe_w_sql("UPDATE Finals SET FinAverageMatch='{$oppAvgMatch}', FinAverageTie='{$oppAvgTie}' WHERE FinTournament={$this->tournament} AND FinEvent='{$EventToUse}' AND FinMatchNo='{$myRow->OppRealMatchNo}'") === false) return false;
 
 							$matchData[] = array(
 								'id'         => $myRow->AthId,

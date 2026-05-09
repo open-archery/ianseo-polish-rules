@@ -82,8 +82,8 @@ foreach($PdfData->rankData['sections'] as $section) {
 				if($v['tie']==2) {
 					$pdf->Cell(12, 4, $PdfData->Bye, 1, 0, 'R', 0);
 				} else {
-					$pdf->Cell(5, 4, (($cntPhases<count($item['finals']) or floatval($v['avgTie'])==0) ? '' : ($v['avgTie'] ? number_format($v['avgTie'],3) : str_replace('|', ',', $v['tiebreak']))), 'LBT', 0, 'R', 0);
-					$pdf->Cell(7, 4, ($v['avgMatch'] ? number_format($v['avgMatch'],3, $pdf->NumberDecimalSeparator) : $v['score']), 'RBT', 0, 'R', 0);
+					$pdf->Cell(5, 4, (($cntPhases<count($item['finals']) || $v['avgTie'] === null || $v['avgTie'] === '') ? '' : ($v['avgTie'] !== null && $v['avgTie'] !== '' ? number_format($v['avgTie'],3) : str_replace('|', ',', $v['tiebreak']))), 'LBT', 0, 'R', 0);
+					$pdf->Cell(7, 4, ($v['avgMatch'] !== null && $v['avgMatch'] !== '' ? number_format($v['avgMatch'],3, $pdf->NumberDecimalSeparator) : ($section['meta']['matchMode']==0 ? $v['score'] : $v['setScore'])), 'RBT', 0, 'R', 0);
 				}
 			}
 			$pdf->Cell(0.1, 4,'',0,1,'C',0);
