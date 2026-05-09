@@ -153,7 +153,7 @@ function pl_bibimport_upsert_country($tourId, $coCode, $coName, &$cache) {
 }
 
 /**
- * Insert a single row into Entries.
+ * Insert a single row into Entries and return the new EnId.
  *
  * ianseo column name quirk:
  *   EnFirstName → family name (LueFamilyName)
@@ -164,9 +164,9 @@ function pl_bibimport_upsert_country($tourId, $coCode, $coName, &$cache) {
  * @param string $division  Division code selected by the operator
  * @param string $classId   Age class ID, or '' if unresolved
  * @param int    $coId      Countries.CoId
- * @return void
+ * @return int The new Entries.EnId
  */
-function pl_bibimport_create_entry($tourId, $lue, $division, $classId, $coId) {
+function pl_bibimport_create_entry($tourId, $lue, $division, $classId, $coId): int {
     safe_w_sql(
         "INSERT INTO Entries SET"
         . "  EnTournament = " . StrSafe_DB($tourId, true)
@@ -180,6 +180,25 @@ function pl_bibimport_create_entry($tourId, $lue, $division, $classId, $coId) {
         . ", EnCountry    = " . StrSafe_DB($coId, true)
         . ", EnIocCode    = 'POL'"
         . ", EnStatus     = " . StrSafe_DB($lue->LueStatus, true)
+    );
+    return (int) safe_w_last_id();
+}
+
+/**
+ * Insert a Qualifications row linking the entry to a session.
+ *
+ * Matches ianseo's PopEdit.php pattern: only QuId and QuSession are set;
+ * QuTarget and QuLetter are left at their column defaults (0 / '').
+ * The target draw step fills those in later.
+ *
+ * @param int $enId    Entries.EnId of the just-created athlete
+ * @param int $session Session number (Session.SesOrder) chosen by the operator
+ * @return void
+ */
+function pl_bibimport_create_qualification(int $enId, int $session): void {
+    safe_w_sql(
+        "INSERT INTO Qualifications (QuId, QuSession)"
+        . " VALUES (" . StrSafe_DB($enId, true) . ", " . StrSafe_DB($session, true) . ")"
     );
 }
 
@@ -200,6 +219,7 @@ function pl_bibimport_create_entry($tourId, $lue, $division, $classId, $coId) {
  * @param int    $tourId    Tournament ID
  * @param string $rawInput  Raw textarea content (lines of licence numbers)
  * @param string $division  Division code selected by the operator
+ * @param int    $session   Session number (Session.SesOrder) to assign to each athlete
  * @return array [
  *   'imported'        => int,
  *   'duplicates'      => [ ['code'=>..., 'name'=>...], ... ],
@@ -208,7 +228,7 @@ function pl_bibimport_create_entry($tourId, $lue, $division, $classId, $coId) {
  *   'error'           => string|null,
  * ]
  */
-function pl_bibimport_run($tourId, $rawInput, $division) {
+function pl_bibimport_run($tourId, $rawInput, $division, int $session) {
     $result = [
         'imported'        => 0,
         'duplicates'      => [],
@@ -295,8 +315,9 @@ function pl_bibimport_run($tourId, $rawInput, $division) {
                 $countryCache
             );
 
-            // Step 5: Create entry
-            pl_bibimport_create_entry($tourId, $lue, $division, $classId, $coId);
+            // Step 5: Create entry, then immediately link to the selected session
+            $enId = pl_bibimport_create_entry($tourId, $lue, $division, $classId, $coId);
+            pl_bibimport_create_qualification($enId, $session);
 
             $result['imported']++;
         }

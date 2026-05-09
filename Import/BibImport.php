@@ -2,9 +2,10 @@
 /**
  * BibImport.php — Batch import of tournament entries from PZŁucz licence numbers.
  *
- * Operator pastes one licence number per line, selects a division, and clicks
- * "Importuj uczestników". The page looks up each licence in LookUpEntries and
- * creates Entries rows in the current tournament.
+ * Operator pastes one licence number per line, selects a division and a
+ * qualification session, and clicks "Importuj uczestników". The page looks up
+ * each licence in LookUpEntries and creates Entries + Qualifications rows in
+ * the current tournament.
  *
  * GET  — shows the input form (with optional Sportzona warning)
  * POST — processes the batch, shows results, then shows the form again
@@ -36,19 +37,44 @@ while ($div = safe_fetch($rsDivisions)) {
 }
 safe_free_result($rsDivisions);
 
+// ─── Load Q sessions for the dropdown ────────────────────────────────────────
+$sessions    = [];
+$rsSessions  = safe_r_sql(
+    "SELECT SesOrder, SesName FROM Session"
+    . " WHERE SesTournament = " . StrSafe_DB($tourId, true)
+    . "   AND SesType = 'Q'"
+    . " ORDER BY SesOrder ASC"
+);
+while ($ses = safe_fetch($rsSessions)) {
+    $sessions[] = $ses;
+}
+safe_free_result($rsSessions);
+$sessionsEmpty = empty($sessions);
+
 // ─── Handle POST ──────────────────────────────────────────────────────────────
-$importResult    = null;
+$importResult     = null;
 $selectedDivision = '';
+$selectedSession  = 0;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $selectedDivision = isset($_POST['division']) ? trim($_POST['division']) : '';
-    $rawInput         = isset($_POST['bibs'])     ? $_POST['bibs']           : '';
+    $selectedSession  = isset($_POST['session'])  ? (int) $_POST['session'] : 0;
+    $rawInput         = isset($_POST['bibs'])     ? $_POST['bibs']          : '';
 
-    // Basic validation: division must be non-empty and exist in this tournament
+    // Validate division
     $divisionValid = false;
     foreach ($divisions as $div) {
         if ($div->DivId === $selectedDivision) {
             $divisionValid = true;
+            break;
+        }
+    }
+
+    // Validate session
+    $sessionValid = false;
+    foreach ($sessions as $ses) {
+        if ((int) $ses->SesOrder === $selectedSession) {
+            $sessionValid = true;
             break;
         }
     }
@@ -61,8 +87,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'classUnresolved' => [],
             'error'           => 'Nieprawidłowa dyscyplina. Wybierz dyscyplinę z listy.',
         ];
+    } elseif (!$sessionValid) {
+        $importResult = [
+            'imported'        => 0,
+            'duplicates'      => [],
+            'unmatched'       => [],
+            'classUnresolved' => [],
+            'error'           => 'Nieprawidłowa sesja. Wybierz sesję kwalifikacyjną z listy.',
+        ];
     } else {
-        $importResult = pl_bibimport_run($tourId, $rawInput, $selectedDivision);
+        $importResult = pl_bibimport_run($tourId, $rawInput, $selectedDivision, $selectedSession);
     }
 }
 
@@ -80,6 +114,14 @@ if ($lookupEmpty): ?>
     <a href="<?php echo $CFG->ROOT_DIR; ?>Modules/Sets/PL/Lookup/Install.php" style="color:#a94442;font-weight:bold;">
         Przejdź do strony synchronizacji &rsaquo;
     </a>
+</div>
+<?php endif; ?>
+
+<?php if ($sessionsEmpty): ?>
+<div style="background:#f2dede;border:1px solid #a94442;padding:12px 16px;margin:10px 0;border-radius:4px;color:#a94442;">
+    <strong>Uwaga:</strong> Turniej nie ma zdefiniowanych sesji kwalifikacyjnych.
+    Przed importem uczestników skonfiguruj sesje w zakładce
+    <strong>Zarządzanie sesjami</strong>.
 </div>
 <?php endif; ?>
 
@@ -184,7 +226,7 @@ if ($importResult !== null):
             Skonfiguruj turniej przed importem.
         </td>
     </tr>
-    <?php else: ?>
+    <?php elseif (!$sessionsEmpty): ?>
 
     <tr>
         <td colspan="2">
@@ -202,6 +244,28 @@ if ($importResult !== null):
                                 <option value="<?php echo htmlspecialchars($div->DivId); ?>"
                                     <?php if ($selectedDivision === $div->DivId) echo 'selected'; ?>>
                                     <?php echo htmlspecialchars($div->DivDescription); ?>
+                                </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding:8px 10px;font-weight:bold;vertical-align:top;">
+                            Sesja:
+                        </td>
+                        <td style="padding:8px 0;">
+                            <select name="session" style="padding:4px 8px;min-width:200px;">
+                                <?php foreach ($sessions as $ses): ?>
+                                <option value="<?php echo (int) $ses->SesOrder; ?>"
+                                    <?php if ($selectedSession === (int) $ses->SesOrder) echo 'selected'; ?>>
+                                    <?php
+                                        $label = (int) $ses->SesOrder;
+                                        if ($ses->SesName !== '') {
+                                            $label .= ' – ' . htmlspecialchars($ses->SesName);
+                                        }
+                                        echo $label;
+                                    ?>
                                 </option>
                                 <?php endforeach; ?>
                             </select>
@@ -237,7 +301,7 @@ if ($importResult !== null):
         </td>
     </tr>
 
-    <?php endif; // end: divisions not empty ?>
+    <?php endif; // end: divisions not empty and sessions available ?>
 
 </table>
 
