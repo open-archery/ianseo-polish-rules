@@ -70,8 +70,9 @@ function pl_bibimport_is_duplicate($code, $tourId) {
  * @return object|null Classes row object, or null if no class matched
  */
 function pl_bibimport_resolve_class($tourId, $lueSex, $birthYear, $division) {
-    // Compute athlete age at tournament end date (same formula as CheckCtrlCode.php)
-    $tourYear  = intval(substr($_SESSION['TourWhenTo'], 0, 4));
+    // Compute athlete age at tournament end date (same formula as CheckCtrlCode.php).
+    // TourRealWhenTo is ToWhenTo in raw YYYY-MM-DD format; TourWhenTo is locale-formatted.
+    $tourYear  = intval(substr($_SESSION['TourRealWhenTo'], 0, 4));
     $birthYearInt = intval($birthYear);
     if ($birthYearInt <= 0 || $tourYear <= 0) {
         return null;
@@ -162,7 +163,8 @@ function pl_bibimport_upsert_country($tourId, $coCode, $coName, &$cache) {
  * @param int    $tourId    Tournament ID
  * @param object $lue       LookUpEntries row
  * @param string $division  Division code selected by the operator
- * @param string $classId   Age class ID, or '' if unresolved
+ * @param string $classId   Age class ID (Classes.ClId), or '' if unresolved.
+ *                          Written to both EnAgeClass and EnClass.
  * @param int    $coId      Countries.CoId
  * @return int The new Entries.EnId
  */
@@ -177,6 +179,7 @@ function pl_bibimport_create_entry($tourId, $lue, $division, $classId, $coId): i
         . ", EnDob        = " . StrSafe_DB($lue->LueCtrlCode)
         . ", EnDivision   = " . StrSafe_DB($division)
         . ", EnClass      = " . StrSafe_DB($classId)
+        . ", EnAgeClass   = " . StrSafe_DB($classId)
         . ", EnCountry    = " . StrSafe_DB($coId, true)
         . ", EnIocCode    = 'POL'"
         . ", EnStatus     = " . StrSafe_DB($lue->LueStatus, true)

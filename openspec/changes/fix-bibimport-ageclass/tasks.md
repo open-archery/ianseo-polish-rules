@@ -1,11 +1,11 @@
 ## 1. Fix Entry Creation
 
-- [ ] 1.1 In `Import/Fun_BibImport.php`, add `, EnAgeClass = StrSafe_DB($classId)` to the `pl_bibimport_create_entry()` INSERT statement, immediately after the existing `EnClass` line
-- [ ] 1.2 Update the `@param $classId` docblock in `pl_bibimport_create_entry()` to note that the value is written to both `EnClass` and `EnAgeClass`
+- [x] 1.1 In `Import/Fun_BibImport.php`, add `, EnAgeClass = StrSafe_DB($classId)` to the `pl_bibimport_create_entry()` INSERT statement, immediately after the existing `EnClass` line
+- [x] 1.2 Update the `@param $classId` docblock in `pl_bibimport_create_entry()` to note that the value is written to both `EnClass` and `EnAgeClass`
 
 ## 2. Spec Update
 
-- [ ] 2.1 Merge the delta spec from `openspec/changes/fix-bibimport-ageclass/specs/bib-import/spec.md` into `openspec/specs/bib-import/spec.md` — append the new requirement under a new `## Entry-Column Requirements` section (or integrate into existing Step 5 prose)
+- [x] 2.1 Merge the delta spec from `openspec/changes/fix-bibimport-ageclass/specs/bib-import/spec.md` into `openspec/specs/bib-import/spec.md` — append the new requirement under a new `## Entry-Column Requirements` section (or integrate into existing Step 5 prose)
 
 ## 3. Verification
 
