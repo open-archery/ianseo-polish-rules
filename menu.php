@@ -5,6 +5,7 @@ if($on and $_SESSION["TourLocRule"]=='PL'){
   $ret['PRNT'][] = 'Dyplomy|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/Diplomas/Diplomas.php';
 
   $ret['PART']['SYNC'][] = 'Import by licence|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/Import/BibImport.php';
+  $ret['PART']['TARG'][] = 'Rozstaw. tarcze ABC/ACD|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/Targets/SetTargetABCACD.php';
   $ret['PART']['SYNC'][] = MENU_DIVIDER;
   $ret['PART']['SYNC'][] = 'Install Sportzona|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/Lookup/Install.php';
 }
