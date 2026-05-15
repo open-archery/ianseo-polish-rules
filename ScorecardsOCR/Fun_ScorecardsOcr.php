@@ -61,13 +61,15 @@ function pl_ocr_save_config(string $key, string $value): void
 }
 
 /**
- * Look up qualification scores for an archer by bib number and session index.
+ * Look up qualification scores for an archer by bib number.
  *
- * Queries Entries to resolve EnId by bib + tournament, then reads
- * QuD{N}Score / QuD{N}Gold / QuD{N}Xnine from Qualifications.
+ * Queries Entries to resolve EnId by bib + tournament, then reads scores from
+ * Qualifications. When $session is 1–8 the per-distance columns (QuD{N}Score
+ * etc.) are returned; when $session is 0 the grand total (QuScore/QuGold/
+ * QuXnine) is returned instead.
  *
  * @param string $bib     Bib number as read from the scorecard barcode
- * @param int    $session Distance/session index (1–8, from barcode suffix)
+ * @param int    $session Distance index (1–8) or 0 for grand total
  * @param int    $tourId  Current tournament ID
  * @return array{found: bool, score: int|null, gold: int|null, xnine: int|null}
  */
@@ -75,7 +77,7 @@ function pl_ocr_lookup_scores(string $bib, int $session, int $tourId): array
 {
     $notFound = ['found' => false, 'score' => null, 'gold' => null, 'xnine' => null];
 
-    if ($session < 1 || $session > 8 || $bib === '') {
+    if ($bib === '') {
         return $notFound;
     }
 
@@ -83,7 +85,7 @@ function pl_ocr_lookup_scores(string $bib, int $session, int $tourId): array
 
     $rs = safe_r_sql(
         "SELECT EnId FROM Entries"
-        . " WHERE EnBib = " . StrSafe_DB($bib)
+        . " WHERE EnCode = " . StrSafe_DB($bib)
         . "   AND EnTournament = {$tourSafe}"
         . " LIMIT 1"
     );
@@ -97,11 +99,18 @@ function pl_ocr_lookup_scores(string $bib, int $session, int $tourId): array
     safe_free_result($rs);
     $enId = intval($entry->EnId);
 
-    $n   = intval($session);
-    $rs2 = safe_r_sql(
-        "SELECT QuD{$n}Score AS score, QuD{$n}Gold AS gold, QuD{$n}Xnine AS xnine"
-        . " FROM Qualifications WHERE QuId = {$enId}"
-    );
+    if ($session >= 1 && $session <= 8) {
+        $n   = intval($session);
+        $rs2 = safe_r_sql(
+            "SELECT QuD{$n}Score AS score, QuD{$n}Gold AS gold, QuD{$n}Xnine AS xnine"
+            . " FROM Qualifications WHERE QuId = {$enId}"
+        );
+    } else {
+        $rs2 = safe_r_sql(
+            "SELECT QuScore AS score, QuGold AS gold, QuXnine AS xnine"
+            . " FROM Qualifications WHERE QuId = {$enId}"
+        );
+    }
 
     if (safe_num_rows($rs2) === 0) {
         safe_free_result($rs2);

@@ -116,7 +116,7 @@ resultsEl.addEventListener("change", e => {
   if (card._historyId) updateHistoryEntry(card._historyId, sc, card._editedCells);
 });
 
-// Event delegation for editable count cells (10+X / X)
+// Event delegation for editable count cells (10+X / X / Suma / Razem / Bieżący)
 resultsEl.addEventListener("click", e => {
   const span = e.target.closest(".val-cell--editable");
   if (!span) return;
@@ -124,15 +124,31 @@ resultsEl.addEventListener("click", e => {
   const sc     = card?._sc;
   if (!sc) return;
   const endIdx = +span.dataset.end;
-  const row    = span.dataset.row;
+  const row    = span.dataset.row;   // "a", "b", or ""
   const field  = span.dataset.field;
-  const subRow = sc.ends[endIdx]?.[`sub_row_${row}`];
-  const curVal = field === "10x" ? subRow?.recorded_10x : subRow?.recorded_x;
+  const end    = sc.ends[endIdx];
+  if (!end) return;
+
+  let curVal;
+  if (row === "a" || row === "b") {
+    const subRow = end[`sub_row_${row}`];
+    if (field === "10x")       curVal = subRow?.recorded_10x;
+    else if (field === "x")    curVal = subRow?.recorded_x;
+    else if (field === "suma") curVal = subRow?.recorded_suma;
+  } else if (field === "razem") {
+    curVal = end.recorded_razem;
+  } else if (field === "running") {
+    curVal = end.recorded_running;
+  }
+
+  const maxVal = (field === "10x" || field === "x") ? "3"
+               : field === "suma" ? "30"
+               : "9999";
 
   const inp       = document.createElement("input");
   inp.type        = "number";
   inp.min         = "0";
-  inp.max         = "3";
+  inp.max         = maxVal;
   inp.className   = "count-edit";
   inp.dataset.end   = span.dataset.end;
   inp.dataset.row   = span.dataset.row;
@@ -148,15 +164,32 @@ function commitCountEdit(inp) {
   const sc     = card?._sc;
   if (!sc) return;
   const endIdx = +inp.dataset.end;
-  const row    = inp.dataset.row;
+  const row    = inp.dataset.row;   // "a", "b", or ""
   const field  = inp.dataset.field;
-  const subRow = sc.ends[endIdx]?.[`sub_row_${row}`];
-  if (!subRow) return;
-  const val = inp.value === "" ? null : Math.max(0, Math.min(3, parseInt(inp.value, 10)));
-  if (field === "10x") subRow.recorded_10x = val;
-  else                 subRow.recorded_x   = val;
+  const end    = sc.ends[endIdx];
+  if (!end) return;
+
+  const maxVal = (field === "10x" || field === "x") ? 3
+               : field === "suma" ? 30
+               : 9999;
+
+  const val = inp.value === "" ? null : Math.max(0, Math.min(maxVal, parseInt(inp.value, 10)));
+
+  if (row === "a" || row === "b") {
+    const subRow = end[`sub_row_${row}`];
+    if (!subRow) return;
+    if (field === "10x")       subRow.recorded_10x  = val;
+    else if (field === "x")    subRow.recorded_x    = val;
+    else if (field === "suma") subRow.recorded_suma  = val;
+  } else if (field === "razem") {
+    end.recorded_razem   = val;
+  } else if (field === "running") {
+    end.recorded_running = val;
+  }
+
   if (!card._editedCells) card._editedCells = new Set();
-  card._editedCells.add(`${endIdx}-${row}-${field}`);
+  const cellKey = (row === "a" || row === "b") ? `${endIdx}-${row}-${field}` : `${endIdx}-${field}`;
+  card._editedCells.add(cellKey);
   enrichScorecard(sc);
   card._rerender?.();
   if (card._historyId) updateHistoryEntry(card._historyId, sc, card._editedCells);
@@ -407,16 +440,35 @@ function resizeImage(dataUrl, maxPx = 2400, quality = 0.92) {
 
 // ── DB score lookup ───────────────────────────────────────────────────────────
 
-async function fetchDbScores(barcodeText) {
+function parseSessionNum(label) {
+  if (!label) return null;
+  const m = String(label).match(/(\d+)\s*$/);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+async function fetchDbScores(barcodeText, sessionLabel) {
   if (!barcodeText) return null;
   try {
     const fd = new FormData();
     fd.append("barcode_text", barcodeText);
+    const sessionNum = parseSessionNum(sessionLabel);
+    if (sessionNum !== null) fd.append("session", sessionNum);
     const res = await fetch(window.PL_OCR.scoresUrl, { method: "POST", body: fd });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null;
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      console.error("[OCR] fetchDbScores HTTP", res.status, body);
+      return { _error: `HTTP ${res.status}`, _body: body };
+    }
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch {
+      console.error("[OCR] fetchDbScores JSON parse failed:", text);
+      return { _error: "JSON parse", _body: text };
+    }
+  } catch (err) {
+    console.error("[OCR] fetchDbScores fetch error:", err);
+    return { _error: String(err) };
   }
 }
 
@@ -553,8 +605,8 @@ async function analyze({ name, dataUrl, label, cardEl = null }) {
     // Fetch DB scores if barcode was read
     if (barcodeText) {
       addLog("Pobieranie wyników z bazy danych…");
-      const dbResult = await fetchDbScores(barcodeText);
-      if (dbResult) {
+      const dbResult = await fetchDbScores(barcodeText, sessionLabel);
+      if (dbResult && !dbResult._error) {
         sc.db_looked_up = true;
         sc.db_found  = dbResult.found ?? false;
         sc.db_score  = dbResult.score ?? null;
@@ -566,7 +618,9 @@ async function analyze({ name, dataUrl, label, cardEl = null }) {
           ? `DB: sesja ${sc.db_session} → wynik ${sc.db_score}, 10+X ${sc.db_gold}, X ${sc.db_xnine}`
           : `DB: zawodnik nie znaleziony (${dbResult.bib ?? "?"})`);
       } else {
-        addLog("Nie można pobrać wyników z bazy danych.");
+        const detail = dbResult?._error ?? "brak odpowiedzi";
+        const body   = dbResult?._body  ? ` — ${dbResult._body.slice(0, 120)}` : "";
+        addLog(`Nie można pobrać wyników z bazy danych. (${detail}${body})`);
       }
     }
 

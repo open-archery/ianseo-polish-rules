@@ -57,10 +57,13 @@ function renderDbRow(d) {
   const dbScore = d.db_score;
   const calc    = d.calculated_grand_total;
   const session = d.db_session;
+  const label   = session ? `sesja ${session}` : "łącznie";
 
   let scoreHtml;
   if (dbScore == null || dbScore === 0) {
-    scoreHtml = `<span class="db-pending">— (nie wprowadzono sesji ${session})</span>`;
+    scoreHtml = session
+      ? `<span class="db-pending">— (nie wprowadzono sesji ${session})</span>`
+      : `<span class="db-pending">— (brak wyników w bazie)</span>`;
   } else if (dbScore === calc) {
     scoreHtml = `<span class="db-ok">${dbScore} ✓</span>`;
   } else {
@@ -68,7 +71,7 @@ function renderDbRow(d) {
   }
 
   return `<div class="db-row">
-    <span class="db-label">Baza danych (sesja ${session}):</span>
+    <span class="db-label">Baza danych (${label}):</span>
     ${scoreHtml}
   </div>`;
 }
@@ -147,7 +150,7 @@ function renderDetails(d, { editable = false, editedCells = null } = {}) {
           <td rowspan="2" class="td-end">${end.end_number}</td>
           <td class="td-row">A</td>
           <td>${aArrows}</td>
-          <td>${valCell(end.sub_row_a?.recorded_suma, end.sub_row_a?.calculated_suma, end.sub_row_a?.suma_error)}</td>
+          <td>${editableCountCell(end.sub_row_a?.recorded_suma, end.sub_row_a?.calculated_suma, end.sub_row_a?.suma_error, editable ? { endIdx, row: "a", field: "suma", isEdited: editedCells?.has(`${endIdx}-a-suma`) ?? false } : null)}</td>
           <td class="dim">—</td><td class="dim">—</td>
           <td>${editableCountCell(end.sub_row_a?.recorded_10x, end.sub_row_a?.calculated_10x, end.sub_row_a?.tenx_error, editable ? { endIdx, row: "a", field: "10x", isEdited: editedCells?.has(`${endIdx}-a-10x`) ?? false } : null)}</td>
           <td>${editableCountCell(end.sub_row_a?.recorded_x,   end.sub_row_a?.calculated_x,   end.sub_row_a?.x_error,   editable ? { endIdx, row: "a", field: "x",   isEdited: editedCells?.has(`${endIdx}-a-x`)   ?? false } : null)}</td>
@@ -156,9 +159,9 @@ function renderDetails(d, { editable = false, editedCells = null } = {}) {
         <tr class="end-sep ${bErr ? "row-error" : ""}">
           <td class="td-row">B</td>
           <td>${bArrows}</td>
-          <td>${valCell(end.sub_row_b?.recorded_suma, end.sub_row_b?.calculated_suma, end.sub_row_b?.suma_error)}</td>
-          <td>${valCell(end.recorded_razem,           end.calculated_razem,           end.razem_error)}</td>
-          <td>${valCell(end.recorded_running,         end.calculated_running,         end.running_error)}</td>
+          <td>${editableCountCell(end.sub_row_b?.recorded_suma, end.sub_row_b?.calculated_suma, end.sub_row_b?.suma_error, editable ? { endIdx, row: "b", field: "suma",    isEdited: editedCells?.has(`${endIdx}-b-suma`)    ?? false } : null)}</td>
+          <td>${editableCountCell(end.recorded_razem,          end.calculated_razem,          end.razem_error,          editable ? { endIdx, row: "",  field: "razem",   isEdited: editedCells?.has(`${endIdx}-razem`)    ?? false } : null)}</td>
+          <td>${editableCountCell(end.recorded_running,        end.calculated_running,        end.running_error,        editable ? { endIdx, row: "",  field: "running", isEdited: editedCells?.has(`${endIdx}-running`)  ?? false } : null)}</td>
           <td>${editableCountCell(end.sub_row_b?.recorded_10x, end.sub_row_b?.calculated_10x, end.sub_row_b?.tenx_error, editable ? { endIdx, row: "b", field: "10x", isEdited: editedCells?.has(`${endIdx}-b-10x`) ?? false } : null)}</td>
           <td>${editableCountCell(end.sub_row_b?.recorded_x,   end.sub_row_b?.calculated_x,   end.sub_row_b?.x_error,   editable ? { endIdx, row: "b", field: "x",   isEdited: editedCells?.has(`${endIdx}-b-x`)   ?? false } : null)}</td>
           <td>${bErr || aErr ? '<span class="e-chip">✗</span>' : '<span class="o-chip">✓</span>'}</td>
