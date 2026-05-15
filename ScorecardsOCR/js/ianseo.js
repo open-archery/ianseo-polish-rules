@@ -147,17 +147,45 @@ async function splitAndAnalyze(file) {
   let rawDataUrl;
   try { rawDataUrl = await readFileAsDataURL(file); } catch { return; }
 
+  const pageGroup = document.createElement("div");
+  pageGroup.className = "ocr-page-group";
+
+  const pageLabel = document.createElement("div");
+  pageLabel.className = "ocr-page-label";
+  pageLabel.textContent = file.name;
+  pageGroup.appendChild(pageLabel);
+
   let quadrants;
   try { quadrants = await splitIntoQuadrants(rawDataUrl); } catch { quadrants = null; }
 
   if (!quadrants) {
-    analyze({ name: file.name, dataUrl: rawDataUrl, label: null });
+    const card = document.createElement("div");
+    card.className = "card";
+    pageGroup.appendChild(card);
+    allCards.unshift(pageGroup);
+    renderPage(1);
+    await analyze({ name: file.name, dataUrl: rawDataUrl, label: null, cardEl: card });
     return;
   }
 
   const labels = ["Lewy-górny", "Prawy-górny", "Lewy-dolny", "Prawy-dolny"];
+
+  const gridWrap = document.createElement("div");
+  gridWrap.className = "ocr-quad-grid";
+
+  const cards = labels.map(() => {
+    const card = document.createElement("div");
+    card.className = "card";
+    gridWrap.appendChild(card);
+    return card;
+  });
+
+  pageGroup.appendChild(gridWrap);
+  allCards.unshift(pageGroup);
+  renderPage(1);
+
   await Promise.all(quadrants.map((q, i) =>
-    analyze({ name: file.name, dataUrl: q, label: labels[i] })
+    analyze({ name: file.name, dataUrl: q, label: labels[i], cardEl: cards[i] })
   ));
 }
 
@@ -231,11 +259,13 @@ async function fetchDbScores(barcodeText) {
 
 // ── Core analysis ─────────────────────────────────────────────────────────────
 
-async function analyze({ name, dataUrl, label }) {
-  const card = document.createElement("div");
+async function analyze({ name, dataUrl, label, cardEl = null }) {
+  const card = cardEl ?? document.createElement("div");
   card.className = "card";
-  allCards.unshift(card);
-  renderPage(1);
+  if (!cardEl) {
+    allCards.unshift(card);
+    renderPage(1);
+  }
 
   const displayName = label ? `${name} — ${label}` : name;
   const logs   = [];

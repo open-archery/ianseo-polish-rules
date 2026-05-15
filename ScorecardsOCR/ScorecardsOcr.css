@@ -107,7 +107,7 @@
 
 /* ── Ends table ── */
 .pl-ocr-wrap .tbl-wrap      { overflow-x: auto; }
-.pl-ocr-wrap table.ends     { border-collapse: collapse; width: 100%; font-size: 13px; }
+.pl-ocr-wrap table.ends     { border-collapse: collapse; width: auto; font-size: 13px; }
 .pl-ocr-wrap table.ends th,
 .pl-ocr-wrap table.ends td  { border: 1px solid #e0e0e0; padding: 4px 8px; text-align: center; white-space: nowrap; }
 .pl-ocr-wrap table.ends th  { background: #f0f0f8; font-size: 11px; font-weight: 600; color: #555; }
@@ -156,6 +156,15 @@
 .pl-ocr-wrap .hist-score    { font-size: 15px; font-weight: 700; color: #333; }
 .pl-ocr-wrap .hist-detail   { padding: 8px 0; }
 .pl-ocr-wrap .hist-row--open { background: #f7f9ff; }
+
+/* ── Page group (one physical scorecard page) ── */
+.pl-ocr-wrap .ocr-page-group                        { padding-bottom: 20px; margin-bottom: 20px; border-bottom: 2px solid #c8cfe8; }
+.pl-ocr-wrap .ocr-page-group:last-child             { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+.pl-ocr-wrap .ocr-page-label                        { font-size: 11px; color: #888; letter-spacing: .5px; margin-bottom: 8px; }
+
+/* ── Quadrant grid (2×2 matching physical scorecard layout) ── */
+.pl-ocr-wrap .ocr-quad-grid        { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pl-ocr-wrap .ocr-quad-grid .card  { margin-bottom: 0; }
 
 /* ── Warning banner ── */
 .pl-ocr-no-key { background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 10px 14px; margin-bottom: 14px; font-size: 13px; }
