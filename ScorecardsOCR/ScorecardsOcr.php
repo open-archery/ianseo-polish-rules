@@ -167,7 +167,9 @@ const History = (() => {
         listEl.querySelectorAll(".hist-detail").forEach(d => d.style.display = "none");
         listEl.querySelectorAll(".hist-row").forEach(r => r.classList.remove("hist-row--open"));
         if (!isOpen && load()[idx]?.scorecard) {
-          detailEl.innerHTML = renderDetails(load()[idx].scorecard);
+          const entry = load()[idx];
+          const editedCells = entry.editedCells?.length ? new Set(entry.editedCells) : null;
+          detailEl.innerHTML = renderDetails(entry.scorecard, { editedCells });
           detailEl.style.display = "block";
           row.classList.add("hist-row--open");
         }

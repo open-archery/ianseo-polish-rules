@@ -1,9 +1,17 @@
-function arrowChip(v) {
+function arrowChip(v, editMeta = null) {
   const s   = String(v).toUpperCase();
   const cls = s === "X"               ? "chip chip-x"
             : (v === 10 || s === "10") ? "chip chip-10"
             : s === "M"               ? "chip chip-m"
             :                           "chip chip-norm";
+  if (editMeta != null) {
+    const { endIdx, row, arrowIdx, isEdited = false } = editMeta;
+    const editedCls = isEdited ? " chip--corrected" : "";
+    if (endIdx !== undefined) {
+      return `<span class="${cls} chip--editable${editedCls}" data-end="${endIdx}" data-row="${row}" data-arrow="${arrowIdx}" title="Kliknij, aby poprawić">${s}</span>`;
+    }
+    return `<span class="${cls}${editedCls}">${s}</span>`;
+  }
   return `<span class="${cls}">${s}</span>`;
 }
 
@@ -57,7 +65,7 @@ function renderDbRow(d) {
   </div>`;
 }
 
-function renderDetails(d) {
+function renderDetails(d, { editable = false, editedCells = null } = {}) {
   const errCount = d.errors_found?.length || 0;
   const diff = d.calculated_grand_total != null && d.recorded_grand_total != null
     ? d.calculated_grand_total - d.recorded_grand_total : null;
@@ -115,11 +123,17 @@ function renderDetails(d) {
 
   let tableHtml = "";
   if (d.ends?.length > 0) {
-    const rows = d.ends.map(end => {
+    const rows = d.ends.map((end, endIdx) => {
       const aErr = end.sub_row_a?.suma_error || end.sub_row_a?.tenx_error || end.sub_row_a?.x_error;
       const bErr = end.sub_row_b?.suma_error || end.sub_row_b?.tenx_error || end.sub_row_b?.x_error || end.razem_error || end.running_error;
-      const aArrows = (end.sub_row_a?.arrows || []).map(arrowChip).join("");
-      const bArrows = (end.sub_row_b?.arrows || []).map(arrowChip).join("");
+      const aArrows = (end.sub_row_a?.arrows || []).map((v, arrowIdx) => {
+        const isEdited = editedCells?.has(`${endIdx}-a-${arrowIdx}`) ?? false;
+        return arrowChip(v, editable ? { endIdx, row: "a", arrowIdx, isEdited } : isEdited ? { isEdited } : null);
+      }).join("");
+      const bArrows = (end.sub_row_b?.arrows || []).map((v, arrowIdx) => {
+        const isEdited = editedCells?.has(`${endIdx}-b-${arrowIdx}`) ?? false;
+        return arrowChip(v, editable ? { endIdx, row: "b", arrowIdx, isEdited } : isEdited ? { isEdited } : null);
+      }).join("");
       return `
         <tr class="${aErr ? "row-error" : ""}">
           <td rowspan="2" class="td-end">${end.end_number}</td>

@@ -75,6 +75,64 @@ resultsEl.addEventListener("click", e => {
   btn.textContent    = `${visible ? "Pokaż" : "Ukryj"} log (${lb.dataset.count})`;
 });
 
+// Event delegation for editable arrow chips
+resultsEl.addEventListener("click", e => {
+  const chip = e.target.closest(".chip--editable");
+  if (!chip) return;
+  const currentVal = chip.textContent.trim();
+  const options    = ["M", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "X"];
+  const sel        = document.createElement("select");
+  sel.className    = "arrow-edit";
+  sel.dataset.end   = chip.dataset.end;
+  sel.dataset.row   = chip.dataset.row;
+  sel.dataset.arrow = chip.dataset.arrow;
+  options.forEach(opt => {
+    const o = document.createElement("option");
+    o.value = opt;
+    o.textContent = opt;
+    if (opt === currentVal) o.selected = true;
+    sel.appendChild(o);
+  });
+  chip.replaceWith(sel);
+  sel.focus();
+});
+
+resultsEl.addEventListener("change", e => {
+  const sel = e.target.closest(".arrow-edit");
+  if (!sel) return;
+  const card     = sel.closest(".card");
+  const sc       = card?._sc;
+  if (!sc) return;
+  const endIdx   = +sel.dataset.end;
+  const row      = sel.dataset.row;   // "a" or "b"
+  const arrowIdx = +sel.dataset.arrow;
+  const subRow   = sc.ends[endIdx]?.[`sub_row_${row}`];
+  if (!subRow?.arrows) return;
+  subRow.arrows[arrowIdx] = normalizeArrow(sel.value);
+  if (!card._editedCells) card._editedCells = new Set();
+  card._editedCells.add(`${endIdx}-${row}-${arrowIdx}`);
+  enrichScorecard(sc);
+  card._rerender?.();
+  if (card._historyId) updateHistoryEntry(card._historyId, sc, card._editedCells);
+});
+
+function updateHistoryEntry(id, sc, editedCells) {
+  const KEY = "pl_ocr_history";
+  let entries;
+  try { entries = JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return; }
+  const idx = entries.findIndex(e => e.id === id);
+  if (idx === -1) return;
+  const e = entries[idx];
+  e.scorecard              = sc;
+  e.calculated_grand_total = sc.calculated_grand_total ?? null;
+  e.errors_count           = sc.errors_found?.length  || 0;
+  e.overall_valid          = sc.overall_valid          ?? false;
+  e.manually_corrected     = true;
+  e.editedCells            = editedCells ? [...editedCells] : [];
+  try { localStorage.setItem(KEY, JSON.stringify(entries)); } catch {}
+  if (typeof History !== "undefined") History.refresh();
+}
+
 // ── File handling ─────────────────────────────────────────────────────────────
 
 function handleFiles(files) {
@@ -193,10 +251,10 @@ async function analyze({ name, dataUrl, label }) {
   };
 
   function renderCard(status, data, error, rawText) {
-    const isValid  = data?.overall_valid;
-    const errCount = data?.errors_found?.length || 0;
-    const badge    = `<div class="${cardBadgeClass(status, isValid)}">${cardBadgeText(status, isValid, errCount)}</div>`;
-    const barcodeInfo = data?.barcode_text
+    const isValid      = data?.overall_valid;
+    const errCount     = data?.errors_found?.length || 0;
+    const badge        = `<div class="${cardBadgeClass(status, isValid)}">${cardBadgeText(status, isValid, errCount)}</div>`;
+    const barcodeInfo  = data?.barcode_text
       ? `<div style="font-size:11px;color:#888;font-family:monospace">${data.barcode_text}${data.target_label ? " · " + data.target_label : ""}</div>`
       : "";
 
@@ -224,7 +282,7 @@ async function analyze({ name, dataUrl, label }) {
       </div>
       ${status === "error"          ? `<div class="alert">⚠ ${error}</div>`                                                                     : ""}
       ${status === "raw" && rawText ? `<div class="alert">⚠ Odpowiedź API nie jest poprawnym JSON:</div><pre class="raw">${rawText}</pre>` : ""}
-      ${status === "done" && data   ? renderDetails(data)                                                                                   : ""}`;
+      ${status === "done" && data   ? renderDetails(data, { editable: true, editedCells: card._editedCells ?? null })                   : ""}`;
   }
 
   renderCard("loading");
@@ -321,10 +379,16 @@ async function analyze({ name, dataUrl, label }) {
 
     renderCard("done", sc);
 
+    // Attach live scorecard state to card element for inline editing
+    card._sc       = sc;
+    card._rerender = () => renderCard("done", sc);
+
     // Persist to localStorage history (reuse History from history.js if available)
     if (typeof History !== "undefined") {
+      const historyId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      card._historyId = historyId;
       History.save({
-        id:                     `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        id:                     historyId,
         timestamp:              new Date().toISOString(),
         filename:               name,
         label,

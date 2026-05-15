@@ -45,7 +45,7 @@
 .pl-ocr-wrap .sbadge        { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px; white-space: nowrap; }
 .pl-ocr-wrap .sbadge--valid   { background: #e6f4ea; color: #2d7a3c; border: 1px solid #b2dfba; }
 .pl-ocr-wrap .sbadge--error   { background: #fdecea; color: #b71c1c; border: 1px solid #f5c6cb; }
-.pl-ocr-wrap .sbadge--loading { background: #e8eaf6; color: #3949ab; border: 1px solid #c5cae9; }
+.pl-ocr-wrap .sbadge--loading   { background: #e8eaf6; color: #3949ab; border: 1px solid #c5cae9; }
 .pl-ocr-wrap .spin          { display: inline-block; animation: pl-ocr-spin 1s linear infinite; margin-right: 3px; }
 
 /* ── Alert / raw ── */
@@ -125,6 +125,13 @@
 .pl-ocr-wrap .chip-10       { background: #e8f5e9; color: #2e7d32; }
 .pl-ocr-wrap .chip-m        { background: #ffebee; color: #b71c1c; }
 .pl-ocr-wrap .chip-norm     { background: #e3f2fd; color: #0d47a1; }
+.pl-ocr-wrap .chip--editable { cursor: pointer; }
+.pl-ocr-wrap .chip--editable:hover { opacity: .75; outline: 2px solid currentColor; outline-offset: 1px; }
+.pl-ocr-wrap .chip--corrected { position: relative; }
+.pl-ocr-wrap .chip--corrected::after { content: "✍️"; position: absolute; top: -7px; right: -7px; font-size: 11px; line-height: 1; background: #fff; border-radius: 50%; padding: 1px; pointer-events: none; }
+
+/* ── Arrow edit select ── */
+.pl-ocr-wrap .arrow-edit    { width: 46px; height: 26px; font-size: 12px; font-weight: 700; padding: 0 2px; border: 1px solid #6a8fd8; border-radius: 13px; background: #fff; color: #333; text-align: center; cursor: pointer; margin: 1px; vertical-align: middle; }
 
 /* ── Notes ── */
 .pl-ocr-wrap .notes         { font-size: 12px; color: #666; padding: 6px 0 0; }

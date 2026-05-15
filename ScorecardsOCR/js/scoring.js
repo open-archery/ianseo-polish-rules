@@ -1,7 +1,7 @@
 function normalizeScorecard(sc) {
   sc.ends?.forEach(end => {
     for (const row of [end.sub_row_a, end.sub_row_b]) {
-      if (row?.arrows) row.arrows = row.arrows.map(v => (v === 0 || v == null) ? "M" : v);
+      if (row?.arrows) row.arrows = row.arrows.map(v => { const n = normalizeArrow(v); return (n === 0 || n == null) ? "M" : n; });
     }
   });
   return sc;
@@ -47,24 +47,26 @@ function enrichScorecard(sc) {
     const razem = a.calculated_suma + b.calculated_suma;
     running += razem;
 
-    end.sub_row_a.calculated_suma = a.calculated_suma;
-    end.sub_row_a.calculated_10x  = a.tenx_count;
-    end.sub_row_a.calculated_x    = a.x_count;
+    if (end.sub_row_a) {
+      end.sub_row_a.calculated_suma = a.calculated_suma;
+      end.sub_row_a.calculated_10x  = a.tenx_count;
+      end.sub_row_a.calculated_x    = a.x_count;
+      end.sub_row_a.suma_error = end.sub_row_a.recorded_suma != null && end.sub_row_a.recorded_suma !== a.calculated_suma;
+      end.sub_row_a.tenx_error = end.sub_row_a.recorded_10x  != null && end.sub_row_a.recorded_10x  !== a.tenx_count;
+      end.sub_row_a.x_error    = end.sub_row_a.recorded_x    != null && end.sub_row_a.recorded_x    !== a.x_count;
+    }
 
-    end.sub_row_b.calculated_suma = b.calculated_suma;
-    end.sub_row_b.calculated_10x  = b.tenx_count;
-    end.sub_row_b.calculated_x    = b.x_count;
+    if (end.sub_row_b) {
+      end.sub_row_b.calculated_suma = b.calculated_suma;
+      end.sub_row_b.calculated_10x  = b.tenx_count;
+      end.sub_row_b.calculated_x    = b.x_count;
+      end.sub_row_b.suma_error = end.sub_row_b.recorded_suma != null && end.sub_row_b.recorded_suma !== b.calculated_suma;
+      end.sub_row_b.tenx_error = end.sub_row_b.recorded_10x  != null && end.sub_row_b.recorded_10x  !== b.tenx_count;
+      end.sub_row_b.x_error    = end.sub_row_b.recorded_x    != null && end.sub_row_b.recorded_x    !== b.x_count;
+    }
 
     end.calculated_razem   = razem;
     end.calculated_running = running;
-
-    end.sub_row_a.suma_error = end.sub_row_a.recorded_suma != null && end.sub_row_a.recorded_suma !== a.calculated_suma;
-    end.sub_row_a.tenx_error = end.sub_row_a.recorded_10x  != null && end.sub_row_a.recorded_10x  !== a.tenx_count;
-    end.sub_row_a.x_error    = end.sub_row_a.recorded_x    != null && end.sub_row_a.recorded_x    !== a.x_count;
-
-    end.sub_row_b.suma_error = end.sub_row_b.recorded_suma != null && end.sub_row_b.recorded_suma !== b.calculated_suma;
-    end.sub_row_b.tenx_error = end.sub_row_b.recorded_10x  != null && end.sub_row_b.recorded_10x  !== b.tenx_count;
-    end.sub_row_b.x_error    = end.sub_row_b.recorded_x    != null && end.sub_row_b.recorded_x    !== b.x_count;
 
     end.razem_error   = end.recorded_razem   != null && end.recorded_razem   !== razem;
     end.running_error = end.recorded_running != null && end.recorded_running !== running;
