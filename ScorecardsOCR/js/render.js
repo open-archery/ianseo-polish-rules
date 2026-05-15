@@ -15,6 +15,14 @@ function arrowChip(v, editMeta = null) {
   return `<span class="${cls}">${s}</span>`;
 }
 
+function editableCountCell(recorded, calculated, error, editMeta = null) {
+  const inner = valCell(recorded, calculated, error);
+  if (editMeta == null) return inner;
+  const { endIdx, row, field, isEdited = false } = editMeta;
+  const corrCls = isEdited ? " val-cell--corrected" : "";
+  return `<span class="val-cell--editable${corrCls}" data-end="${endIdx}" data-row="${row}" data-field="${field}" title="Kliknij, aby poprawić">${inner}</span>`;
+}
+
 function valCell(recorded, calculated, error) {
   if (recorded == null && (calculated == null || calculated === 0))
     return `<span class="dim">—</span>`;
@@ -141,8 +149,8 @@ function renderDetails(d, { editable = false, editedCells = null } = {}) {
           <td>${aArrows}</td>
           <td>${valCell(end.sub_row_a?.recorded_suma, end.sub_row_a?.calculated_suma, end.sub_row_a?.suma_error)}</td>
           <td class="dim">—</td><td class="dim">—</td>
-          <td>${valCell(end.sub_row_a?.recorded_10x, end.sub_row_a?.calculated_10x, end.sub_row_a?.tenx_error)}</td>
-          <td>${valCell(end.sub_row_a?.recorded_x,   end.sub_row_a?.calculated_x,   end.sub_row_a?.x_error)}</td>
+          <td>${editableCountCell(end.sub_row_a?.recorded_10x, end.sub_row_a?.calculated_10x, end.sub_row_a?.tenx_error, editable ? { endIdx, row: "a", field: "10x", isEdited: editedCells?.has(`${endIdx}-a-10x`) ?? false } : null)}</td>
+          <td>${editableCountCell(end.sub_row_a?.recorded_x,   end.sub_row_a?.calculated_x,   end.sub_row_a?.x_error,   editable ? { endIdx, row: "a", field: "x",   isEdited: editedCells?.has(`${endIdx}-a-x`)   ?? false } : null)}</td>
           <td>${aErr ? '<span class="e-chip">✗</span>' : '<span class="o-chip">✓</span>'}</td>
         </tr>
         <tr class="end-sep ${bErr ? "row-error" : ""}">
@@ -151,8 +159,8 @@ function renderDetails(d, { editable = false, editedCells = null } = {}) {
           <td>${valCell(end.sub_row_b?.recorded_suma, end.sub_row_b?.calculated_suma, end.sub_row_b?.suma_error)}</td>
           <td>${valCell(end.recorded_razem,           end.calculated_razem,           end.razem_error)}</td>
           <td>${valCell(end.recorded_running,         end.calculated_running,         end.running_error)}</td>
-          <td>${valCell(end.sub_row_b?.recorded_10x, end.sub_row_b?.calculated_10x, end.sub_row_b?.tenx_error)}</td>
-          <td>${valCell(end.sub_row_b?.recorded_x,   end.sub_row_b?.calculated_x,   end.sub_row_b?.x_error)}</td>
+          <td>${editableCountCell(end.sub_row_b?.recorded_10x, end.sub_row_b?.calculated_10x, end.sub_row_b?.tenx_error, editable ? { endIdx, row: "b", field: "10x", isEdited: editedCells?.has(`${endIdx}-b-10x`) ?? false } : null)}</td>
+          <td>${editableCountCell(end.sub_row_b?.recorded_x,   end.sub_row_b?.calculated_x,   end.sub_row_b?.x_error,   editable ? { endIdx, row: "b", field: "x",   isEdited: editedCells?.has(`${endIdx}-b-x`)   ?? false } : null)}</td>
           <td>${bErr || aErr ? '<span class="e-chip">✗</span>' : '<span class="o-chip">✓</span>'}</td>
         </tr>`;
     }).join("");

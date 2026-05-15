@@ -116,6 +116,63 @@ resultsEl.addEventListener("change", e => {
   if (card._historyId) updateHistoryEntry(card._historyId, sc, card._editedCells);
 });
 
+// Event delegation for editable count cells (10+X / X)
+resultsEl.addEventListener("click", e => {
+  const span = e.target.closest(".val-cell--editable");
+  if (!span) return;
+  const card   = span.closest(".card");
+  const sc     = card?._sc;
+  if (!sc) return;
+  const endIdx = +span.dataset.end;
+  const row    = span.dataset.row;
+  const field  = span.dataset.field;
+  const subRow = sc.ends[endIdx]?.[`sub_row_${row}`];
+  const curVal = field === "10x" ? subRow?.recorded_10x : subRow?.recorded_x;
+
+  const inp       = document.createElement("input");
+  inp.type        = "number";
+  inp.min         = "0";
+  inp.max         = "3";
+  inp.className   = "count-edit";
+  inp.dataset.end   = span.dataset.end;
+  inp.dataset.row   = span.dataset.row;
+  inp.dataset.field = span.dataset.field;
+  inp.value = curVal ?? "";
+  span.replaceWith(inp);
+  inp.focus();
+  inp.select();
+});
+
+function commitCountEdit(inp) {
+  const card   = inp.closest(".card");
+  const sc     = card?._sc;
+  if (!sc) return;
+  const endIdx = +inp.dataset.end;
+  const row    = inp.dataset.row;
+  const field  = inp.dataset.field;
+  const subRow = sc.ends[endIdx]?.[`sub_row_${row}`];
+  if (!subRow) return;
+  const val = inp.value === "" ? null : Math.max(0, Math.min(3, parseInt(inp.value, 10)));
+  if (field === "10x") subRow.recorded_10x = val;
+  else                 subRow.recorded_x   = val;
+  if (!card._editedCells) card._editedCells = new Set();
+  card._editedCells.add(`${endIdx}-${row}-${field}`);
+  enrichScorecard(sc);
+  card._rerender?.();
+  if (card._historyId) updateHistoryEntry(card._historyId, sc, card._editedCells);
+}
+
+resultsEl.addEventListener("blur", e => {
+  const inp = e.target.closest(".count-edit");
+  if (inp) commitCountEdit(inp);
+}, true);
+
+resultsEl.addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+  const inp = e.target.closest(".count-edit");
+  if (inp) inp.blur();
+});
+
 function updateHistoryEntry(id, sc, editedCells) {
   const KEY = "pl_ocr_history";
   let entries;
