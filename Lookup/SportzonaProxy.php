@@ -16,6 +16,13 @@
 
 require_once __DIR__ . '/Fun_ClubName.php';
 
+// Disable PHP error display and HTML-formatted error output in this lookup proxy.
+// The script must emit only JSON for the ianseo lookup consumer.
+ini_set('display_errors', '0');
+ini_set('display_startup_errors', '0');
+ini_set('html_errors', '0');
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED);
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
