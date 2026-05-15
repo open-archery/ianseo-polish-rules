@@ -212,8 +212,17 @@ async function splitAndAnalyze(file) {
   pageLabel.textContent = file.name;
   pageGroup.appendChild(pageLabel);
 
+  let processedDataUrl = rawDataUrl;
+  try {
+    const { dataUrl: straightened, angleDeg } = await straightenImage(rawDataUrl);
+    if (angleDeg !== 0) {
+      processedDataUrl = straightened;
+      pageLabel.textContent += ` (obrót: ${angleDeg > 0 ? "+" : ""}${angleDeg.toFixed(1)}°)`;
+    }
+  } catch { /* use original */ }
+
   let quadrants;
-  try { quadrants = await splitIntoQuadrants(rawDataUrl); } catch { quadrants = null; }
+  try { quadrants = await splitIntoQuadrants(processedDataUrl); } catch { quadrants = null; }
 
   if (!quadrants) {
     const card = document.createElement("div");
@@ -221,7 +230,7 @@ async function splitAndAnalyze(file) {
     pageGroup.appendChild(card);
     allCards.unshift(pageGroup);
     renderPage(1);
-    await analyze({ name: file.name, dataUrl: rawDataUrl, label: null, cardEl: card });
+    await analyze({ name: file.name, dataUrl: processedDataUrl, label: null, cardEl: card });
     return;
   }
 
@@ -244,6 +253,103 @@ async function splitAndAnalyze(file) {
   await Promise.all(quadrants.map((q, i) =>
     analyze({ name: file.name, dataUrl: q, label: labels[i], cardEl: cards[i] })
   ));
+}
+
+// ── Skew correction ───────────────────────────────────────────────────────────
+
+function pl_ocr_toGrayscale(imgData) {
+  const { data, width, height } = imgData;
+  const gray = new Uint8Array(width * height);
+  for (let i = 0; i < gray.length; i++) {
+    const j = i * 4;
+    gray[i] = (data[j] * 77 + data[j + 1] * 150 + data[j + 2] * 29) >> 8;
+  }
+  return gray;
+}
+
+function pl_ocr_detectSkewDeg(gray, w, h) {
+  const hist       = new Float64Array(181);
+  const EDGE_THRESH = 20;
+
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const gx =
+        -gray[(y - 1) * w + (x - 1)] + gray[(y - 1) * w + (x + 1)]
+        - 2 * gray[y * w + (x - 1)] + 2 * gray[y * w + (x + 1)]
+        - gray[(y + 1) * w + (x - 1)] + gray[(y + 1) * w + (x + 1)];
+      const gy =
+        -gray[(y - 1) * w + (x - 1)] - 2 * gray[(y - 1) * w + x] - gray[(y - 1) * w + (x + 1)]
+        + gray[(y + 1) * w + (x - 1)] + 2 * gray[(y + 1) * w + x] + gray[(y + 1) * w + (x + 1)];
+
+      const mag = Math.sqrt(gx * gx + gy * gy);
+      if (mag < EDGE_THRESH) continue;
+
+      let angleDeg = Math.atan2(gy, gx) * 180 / Math.PI; // -180..180
+      if (angleDeg < 0) angleDeg += 180;                  // fold to 0..180
+      const bin = Math.min(180, Math.max(0, Math.round(angleDeg)));
+      hist[bin] += mag;
+    }
+  }
+
+  // 5-tap smoothing
+  const smoothed = new Float64Array(181);
+  for (let b = 0; b <= 180; b++) {
+    let sum = 0, cnt = 0;
+    for (let d = -2; d <= 2; d++) {
+      const nb = b + d;
+      if (nb >= 0 && nb <= 180) { sum += hist[nb]; cnt++; }
+    }
+    smoothed[b] = sum / cnt;
+  }
+
+  // Find peak in bins 70–110 (near-horizontal edges, ±20° tolerance)
+  let peakBin = 90, peakVal = 0;
+  for (let b = 70; b <= 110; b++) {
+    if (smoothed[b] > peakVal) { peakVal = smoothed[b]; peakBin = b; }
+  }
+
+  // correction: rotate by (90 - peakBin) degrees to level horizontal edges
+  return 90 - peakBin;
+}
+
+function straightenImage(dataUrl) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const DETECT_W = 400;
+      const scale = Math.min(1, DETECT_W / img.width);
+      const dw    = Math.round(img.width  * scale);
+      const dh    = Math.round(img.height * scale);
+
+      const tmp  = document.createElement("canvas");
+      tmp.width  = dw; tmp.height = dh;
+      const tCtx = tmp.getContext("2d");
+      tCtx.drawImage(img, 0, 0, dw, dh);
+      const gray    = pl_ocr_toGrayscale(tCtx.getImageData(0, 0, dw, dh));
+      const skewDeg = pl_ocr_detectSkewDeg(gray, dw, dh);
+
+      if (Math.abs(skewDeg) < 0.3) { resolve({ dataUrl, angleDeg: 0 }); return; }
+      const clamped = Math.max(-20, Math.min(20, skewDeg));
+      const rad     = clamped * Math.PI / 180;
+      const sinA    = Math.abs(Math.sin(rad));
+      const cosA    = Math.abs(Math.cos(rad));
+      const newW    = Math.round(img.width  * cosA + img.height * sinA);
+      const newH    = Math.round(img.width  * sinA + img.height * cosA);
+
+      const rc  = document.createElement("canvas");
+      rc.width  = newW; rc.height = newH;
+      const ctx = rc.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, newW, newH);
+      ctx.translate(newW / 2, newH / 2);
+      ctx.rotate(rad);
+      ctx.drawImage(img, -img.width / 2, -img.height / 2);
+
+      resolve({ dataUrl: rc.toDataURL("image/jpeg", 0.92), angleDeg: clamped });
+    };
+    img.onerror = () => resolve({ dataUrl, angleDeg: 0 });
+    img.src = dataUrl;
+  });
 }
 
 function splitIntoQuadrants(dataUrl) {
