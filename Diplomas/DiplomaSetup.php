@@ -29,7 +29,11 @@ function pl_diploma_ensure_tables() {
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 	} else {
 		// Add title enable column if upgrading from earlier version
-		safe_w_sql("ALTER TABLE PLDiplomaConfig ADD COLUMN IF NOT EXISTS PlDcTitlesEnabled TINYINT(1) NOT NULL DEFAULT 0");
+		$Rc = safe_r_sql("SHOW COLUMNS FROM PLDiplomaConfig LIKE 'PlDcTitlesEnabled'");
+		if (safe_num_rows($Rc) == 0) {
+			safe_w_sql("ALTER TABLE PLDiplomaConfig ADD COLUMN PlDcTitlesEnabled TINYINT(1) NOT NULL DEFAULT 0");
+		}
+		safe_free_result($Rc);
 	}
 	safe_free_result($Rs);
 
@@ -48,8 +52,16 @@ function pl_diploma_ensure_tables() {
 		// Widen column for composite keys (I:CODE, T:CODE, M:CODE)
 		safe_w_sql("ALTER TABLE PLDiplomaEventText MODIFY PlDeEventCode VARCHAR(15) NOT NULL DEFAULT ''");
 		// Add title columns if upgrading from earlier version
-		safe_w_sql("ALTER TABLE PLDiplomaEventText ADD COLUMN IF NOT EXISTS PlDeTitlePrefix VARCHAR(100) NOT NULL DEFAULT ''");
-		safe_w_sql("ALTER TABLE PLDiplomaEventText ADD COLUMN IF NOT EXISTS PlDeTitleText VARCHAR(255) NOT NULL DEFAULT ''");
+		$Rc = safe_r_sql("SHOW COLUMNS FROM PLDiplomaEventText LIKE 'PlDeTitlePrefix'");
+		if (safe_num_rows($Rc) == 0) {
+			safe_w_sql("ALTER TABLE PLDiplomaEventText ADD COLUMN PlDeTitlePrefix VARCHAR(100) NOT NULL DEFAULT ''");
+		}
+		safe_free_result($Rc);
+		$Rc = safe_r_sql("SHOW COLUMNS FROM PLDiplomaEventText LIKE 'PlDeTitleText'");
+		if (safe_num_rows($Rc) == 0) {
+			safe_w_sql("ALTER TABLE PLDiplomaEventText ADD COLUMN PlDeTitleText VARCHAR(255) NOT NULL DEFAULT ''");
+		}
+		safe_free_result($Rc);
 	}
 	safe_free_result($Rs);
 }
