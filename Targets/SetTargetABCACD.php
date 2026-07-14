@@ -9,7 +9,8 @@ $tourId  = (int)$_SESSION['TourId'];
 $sessions = GetSessions('Q');
 
 // ─── Erase action ─────────────────────────────────────────────────────────────
-if (isset($_REQUEST['Erase'])
+if ($_SERVER['REQUEST_METHOD'] === 'POST'
+    && isset($_REQUEST['Erase'])
     && isset($_REQUEST['Session'])
     && isset($_REQUEST['Event'])
     && (int)$_REQUEST['Session'] >= 1
@@ -23,7 +24,7 @@ if (isset($_REQUEST['Erase'])
 $PAGE_TITLE = 'Rozstawianie tarcz ABC/ACD';
 include('Common/Templates/head.php');
 ?>
-<form name="Frm" method="GET" action="">
+<form name="Frm" method="POST" action="">
 <table class="Tabella">
 <tr><th class="Title" colspan="7"><?php echo htmlspecialchars($PAGE_TITLE); ?></th></tr>
 <tr class="Divider"><td colspan="7"></td></tr>
@@ -116,7 +117,7 @@ if ($sesOrder >= 1 && $event !== '' && $tgtFrom >= 1 && $tgtTo >= $tgtFrom) {
         [$assignments, $unassigned] = pl_abc_acd_assign($orderedClubs, $slots);
 
         // ─── Erase and save ─────────────────────────
-        if (!empty($_REQUEST['DoAssign'])) {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_REQUEST['DoAssign'])) {
             $saved = pl_abc_acd_save($tourId, $sesOrder, $event, $assignments);
 
             echo '<p><strong>Rozstawienie zostało zapisane.</strong> '

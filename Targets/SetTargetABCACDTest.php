@@ -235,7 +235,7 @@ final class SetTargetABCACDTest extends \PlTestCase
             if ($eraseIdx === null && preg_match('/SET QuTarget=0/', $sql)) {
                 $eraseIdx = $i;
             }
-            if ($writeIdx === null && preg_match('/QuTarget=1, QuLetter=.A./', $sql)) {
+            if ($writeIdx === null && preg_match('/QuTarget=1,\s*QuLetter=.A./', $sql)) {
                 $writeIdx = $i;
             }
         }
@@ -249,16 +249,15 @@ final class SetTargetABCACDTest extends \PlTestCase
     {
         \pl_abc_acd_save(7, 2, 'RMO', ['3C' => $this->athlete('42', 'AZS')]);
 
-        $this->assertCount(1, \FakeDb::executed("/QuTarget=3, QuLetter='C'\\s*WHERE QuId=42/"));
+        $this->assertCount(1, \FakeDb::executed("/QuTarget=3,\\s*QuLetter='C',\\s*QuBacknoPrinted=0\\s*WHERE QuId=42/"));
         $this->assertCount(1, \FakeDb::executed('/EnId=42/'));
-        $this->assertCount(1, \FakeDb::executed('/QuBacknoPrinted=0.*WHERE QuId=42/'));
     }
 
     public function testSaveParsesMultiDigitBossNumber(): void
     {
         \pl_abc_acd_save(7, 2, 'RMO', ['12C' => $this->athlete('99', 'AZS')]);
 
-        $this->assertCount(1, \FakeDb::executed("/QuTarget=12, QuLetter='C'/"));
+        $this->assertCount(1, \FakeDb::executed("/QuTarget=12,\\s*QuLetter='C'/"));
     }
 
     public function testSaveReturnsCountOfAssignments(): void

@@ -58,7 +58,11 @@ function pl_abc_acd_assign(array $clubs, array $slots): array
 
     if ($numClubs === 0) return [$assignments, $unassigned];
 
-    // Club 0 (largest) → A column: always wave 1 on every boss
+    // Club 0 (largest) → A column: always wave 1 on every boss.
+    // Overflow beyond the A column's capacity is left unassigned rather than
+    // spilling into B/C/D: those columns belong to other clubs' bosses, and
+    // placing a second club-0 athlete there would put two athletes from the
+    // same club on one boss, violating the one-club-per-boss invariant.
     $idxA = 0;
     foreach ($clubList[0] as $athlete) {
         if ($idxA < count($colA)) {
@@ -185,33 +189,39 @@ function pl_abc_acd_erase(int $tourId, int $sesOrder, string $event): void
 
 /**
  * Erases existing assignments for the class+session, then writes the new
- * slot => athlete assignments to Qualifications/Entries.
+ * slot => athlete assignments to Qualifications/Entries, inside a single
+ * transaction so a mid-loop failure can't leave assignments partially wiped.
  *
  * @return int number of athletes saved
  */
 function pl_abc_acd_save(int $tourId, int $sesOrder, string $event, array $assignments): int
 {
-    pl_abc_acd_erase($tourId, $sesOrder, $event);
+    safe_w_BeginTransaction();
+    try {
+        pl_abc_acd_erase($tourId, $sesOrder, $event);
 
-    $now = date('Y-m-d H:i:s');
-    foreach ($assignments as $slot => $athlete) {
-        $tgtNum = (int)$slot;
-        $letter = strtoupper(substr($slot, -1));
-        safe_w_sql(
-            "UPDATE Qualifications"
-            . " SET QuTimestamp=QuTimestamp, QuTarget=" . $tgtNum . ", QuLetter='" . $letter . "'"
-            . " WHERE QuId=" . $athlete['id']
-        );
-        safe_w_sql(
-            "UPDATE Entries"
-            . " SET EnTimestamp='" . $now . "', EnMainInfoUpdate='" . $now . "'"
-            . " WHERE EnId=" . $athlete['id']
-        );
-        safe_w_sql(
-            "UPDATE Qualifications"
-            . " SET QuBacknoPrinted=0, QuTimestamp=QuTimestamp"
-            . " WHERE QuId=" . $athlete['id']
-        );
+        $now = date('Y-m-d H:i:s');
+        foreach ($assignments as $slot => $athlete) {
+            $tgtNum = (int)$slot;
+            $letter = strtoupper(substr($slot, -1));
+            safe_w_sql(
+                "UPDATE Qualifications"
+                . " SET QuTimestamp=QuTimestamp,"
+                . "     QuTarget=" . $tgtNum . ","
+                . "     QuLetter='" . $letter . "',"
+                . "     QuBacknoPrinted=0"
+                . " WHERE QuId=" . (int)$athlete['id']
+            );
+            safe_w_sql(
+                "UPDATE Entries"
+                . " SET EnTimestamp='" . $now . "', EnMainInfoUpdate='" . $now . "'"
+                . " WHERE EnId=" . (int)$athlete['id']
+            );
+        }
+        safe_w_Commit();
+    } catch (Exception $e) {
+        safe_w_Rollback();
+        throw $e;
     }
 
     return count($assignments);
