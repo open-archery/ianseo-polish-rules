@@ -13,6 +13,10 @@ Thumbs.db
 /vendor/
 *.log
 
+# Tests
+/tools/*.phar
+/.phpunit.cache/
+
 # Research PDFs (source documents, not committed to repo)
 research/*.pdf
 
