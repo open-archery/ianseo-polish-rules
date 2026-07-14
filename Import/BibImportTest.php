@@ -52,6 +52,7 @@ final class BibImportTest extends \PlTestCase
 
         $this->assertTrue(\pl_bibimport_is_duplicate('5083', 7));
         $this->assertCount(1, \FakeDb::executed("/EnCode\\s+= '5083'/"));
+        $this->assertCount(1, \FakeDb::executed('/EnTournament\s*=\s*7/'));
     }
 
     public function testIsDuplicateFalseWhenNoEntry(): void

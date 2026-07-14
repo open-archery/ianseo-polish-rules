@@ -101,8 +101,11 @@ final class DiplomaSetupTest extends \PlTestCase
     {
         \pl_diploma_save_config(7, $this->sampleConfigData());
 
-        $this->assertCount(1, \FakeDb::executed('/INSERT INTO PLDiplomaConfig/'));
+        $writes = \FakeDb::executed('/INSERT INTO PLDiplomaConfig/');
+        $this->assertCount(1, $writes);
         $this->assertCount(0, \FakeDb::executed('/UPDATE PLDiplomaConfig/'));
+        $this->assertMatchesRegularExpression('/\(7, /', $writes[0]);
+        $this->assertStringContainsString("'Mistrzostwa Polski'", $writes[0]);
     }
 
     public function testSaveConfigUpdatesWhenExists(): void
@@ -111,8 +114,11 @@ final class DiplomaSetupTest extends \PlTestCase
 
         \pl_diploma_save_config(7, $this->sampleConfigData());
 
-        $this->assertCount(1, \FakeDb::executed('/UPDATE PLDiplomaConfig/'));
+        $writes = \FakeDb::executed('/UPDATE PLDiplomaConfig/');
+        $this->assertCount(1, $writes);
         $this->assertCount(0, \FakeDb::executed('/INSERT INTO PLDiplomaConfig/'));
+        $this->assertMatchesRegularExpression('/WHERE PlDcTournament = 7/', $writes[0]);
+        $this->assertStringContainsString("PlDcCompetitionName = 'Mistrzostwa Polski'", $writes[0]);
     }
 
     // --- pl_diploma_get_event_texts / save_event_text ------------------------
@@ -133,7 +139,9 @@ final class DiplomaSetupTest extends \PlTestCase
     {
         \pl_diploma_save_event_text(7, 'I:RM', 'Custom', 'Prefix', 'Text');
 
-        $this->assertCount(1, \FakeDb::executed('/INSERT INTO PLDiplomaEventText/'));
+        $writes = \FakeDb::executed('/INSERT INTO PLDiplomaEventText/');
+        $this->assertCount(1, $writes);
+        $this->assertMatchesRegularExpression("/\(7, 'I:RM', 'Custom', 'Prefix', 'Text'\)/", $writes[0]);
     }
 
     public function testSaveEventTextUpdatesWhenExists(): void
@@ -142,7 +150,10 @@ final class DiplomaSetupTest extends \PlTestCase
 
         \pl_diploma_save_event_text(7, 'I:RM', 'Custom', 'Prefix', 'Text');
 
-        $this->assertCount(1, \FakeDb::executed('/UPDATE PLDiplomaEventText/'));
+        $writes = \FakeDb::executed('/UPDATE PLDiplomaEventText/');
+        $this->assertCount(1, $writes);
+        $this->assertMatchesRegularExpression("/WHERE PlDeTournament = 7 AND PlDeEventCode = 'I:RM'/", $writes[0]);
+        $this->assertStringContainsString("PlDeCustomText = 'Custom'", $writes[0]);
     }
 
     public function testSaveEventTextDeletesRowWhenAllFieldsBlankAndRowExists(): void
@@ -151,7 +162,9 @@ final class DiplomaSetupTest extends \PlTestCase
 
         \pl_diploma_save_event_text(7, 'I:RM', '', '', '');
 
-        $this->assertCount(1, \FakeDb::executed('/DELETE FROM PLDiplomaEventText/'));
+        $writes = \FakeDb::executed('/DELETE FROM PLDiplomaEventText/');
+        $this->assertCount(1, $writes);
+        $this->assertMatchesRegularExpression("/WHERE PlDeTournament = 7 AND PlDeEventCode = 'I:RM'/", $writes[0]);
     }
 
     public function testSaveEventTextDoesNothingWhenAllFieldsBlankAndRowMissing(): void

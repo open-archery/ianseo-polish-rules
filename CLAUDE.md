@@ -106,7 +106,7 @@ Implemented feature specs live in `openspec/specs/`:
 - **Functions:** Prefixed with `pl_`.
 - **UI language:** All user-facing text in Polish; code comments in English.
 - **Line endings:** LF only (enforced by `.gitattributes` and `.vscode/settings.json`).
-- **PHP version:** 8.0+.
+- **PHP version:** 8.2+ (matches the ianseo-bundled runtime and PHPUnit 11's minimum).
 
 ## Agent Roles
 

@@ -268,4 +268,25 @@ final class DiplomaTest extends \PlTestCase
 
         $this->assertCount(2, $teams);
     }
+
+    public function testGetTeamQualResultsSeparatesBySubTeamAndEventTooNotJustClub(): void
+    {
+        \FakeDb::on('/FROM Teams/', [
+            ['TeCoId' => 1, 'TeSubTeam' => 0, 'TeEvent' => 'RM', 'TeRank' => 1, 'TeScore' => 1900,
+                'EvEventName' => 'Recurve Men Team', 'EvMixedTeam' => 0,
+                'EnFullName' => 'Kowalski Jan', 'CoName' => 'Orzeł Warszawa', 'QuScore' => 650, 'TcOrder' => 1],
+            // Same TeCoId, different TeSubTeam (a club fielding a second sub-team).
+            ['TeCoId' => 1, 'TeSubTeam' => 1, 'TeEvent' => 'RM', 'TeRank' => 3, 'TeScore' => 1700,
+                'EvEventName' => 'Recurve Men Team', 'EvMixedTeam' => 0,
+                'EnFullName' => 'Nowak Piotr', 'CoName' => 'Orzeł Warszawa', 'QuScore' => 600, 'TcOrder' => 1],
+            // Same TeCoId/TeSubTeam as the first row, different TeEvent.
+            ['TeCoId' => 1, 'TeSubTeam' => 0, 'TeEvent' => 'CM', 'TeRank' => 1, 'TeScore' => 1800,
+                'EvEventName' => 'Compound Men Team', 'EvMixedTeam' => 0,
+                'EnFullName' => 'Kowalski Jan', 'CoName' => 'Orzeł Warszawa', 'QuScore' => 640, 'TcOrder' => 1],
+        ]);
+
+        $teams = \pl_diploma_get_team_qual_results();
+
+        $this->assertCount(3, $teams);
+    }
 }
