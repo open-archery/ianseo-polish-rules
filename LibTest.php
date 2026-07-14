@@ -2,6 +2,10 @@
 
 namespace PL\Tests;
 
+if (PHP_SAPI !== 'cli') {
+    exit;
+}
+
 require_once __DIR__ . '/lib.php';
 
 final class LibTest extends \PlTestCase

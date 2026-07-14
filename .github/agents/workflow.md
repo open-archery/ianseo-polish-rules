@@ -162,13 +162,9 @@ During implementation, the Developer agent must:
 
 - Stay within `Modules/Sets/PL/` — never modify ianseo core
 - Follow all conventions from `.github/agents/developer.prompt.md`
-- **Follow TDD (red-green) for every new `pl_*` function with testable logic**:
-  write the test colocated with its source file, run it and confirm it fails
-  (RED), then implement until the suite passes (GREEN), one function at a
-  time. See `.github/agents/developer.prompt.md` Step B2 for the full loop
-  and `tests/Support/FakeDb.php` for DB stubbing. Skip this only for
-  integration-only code (page controllers, `Setup_*_PL.php`, `Rank/`, PDF,
-  network proxies).
+- Follow the TDD (red-green) loop and exemption list defined in
+  `.github/agents/developer.prompt.md` Step B2 — don't restate it here, that
+  file is the source of truth
 - Update `.github/agents/research/ianseo-internals.md` if new ianseo behaviour is discovered
 
 ---

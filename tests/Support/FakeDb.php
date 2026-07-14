@@ -1,7 +1,8 @@
 <?php
 /**
  * Minimal fake DB backing the safe_* shims in tests/bootstrap.php.
- * Regex pattern -> canned rows, plus a recorded-query log for write assertions.
+ * Regex pattern -> canned rows (or a thrown exception), plus a recorded-query
+ * log for write assertions.
  */
 final class FakeDb
 {
@@ -11,11 +12,8 @@ final class FakeDb
     /** @var string[] 'begin' | 'commit' | 'rollback' */
     public static array $tx = [];
 
-    /** @var array<int, array{0: string, 1: array}> */
+    /** @var array<int, array{pattern: string, action: 'rows'|'throw', payload: array|string}> */
     private static array $handlers = [];
-
-    /** @var array<int, array{0: string, 1: string}> */
-    private static array $throwHandlers = [];
 
     /** @var int[] */
     private static array $lastIds = [];
@@ -25,20 +23,19 @@ final class FakeDb
         self::$queries = [];
         self::$tx = [];
         self::$handlers = [];
-        self::$throwHandlers = [];
         self::$lastIds = [];
     }
 
     /** Any query matching $pattern (regex) returns $rows (list of assoc arrays). Later registrations win. */
     public static function on(string $pattern, array $rows): void
     {
-        array_unshift(self::$handlers, [$pattern, $rows]);
+        array_unshift(self::$handlers, ['pattern' => $pattern, 'action' => 'rows', 'payload' => $rows]);
     }
 
-    /** Any query matching $pattern throws an Exception($message) instead of returning a result. */
+    /** Any query matching $pattern throws an Exception($message) instead of returning a result. Later registrations win. */
     public static function throwOn(string $pattern, string $message = 'fake db error'): void
     {
-        array_unshift(self::$throwHandlers, [$pattern, $message]);
+        array_unshift(self::$handlers, ['pattern' => $pattern, 'action' => 'throw', 'payload' => $message]);
     }
 
     public static function willInsertId(int $id): void
@@ -49,14 +46,12 @@ final class FakeDb
     public static function query(string $sql): FakeResult
     {
         self::$queries[] = $sql;
-        foreach (self::$throwHandlers as [$pattern, $message]) {
-            if (preg_match($pattern, $sql)) {
-                throw new \Exception($message);
-            }
-        }
-        foreach (self::$handlers as [$pattern, $rows]) {
-            if (preg_match($pattern, $sql)) {
-                return new FakeResult($rows);
+        foreach (self::$handlers as $handler) {
+            if (preg_match($handler['pattern'], $sql)) {
+                if ($handler['action'] === 'throw') {
+                    throw new \Exception($handler['payload']);
+                }
+                return new FakeResult($handler['payload']);
             }
         }
         return new FakeResult([]);
@@ -78,7 +73,7 @@ final class FakeResult
 {
     private int $pos = 0;
 
-    public function __construct(private readonly array $rows)
+    public function __construct(private array $rows)
     {
     }
 

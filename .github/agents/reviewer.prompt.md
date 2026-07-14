@@ -69,7 +69,7 @@ severity, and a clear fix instruction.
 | **Red-green evidence**   | The Developer's summary states the test was written and run failing (RED) before the implementation (GREEN). If the summary shows implementation-then-tests, or no run output at all, request changes — a test that was never seen failing may not test the right thing |
 | **Suite passes**         | Full suite green (`tools/test.cmd` / `tools/test.sh`), not just the new test in isolation |
 | **FakeDb reuse**         | DB stubbing uses `tests/Support/FakeDb.php` (`FakeDb::on`/`FakeDb::executed`/`FakeDb::throwOn`), not a bespoke mock. Code calling core builders (`CreateDivision`, etc.) instead of `safe_*` uses `tests/Support/CallLog.php` |
-| **Integration-only exemption** | Page controllers, `Setup_*_PL.php`, `Rank/`, PDF classes, and network proxies don't need unit tests — don't block on these |
+| **Integration-only exemption** | See the exemption list in `developer.prompt.md` Hard Constraints — don't block on those |
 
 ### 5. Completeness (MINOR — should be fixed before merge)
 

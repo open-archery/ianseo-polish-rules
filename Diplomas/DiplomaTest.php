@@ -4,7 +4,12 @@ namespace PL\Tests\Diplomas;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 
+if (PHP_SAPI !== 'cli') {
+    exit;
+}
+
 require_once __DIR__ . '/Fun_Diploma.php';
+require_once __DIR__ . '/DiplomaSetup.php';
 
 final class DiplomaTest extends \PlTestCase
 {

@@ -4,6 +4,10 @@ namespace PL\Tests\Lookup;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 
+if (PHP_SAPI !== 'cli') {
+    exit;
+}
+
 require_once __DIR__ . '/Fun_ClubName.php';
 
 final class ClubNameTest extends \PlTestCase

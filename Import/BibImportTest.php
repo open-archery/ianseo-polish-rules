@@ -2,6 +2,10 @@
 
 namespace PL\Tests\Import;
 
+if (PHP_SAPI !== 'cli') {
+    exit;
+}
+
 require_once __DIR__ . '/Fun_BibImport.php';
 
 final class BibImportTest extends \PlTestCase
@@ -152,9 +156,9 @@ final class BibImportTest extends \PlTestCase
         $this->assertSame(123, $enId);
         $writes = \FakeDb::executed('/INSERT INTO Entries/');
         $this->assertCount(1, $writes);
-        $this->assertStringContainsString("EnFirstName  = 'Kowalski'", $writes[0]);
-        $this->assertStringContainsString("EnName       = 'Jan'", $writes[0]);
-        $this->assertStringContainsString('EnCountry    = 42', $writes[0]);
+        $this->assertMatchesRegularExpression("/EnFirstName\\s*=\\s*'Kowalski'/", $writes[0]);
+        $this->assertMatchesRegularExpression("/EnName\\s*=\\s*'Jan'/", $writes[0]);
+        $this->assertMatchesRegularExpression('/EnCountry\\s*=\\s*42/', $writes[0]);
     }
 
     public function testCreateQualificationInsertsSessionLink(): void
