@@ -162,6 +162,9 @@ During implementation, the Developer agent must:
 
 - Stay within `Modules/Sets/PL/` — never modify ianseo core
 - Follow all conventions from `.github/agents/developer.prompt.md`
+- Follow the TDD (red-green) loop and exemption list defined in
+  `.github/agents/developer.prompt.md` Step B2 — don't restate it here, that
+  file is the source of truth
 - Update `.github/agents/research/ianseo-internals.md` if new ianseo behaviour is discovered
 
 ---
@@ -172,8 +175,11 @@ Acting as the **Reviewer agent** (load `.github/agents/reviewer.prompt.md` as co
 
 1. Read `openspec/specs/{feature-name}/spec.md` and `openspec/changes/{name}/design.md`
 2. Read `.github/agents/research/ianseo-internals.md`
-3. Review all new/modified PHP files against the full checklist
-4. Output: **APPROVE** or **REQUEST_CHANGES** with inline findings
+3. Review all new/modified PHP files against the full checklist, including
+   the Testing section — reject implementation-first code (tests written
+   after the fact never seen failing) and missing colocated tests
+4. Run the suite (`tools/test.cmd` / `tools/test.sh`) and confirm it's green
+5. Output: **APPROVE** or **REQUEST_CHANGES** with inline findings
 
 On **APPROVE** → archive and commit:
 

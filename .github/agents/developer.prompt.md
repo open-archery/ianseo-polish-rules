@@ -26,6 +26,7 @@ APIs and patterns but you never modify it.
 
 ## Hard Constraints
 
+- **MUST follow TDD (red-green) for every new `pl_*` function** — see Step B2. Exception: integration-only code (page controllers, `Setup_*_PL.php`, `Rank/`, PDF classes, network proxies) where a unit test provides no value.
 - **MUST NOT** create or modify any file outside `Modules/Sets/PL/`
 - **MUST NOT** modify ianseo core files (`Common/`, `config.php`, install scripts, etc.)
 - All DB tables auto-created via `SHOW TABLES LIKE` — no changes to install scripts
@@ -167,11 +168,30 @@ Modules/Sets/PL/
 
 5. **Wait for architecture review** (or proceed if self-reviewing) before writing code
 
-### Step B2 — Implementation
+### Step B2 — Implementation (TDD, red-green)
 
-1. **Implement** all files listed in `openspec/changes/{change-name}/design.md` following conventions above
-2. **Update** `.github/agents/research/ianseo-internals.md` if you discovered any undocumented ianseo behaviour
-3. **Self-review** against the Reviewer agent's checklist before declaring done
+For every `pl_*` function that contains logic (pure transforms, or DB-wrapped
+logic reachable by stubbing `safe_*`/`StrSafe_DB` per `tests/bootstrap.php`),
+work in this order — do not write the implementation before the test:
+
+1. **RED** — write the test first, colocated with the source file it targets
+   (e.g. `Lookup/ClubNameTest.php` next to `Lookup/Fun_ClubName.php`; class
+   name must match the filename). Run it and confirm it **fails** — a test
+   that passes before the implementation exists is testing nothing.
+2. **GREEN** — write the minimum implementation to make that test pass. Run
+   the suite (`tools/test.cmd` on Windows, `tools/test.sh` on macOS/Linux/the
+   ianseo-docker container) and confirm all tests pass, including previously
+   green ones.
+3. Repeat 1–2 for the next function/behaviour rather than writing all tests
+   or all implementation up front.
+4. Stub the DB with `FakeDb::on($regexPattern, $rows)` / assert writes with
+   `FakeDb::executed($regexPattern)` — see `tests/Support/FakeDb.php`. Don't
+   invent a different fake per feature.
+5. **Update** `.github/agents/research/ianseo-internals.md` if you discovered
+   any undocumented ianseo behaviour.
+6. **Self-review** against the Reviewer agent's checklist before declaring
+   done — the Reviewer will check for red-green evidence (see its Testing
+   section) and reject implementation-first code.
 
 ## What to Produce
 
@@ -179,5 +199,6 @@ For each task, produce:
 
 - `openspec/changes/{change-name}/design.md` — ianseo mapping and design decisions (Step B1)
 - All required PHP files in `PL/{FeatureName}/` (Step B2)
+- A colocated `*Test.php` for every `pl_*` function with testable logic, written red-first (Step B2)
 - Any required `menu.php` additions
-- A brief summary of what was implemented and which `.github/agents/research/ianseo-internals.md` sections were updated (if any)
+- A brief summary of what was implemented, the red→green sequence followed, and which `.github/agents/research/ianseo-internals.md` sections were updated (if any)

@@ -16,7 +16,37 @@ There are no build or compile steps. This is a pure PHP project loaded directly 
 composer install
 ```
 
-There is no automated test suite. Testing is done manually by running a tournament within ianseo with the PL ruleset active.
+**Automated tests (PHPUnit):**
+
+One-time setup — download the pinned PHPUnit phar (not via Composer; the module has no autoload/deps to justify it):
+
+```bash
+# macOS / Linux / ianseo-docker container
+mkdir -p tools
+curl -fsSL -o tools/phpunit.phar https://phar.phpunit.de/phpunit-11.5.phar
+```
+
+```powershell
+# Windows
+New-Item -ItemType Directory -Force tools
+Invoke-WebRequest https://phar.phpunit.de/phpunit-11.5.phar -OutFile tools\phpunit.phar
+```
+
+Run the suite:
+
+```bash
+# macOS / Linux / ianseo-docker container (requires php on PATH)
+tools/test.sh
+tools/test.sh --filter ClubName   # focused run for TDD
+```
+
+```
+:: Windows (uses the ianseo-bundled PHP if none is on PATH)
+tools\test.cmd
+tools\test.cmd --filter ClubName
+```
+
+Test files live next to the code they test (e.g. `Lookup/ClubNameTest.php` tests `Lookup/Fun_ClubName.php`) — PHPUnit discovers any `*Test.php` file in the module tree; the class name must match the filename. Shared test infrastructure lives in `tests/`: `tests/bootstrap.php` shims ianseo's global DB functions (`safe_r_sql`, `safe_w_sql`, `StrSafe_DB`, etc. — see `tests/Support/FakeDb.php`) since module files only call them, never define them. Stub SQL results with `FakeDb::on($regexPattern, $rows)`; assert writes happened with `FakeDb::executed($regexPattern)`; simulate a write failure with `FakeDb::throwOn($regexPattern, $message)` (needed for transaction-rollback tests). For code that calls `Modules/Sets/lib.php`-style core builders (`CreateDivision`, `CreateClass`, `InsertClassEvent`) instead of `safe_*` directly, `tests/Support/CallLog.php` records the call args — assert with `CallLog::calls($fnName)` / `CallLog::callsMatching($fnName, $predicate)`. Pure functions (e.g. `Lookup/Fun_ClubName.php`) need no stubbing at all. Manual tournament testing in ianseo with the PL ruleset active is still the way to verify UI/integration behavior end-to-end.
 
 ## OpenSpec Workflow
 
@@ -76,7 +106,7 @@ Implemented feature specs live in `openspec/specs/`:
 - **Functions:** Prefixed with `pl_`.
 - **UI language:** All user-facing text in Polish; code comments in English.
 - **Line endings:** LF only (enforced by `.gitattributes` and `.vscode/settings.json`).
-- **PHP version:** 8.0+.
+- **PHP version:** 8.2+ (matches the ianseo-bundled runtime and PHPUnit 11's minimum).
 
 ## Agent Roles
 
