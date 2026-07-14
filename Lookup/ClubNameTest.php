@@ -83,4 +83,44 @@ final class ClubNameTest extends \PlTestCase
 
         $this->assertSame('TALWRO', $result['Uczniowski Klub Sportowy Talent (Wrocław)']['code']);
     }
+
+    #[DataProvider('wordMapLookups')]
+    public function testWordMapLookup(string $word, ?string $expected): void
+    {
+        $this->assertSame($expected, \pl_word_map_lookup($word, \pl_club_word_map()));
+    }
+
+    public static function wordMapLookups(): array
+    {
+        return [
+            'exact case' => ['Klub', 'K'],
+            'case-insensitive' => ['KLUB', 'K'],
+            'lowercase' => ['sportowy', 'S'],
+            'connector mapped to empty string' => ['na', ''],
+            'connector "i" keeps its own abbreviation' => ['i', 'i'],
+            'unknown word returns null' => ['Xyzzy', null],
+        ];
+    }
+
+    public function testBuildPrefixAbbrConcatenatesKnownWords(): void
+    {
+        $this->assertSame(
+            'MLKS',
+            \pl_build_prefix_abbr('Miejsko-Ludowy Klub Sportowy', \pl_club_word_map())
+        );
+    }
+
+    public function testBuildPrefixAbbrFallsBackToFirstLetterForUnknownWords(): void
+    {
+        $this->assertSame(
+            'NK',
+            \pl_build_prefix_abbr('Nieznane Klub', \pl_club_word_map())
+        );
+    }
+
+    public function testBuildPrefixAbbrSkipsEmptyConnectorsButKeepsNonEmptyOnes(): void
+    {
+        $this->assertSame('KiS', \pl_build_prefix_abbr('Klub i Sportowy', \pl_club_word_map()));
+        $this->assertSame('KS', \pl_build_prefix_abbr('Klub na Sportowy', \pl_club_word_map()));
+    }
 }
