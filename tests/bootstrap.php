@@ -11,6 +11,7 @@
 declare(strict_types=1);
 
 require __DIR__ . '/Support/FakeDb.php';
+require __DIR__ . '/Support/CallLog.php';
 require __DIR__ . '/Support/PlTestCase.php';
 
 $_SESSION = [];
@@ -82,5 +83,22 @@ if (!function_exists('safe_r_sql')) {
     function CheckTourSession($required = true): bool
     {
         return true;
+    }
+
+    // Recording shims for Modules/Sets/lib.php builder functions used by
+    // this module's Setup_*_PL.php / lib.php orchestration logic.
+    function CreateDivision(...$args): void
+    {
+        CallLog::record('CreateDivision', $args);
+    }
+
+    function CreateClass(...$args): void
+    {
+        CallLog::record('CreateClass', $args);
+    }
+
+    function InsertClassEvent(...$args): void
+    {
+        CallLog::record('InsertClassEvent', $args);
     }
 }
