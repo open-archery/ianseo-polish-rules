@@ -14,6 +14,9 @@ final class FakeDb
     /** @var array<int, array{0: string, 1: array}> */
     private static array $handlers = [];
 
+    /** @var array<int, array{0: string, 1: string}> */
+    private static array $throwHandlers = [];
+
     /** @var int[] */
     private static array $lastIds = [];
 
@@ -22,6 +25,7 @@ final class FakeDb
         self::$queries = [];
         self::$tx = [];
         self::$handlers = [];
+        self::$throwHandlers = [];
         self::$lastIds = [];
     }
 
@@ -29,6 +33,12 @@ final class FakeDb
     public static function on(string $pattern, array $rows): void
     {
         array_unshift(self::$handlers, [$pattern, $rows]);
+    }
+
+    /** Any query matching $pattern throws an Exception($message) instead of returning a result. */
+    public static function throwOn(string $pattern, string $message = 'fake db error'): void
+    {
+        array_unshift(self::$throwHandlers, [$pattern, $message]);
     }
 
     public static function willInsertId(int $id): void
@@ -39,6 +49,11 @@ final class FakeDb
     public static function query(string $sql): FakeResult
     {
         self::$queries[] = $sql;
+        foreach (self::$throwHandlers as [$pattern, $message]) {
+            if (preg_match($pattern, $sql)) {
+                throw new \Exception($message);
+            }
+        }
         foreach (self::$handlers as [$pattern, $rows]) {
             if (preg_match($pattern, $sql)) {
                 return new FakeResult($rows);
