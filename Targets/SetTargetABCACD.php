@@ -114,7 +114,10 @@ if ($sesOrder >= 1 && $event !== '' && $tgtFrom >= 1 && $tgtTo >= $tgtFrom) {
         }
 
         // ─── Run assignment algorithm ──────────────────────────
-        [$assignments, $unassigned] = pl_abc_acd_assign($orderedClubs, $slots);
+        // Wave tally from other classes already saved in this session biases
+        // which column (A vs C) each club gets (PZŁucz §2.5.1.5).
+        $waveTally = pl_abc_acd_session_wave_tally($tourId, $sesOrder, $event);
+        [$assignments, $unassigned] = pl_abc_acd_assign($orderedClubs, $slots, $waveTally);
 
         // ─── Erase and save ─────────────────────────
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_REQUEST['DoAssign'])) {

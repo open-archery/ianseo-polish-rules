@@ -33,11 +33,18 @@ function pl_abc_acd_build_slots(int $from, int $to): array
  * Placing whole clubs in single columns keeps teammates on consecutive bosses
  * and on a consistent wave. Smaller clubs that don't fit in A or C get B or D.
  *
- * @param  array $clubs  club_code => [[id, name, club], ...]  (sorted DESC by size)
- * @param  array $slots  ordered slot strings from pl_abc_acd_build_slots()
+ * $waveTally biases the A-vs-C choice per club (PZŁucz §2.5.1.5, cross-class
+ * balance within a session): a club that is wave1-heavy from classes already
+ * saved in the same session prefers column C now, and vice versa. An empty
+ * tally (the default) reproduces the plain rank-order behavior above.
+ *
+ * @param  array $clubs     club_code => [[id, name, club], ...]  (sorted DESC by size)
+ * @param  array $slots     ordered slot strings from pl_abc_acd_build_slots()
+ * @param  array $waveTally club_code => ['wave1' => int, 'wave2' => int] from
+ *                          pl_abc_acd_session_wave_tally()
  * @return array [assignments: slot => athlete_array, unassigned: [athlete_array, ...]]
  */
-function pl_abc_acd_assign(array $clubs, array $slots): array
+function pl_abc_acd_assign(array $clubs, array $slots, array $waveTally = []): array
 {
     // Partition slots into named columns
     $colA  = [];
@@ -53,32 +60,55 @@ function pl_abc_acd_assign(array $clubs, array $slots): array
 
     $assignments = [];
     $unassigned  = [];
+    $clubCodes   = array_keys($clubs);
     $clubList    = array_values($clubs);
     $numClubs    = count($clubList);
 
     if ($numClubs === 0) return [$assignments, $unassigned];
 
-    // Club 0 (largest) → A column: always wave 1 on every boss.
-    // Overflow beyond the A column's capacity is left unassigned rather than
-    // spilling into B/C/D: those columns belong to other clubs' bosses, and
-    // placing a second club-0 athlete there would put two athletes from the
-    // same club on one boss, violating the one-club-per-boss invariant.
-    $idxA = 0;
+    // needA > 0: the club is wave2-heavy in this session so far, so it should
+    // shoot wave1 (column A) now; needA < 0: wave1-heavy, prefers column C.
+    $needA = fn($club): int =>
+        ($waveTally[$club]['wave2'] ?? 0) - ($waveTally[$club]['wave1'] ?? 0);
+
+    if ($numClubs === 1) {
+        // Single club → one full column: A by default, C when the club is
+        // wave1-heavy this session. Overflow beyond the column's capacity is
+        // left unassigned rather than spilling into other columns: placing a
+        // second club-0 athlete there would put two athletes from the same
+        // club on one boss, violating the one-club-per-boss invariant.
+        $col = $needA($clubCodes[0]) < 0 ? $colC : $colA;
+        $idx = 0;
+        foreach ($clubList[0] as $athlete) {
+            if ($idx < count($col)) {
+                $assignments[$col[$idx++]] = $athlete;
+            } else {
+                $unassigned[] = $athlete;
+            }
+        }
+        return [$assignments, $unassigned];
+    }
+
+    // Clubs 0 and 1 get columns A and C: rank order (largest → A) unless the
+    // session tally says club 1 needs wave1 strictly more than club 0.
+    $swap = $needA($clubCodes[1]) > $needA($clubCodes[0]);
+    $col0 = $swap ? $colC : $colA;
+    $col1 = $swap ? $colA : $colC;
+
+    // Overflow beyond each column's capacity stays unassigned (see above).
+    $idx0 = 0;
     foreach ($clubList[0] as $athlete) {
-        if ($idxA < count($colA)) {
-            $assignments[$colA[$idxA++]] = $athlete;
+        if ($idx0 < count($col0)) {
+            $assignments[$col0[$idx0++]] = $athlete;
         } else {
             $unassigned[] = $athlete;
         }
     }
 
-    if ($numClubs === 1) return [$assignments, $unassigned];
-
-    // Club 1 (second largest) → C column: always wave 2 on every boss
-    $idxC = 0;
+    $idx1 = 0;
     foreach ($clubList[1] as $athlete) {
-        if ($idxC < count($colC)) {
-            $assignments[$colC[$idxC++]] = $athlete;
+        if ($idx1 < count($col1)) {
+            $assignments[$col1[$idx1++]] = $athlete;
         } else {
             $unassigned[] = $athlete;
         }
@@ -88,30 +118,41 @@ function pl_abc_acd_assign(array $clubs, array $slots): array
 
     // Clubs 2+: fit the whole club into the first column that has enough room.
     // Priority: remaining A → remaining C → B → D → slot-by-slot fallback.
-    $remainingA = array_slice($colA, $idxA);
-    $remainingC = array_slice($colC, $idxC);
-    $colB       = array_values(array_filter($colBD, fn($s) => substr($s, -1) === 'B'));
-    $colD       = array_values(array_filter($colBD, fn($s) => substr($s, -1) === 'D'));
-    $idxRA = 0; $idxRC = 0; $idxB = 0; $idxD = 0;
+    // A wave1-heavy club tries remaining C before remaining A; the B → D tail
+    // never changes (B/D are fixed leftover slots, not an assignable choice).
+    $pool = [
+        'A' => array_slice($colA, $swap ? $idx1 : $idx0),
+        'C' => array_slice($colC, $swap ? $idx0 : $idx1),
+        'B' => array_values(array_filter($colBD, fn($s) => substr($s, -1) === 'B')),
+        'D' => array_values(array_filter($colBD, fn($s) => substr($s, -1) === 'D')),
+    ];
+    $poolIdx = ['A' => 0, 'C' => 0, 'B' => 0, 'D' => 0];
 
-    foreach (array_slice($clubList, 2) as $athletes) {
-        $n = count($athletes);
-        if ($idxRA + $n <= count($remainingA)) {
-            foreach ($athletes as $a) $assignments[$remainingA[$idxRA++]] = $a;
-        } elseif ($idxRC + $n <= count($remainingC)) {
-            foreach ($athletes as $a) $assignments[$remainingC[$idxRC++]] = $a;
-        } elseif ($idxB + $n <= count($colB)) {
-            foreach ($athletes as $a) $assignments[$colB[$idxB++]] = $a;
-        } elseif ($idxD + $n <= count($colD)) {
-            foreach ($athletes as $a) $assignments[$colD[$idxD++]] = $a;
-        } else {
+    foreach (array_slice($clubCodes, 2) as $i => $code) {
+        $athletes = $clubList[$i + 2];
+        $n        = count($athletes);
+        $order    = $needA($code) < 0 ? ['C', 'A', 'B', 'D'] : ['A', 'C', 'B', 'D'];
+
+        $placed = false;
+        foreach ($order as $cn) {
+            if ($poolIdx[$cn] + $n <= count($pool[$cn])) {
+                foreach ($athletes as $a) $assignments[$pool[$cn][$poolIdx[$cn]++]] = $a;
+                $placed = true;
+                break;
+            }
+        }
+        if (!$placed) {
             // Club is larger than any remaining single column — fill slot by slot
             foreach ($athletes as $a) {
-                if ($idxRA < count($remainingA))     { $assignments[$remainingA[$idxRA++]] = $a; }
-                elseif ($idxRC < count($remainingC)) { $assignments[$remainingC[$idxRC++]] = $a; }
-                elseif ($idxB < count($colB))        { $assignments[$colB[$idxB++]] = $a; }
-                elseif ($idxD < count($colD))        { $assignments[$colD[$idxD++]] = $a; }
-                else                                  { $unassigned[] = $a; }
+                $done = false;
+                foreach (['A', 'C', 'B', 'D'] as $cn) {
+                    if ($poolIdx[$cn] < count($pool[$cn])) {
+                        $assignments[$pool[$cn][$poolIdx[$cn]++]] = $a;
+                        $done = true;
+                        break;
+                    }
+                }
+                if (!$done) $unassigned[] = $a;
             }
         }
     }
@@ -162,6 +203,46 @@ function pl_abc_acd_load_athletes(int $tourId, int $sesOrder, string $event): ar
     }
 
     return $orderedClubs;
+}
+
+/**
+ * Tallies saved wave assignments per club for a session, excluding the class
+ * currently being assigned: letters A/B count as wave1, C/D as wave2. Only
+ * committed rows (QuTarget!=0) count — unsaved previews are invisible here.
+ *
+ * @return array club_code => ['wave1' => int, 'wave2' => int]
+ */
+function pl_abc_acd_session_wave_tally(int $tourId, int $sesOrder, string $excludeEvent): array
+{
+    $q = safe_r_sql(
+        "SELECT CoCode EnCountry, QuLetter"
+        . " FROM Entries"
+        . " INNER JOIN Countries ON EnCountry=CoId"
+        . " INNER JOIN Qualifications ON EnId=QuId"
+        . " INNER JOIN Divisions ON EnDivision=DivId AND EnTournament=DivTournament AND DivAthlete=1"
+        . " INNER JOIN Classes   ON EnClass=ClId    AND EnTournament=ClTournament  AND ClAthlete=1"
+        . " WHERE EnTournament=" . StrSafe_DB($tourId)
+        . "   AND QuSession=" . StrSafe_DB($sesOrder)
+        . "   AND QuTarget!=0"
+        . "   AND CONCAT(TRIM(EnDivision),TRIM(EnClass)) NOT LIKE " . StrSafe_DB($excludeEvent)
+    );
+
+    $tally = [];
+    while ($r = safe_fetch($q)) {
+        $club = $r->EnCountry;
+        if (!isset($tally[$club])) {
+            $tally[$club] = ['wave1' => 0, 'wave2' => 0];
+        }
+        $letter = strtoupper(trim((string)$r->QuLetter));
+        if ($letter === 'A' || $letter === 'B') {
+            $tally[$club]['wave1']++;
+        } elseif ($letter === 'C' || $letter === 'D') {
+            $tally[$club]['wave2']++;
+        }
+    }
+    safe_free_result($q);
+
+    return $tally;
 }
 
 /**

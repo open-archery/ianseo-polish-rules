@@ -181,6 +181,134 @@ final class SetTargetABCACDTest extends \PlTestCase
         $this->assertSame('2', $unassigned[0]['id']);
     }
 
+    // --- pl_abc_acd_assign with session wave tally -----------------------------
+
+    public function testTwoClubSwapWhenSecondClubNeedsWaveOneMore(): void
+    {
+        $clubs = [
+            'AZS' => [$this->athlete('1', 'AZS'), $this->athlete('2', 'AZS')],
+            'LKS' => [$this->athlete('3', 'LKS')],
+        ];
+        $slots = \pl_abc_acd_build_slots(1, 2);
+        // LKS shot wave2 (C/D) elsewhere in this session; AZS has no history.
+        $tally = ['LKS' => ['wave1' => 0, 'wave2' => 2]];
+
+        [$assignments, $unassigned] = \pl_abc_acd_assign($clubs, $slots, $tally);
+
+        $this->assertSame('LKS', $assignments['1A']['club']);
+        $this->assertSame('AZS', $assignments['1C']['club']);
+        $this->assertSame('AZS', $assignments['2C']['club']);
+        $this->assertSame([], $unassigned);
+    }
+
+    public function testEqualWaveTalliesKeepRankOrderDefault(): void
+    {
+        $clubs = [
+            'AZS' => [$this->athlete('1', 'AZS'), $this->athlete('2', 'AZS')],
+            'LKS' => [$this->athlete('3', 'LKS')],
+        ];
+        $slots = \pl_abc_acd_build_slots(1, 2);
+        // Balanced histories (needA = 0 for both) must not swap the default.
+        $tally = [
+            'AZS' => ['wave1' => 1, 'wave2' => 1],
+            'LKS' => ['wave1' => 2, 'wave2' => 2],
+        ];
+
+        [$assignments, ] = \pl_abc_acd_assign($clubs, $slots, $tally);
+
+        $this->assertSame('AZS', $assignments['1A']['club']);
+        $this->assertSame('AZS', $assignments['2A']['club']);
+        $this->assertSame('LKS', $assignments['1C']['club']);
+    }
+
+    public function testClubsMissingFromTallyKeepRankOrderDefault(): void
+    {
+        $clubs = [
+            'AZS' => [$this->athlete('1', 'AZS'), $this->athlete('2', 'AZS')],
+            'LKS' => [$this->athlete('3', 'LKS')],
+        ];
+        $slots = \pl_abc_acd_build_slots(1, 2);
+        // Tally only mentions an unrelated club — both present clubs default to 0.
+        $tally = ['XYZ' => ['wave1' => 5, 'wave2' => 0]];
+
+        [$assignments, ] = \pl_abc_acd_assign($clubs, $slots, $tally);
+
+        $this->assertSame('AZS', $assignments['1A']['club']);
+        $this->assertSame('LKS', $assignments['1C']['club']);
+    }
+
+    public function testSingleClubWithWaveOneHeavyHistoryGetsColumnC(): void
+    {
+        $clubs = ['AZS' => [$this->athlete('1', 'AZS'), $this->athlete('2', 'AZS')]];
+        $slots = \pl_abc_acd_build_slots(1, 2);
+        $tally = ['AZS' => ['wave1' => 2, 'wave2' => 0]];
+
+        [$assignments, $unassigned] = \pl_abc_acd_assign($clubs, $slots, $tally);
+
+        $this->assertSame('1', $assignments['1C']['id']);
+        $this->assertSame('2', $assignments['2C']['id']);
+        $this->assertArrayNotHasKey('1A', $assignments);
+        $this->assertSame([], $unassigned);
+    }
+
+    public function testOverflowClubWithWaveOneHeavyHistorySearchesColumnCFirst(): void
+    {
+        // Same setup as testThirdClubFillsRemainingAColumnAfterFirstClubExhausted,
+        // but SMALL is wave1-heavy this session, so it takes remaining C (3C)
+        // instead of remaining A (3A).
+        $clubs = [
+            'BIG'   => [$this->athlete('1', 'BIG'), $this->athlete('2', 'BIG')],
+            'MID'   => [$this->athlete('3', 'MID'), $this->athlete('4', 'MID')],
+            'SMALL' => [$this->athlete('5', 'SMALL')],
+        ];
+        $slots = \pl_abc_acd_build_slots(1, 5);
+        $tally = ['SMALL' => ['wave1' => 3, 'wave2' => 0]];
+
+        [$assignments, ] = \pl_abc_acd_assign($clubs, $slots, $tally);
+
+        $this->assertSame('SMALL', $assignments['3C']['club']);
+        $this->assertArrayNotHasKey('3A', $assignments);
+    }
+
+    // --- pl_abc_acd_session_wave_tally -----------------------------------------
+
+    public function testSessionWaveTallySplitsWavesByLetterPerClub(): void
+    {
+        \FakeDb::on('/SELECT CoCode EnCountry, QuLetter/', [
+            ['EnCountry' => 'AZS', 'QuLetter' => 'A'],
+            ['EnCountry' => 'AZS', 'QuLetter' => 'B'],
+            ['EnCountry' => 'AZS', 'QuLetter' => 'C'],
+            ['EnCountry' => 'LKS', 'QuLetter' => 'D'],
+        ]);
+
+        $tally = \pl_abc_acd_session_wave_tally(1, 1, 'RMO');
+
+        $this->assertSame(['wave1' => 2, 'wave2' => 1], $tally['AZS']);
+        $this->assertSame(['wave1' => 0, 'wave2' => 1], $tally['LKS']);
+    }
+
+    public function testSessionWaveTallyExcludesCurrentClassRows(): void
+    {
+        \pl_abc_acd_session_wave_tally(7, 2, 'RMO');
+
+        $this->assertCount(1, \FakeDb::executed("/CONCAT\\(TRIM\\(EnDivision\\),TRIM\\(EnClass\\)\\) NOT LIKE 'RMO'/"));
+    }
+
+    public function testSessionWaveTallyFiltersByTournamentAndSession(): void
+    {
+        \pl_abc_acd_session_wave_tally(7, 2, 'RMO');
+
+        $this->assertCount(1, \FakeDb::executed("/EnTournament='7'/"));
+        $this->assertCount(1, \FakeDb::executed("/QuSession='2'/"));
+    }
+
+    public function testSessionWaveTallyExcludesUnassignedRows(): void
+    {
+        \pl_abc_acd_session_wave_tally(7, 2, 'RMO');
+
+        $this->assertCount(1, \FakeDb::executed('/QuTarget!=0/'));
+    }
+
     // --- pl_abc_acd_load_athletes --------------------------------------------
 
     public function testLoadAthletesGroupsByClubSortedLargestFirst(): void
