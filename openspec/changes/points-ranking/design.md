@@ -105,7 +105,7 @@ Section ordering reuses `CupRanking`'s division order (`R, C, B`) plus `Classes.
 
 **Why:** `TeamFinComponent` only holds finals rosters. `Qualification/Fun_Qualification.local.inc.php:461` writes qualification teams into `Teams` + `TeamComponent`. LZS teams are explicitly "składające się z najwyżej sklasyfikowanych zawodników z jednego klubu po rundzie kwalifikacyjnej" — ianseo builds exactly that automatically. Reading `TeamFinComponent` for a `QUAL` classification would silently return no roster.
 
-Team size comes from `Events.EvMaxTeamPerson`; mixed teams are identified by `Events.EvMixedTeam = 1`; the 3-of-4 rule finds the athlete's individual event via `Events.EvCodeParent` rather than stripping a suffix off `EvCode` by hand.
+Team size comes from `Events.EvMaxTeamPerson`; mixed teams are identified by `Events.EvMixedTeam = 1`; the 3-of-4 rule finds the athlete's individual event by its `EvCode` — team and individual events of one category share an `EvCode` in this module's setup scripts (`EvTeamEvent` distinguishes them; see the `I:`/`T:` composite-key convention in `Diplomas/Fun_Diploma.php`). `Events.EvCodeParent` is not used for this: it is never populated for a team↔individual link, either in this module's setup scripts or in FITA core — it chains sub-events within the same kind (e.g. finals brackets), verified against `Common/Rank/Obj_Rank_FinalInd_calc.php` and `Obj_Rank_FinalTeam_calc.php`. (Corrected 2026-08 during implementation — the original text named `EvCodeParent` for this lookup.)
 
 Club id resolves as `IF(EnCountry2 = 0, EnCountry, EnCountry2)`, matching ianseo's own team builder — clubs entered under a second affiliation would otherwise land in the wrong club total. The same rule applies to **individual** points, so an athlete's individual and team points always credit the same club.
 
@@ -244,7 +244,7 @@ pl_points_calculate($tourId, $preset):
           roster = TeamComponent (QUAL) | TeamFinComponent (ELIM)
           if preset.one_team_per_club: keep TeSubTeam = 0 only
           if preset.three_of_four and count(roster) = 4:
-              drop the worst qualifier (Events.EvCodeParent → Individuals.IndRank;
+              drop the worst qualifier (same-EvCode individual event → Individuals.IndRank;
               tie → higher entry id dropped)
           athlete[m] value += points / count(counting members)
       else:
