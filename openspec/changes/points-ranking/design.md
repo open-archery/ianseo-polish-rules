@@ -14,6 +14,7 @@ ianseo tables consumed (read-only):
 | `Countries` | `CoId`, `CoCode`, `CoName`, `CoTournament` | ianseo's club table; **there is no `Companies` table** |
 | `Events` | `EvCode`, `EvTeamEvent`, `EvMixedTeam`, `EvMaxTeamPerson`, `EvCodeParent` | team size and mixed flag come from here |
 | `Divisions`, `Classes` | `DivDescription`, `ClDescription`, `ClViewOrder` | section labels |
+| `EventClass` | `EcCode`, `EcDivision`, `EcClass`, `EcTeamEvent`, `EcTournament` | maps events to division/class pairs; the scope filter for team events |
 
 ## Goals / Non-Goals
 
@@ -76,7 +77,8 @@ const PL_POINTS_PRESETS = [
 PP Jun / Jun. Mł.   SEPARATE(ind)
 PP Bloczki / BB     SEPARATE(ind), SEPARATE(mix)
 LZS                 COMBINED(ind,tea, cap 0), SEPARATE(tea), CLUB, VOIVODESHIP
-MP Młodz. / OOM     COMBINED(ind,tea,mix, cap 3|2), CLUB, VOIVODESHIP
+MP Młodz. / MP Jun. COMBINED(ind,tea,mix, cap 3), CLUB, VOIVODESHIP
+OOM / MM Młodz.     COMBINED(ind,tea,mix, cap 2), CLUB, VOIVODESHIP
 ```
 
 Presets 3 (`Puchar Polski — runda`) covers juniorzy młodsi, juniorzy and seniorzy across all divisions: the point tables are identical and the category dimension (D3) already separates the sections. The mixed report is simply empty when the tournament has no mixed event, so one preset serves all Puchar Polski rounds.
@@ -91,6 +93,10 @@ Presets 3 (`Puchar Polski — runda`) covers juniorzy młodsi, juniorzy and seni
 
 Section ordering reuses `CupRanking`'s division order (`R, C, B`) plus `Classes.ClViewOrder`, and labels come from `DivDescription` / `ClDescription`.
 
+**Scope for team events:** a team event has no `EnDivision`/`EnClass` of its own — it maps to division/class pairs through `EventClass` (ianseo's own qualification team builder filters exactly this way, `Qualification/Fun_Qualification.local.inc.php:1082`). A team event is in scope when at least one of its `EventClass` pairs falls inside the preset scope.
+
+**Attribution in `COMBINED`/`CLUB`/`VOIVODESHIP` follows the athlete's own category:** a team or mixed share lands in the member's `EnDivision . EnClass` section, not in the team event's category — a mixed pair's two members sit in two different sections (e.g. `RU21M` and `RU21W`).
+
 ---
 
 ### D4 — Team roster source follows the classification's rank source
@@ -101,17 +107,25 @@ Section ordering reuses `CupRanking`'s division order (`R, C, B`) plus `Classes.
 
 Team size comes from `Events.EvMaxTeamPerson`; mixed teams are identified by `Events.EvMixedTeam = 1`; the 3-of-4 rule finds the athlete's individual event via `Events.EvCodeParent` rather than stripping a suffix off `EvCode` by hand.
 
-Club id resolves as `IF(EnCountry2 = 0, EnCountry, EnCountry2)`, matching ianseo's own team builder — clubs entered under a second affiliation would otherwise land in the wrong club total.
+Club id resolves as `IF(EnCountry2 = 0, EnCountry, EnCountry2)`, matching ianseo's own team builder — clubs entered under a second affiliation would otherwise land in the wrong club total. The same rule applies to **individual** points, so an athlete's individual and team points always credit the same club.
 
 `one_team_per_club` (LZS) restricts scoring to `TeSubTeam = 0`.
 
+A tie for the worst qualification place in the 3-of-4 drop is broken deterministically (higher entry id dropped).
+
+**Preset 4 (MM Młodzików) teams are declared, not automatic:** the annex says "trzech zgłoszonych zawodników klubowych" and "klub może zgłosić dowolną liczbę zespołów" — 3-person rosters entered by the operator as ianseo team entries, any number of sub-teams per club, all scoring (`one_team_per_club` off), club teams only (no voivodeship-team problem here, unlike OOM). There is no 4th-athlete rule, so preset 4 does **not** enable `three_of_four`. Rosters still come from `TeamComponent` as for any `QUAL` classification.
+
 ---
 
-### D5 — Team points are credited twice
+### D5 — Points belong to athletes; club totals are sums of capped athlete values
 
-**Decision:** Team and mixed points go to the club at **full value**, and to each counting member split evenly.
+**Decision:** Team and mixed points are credited to the **counting members** as even shares (`team_points ÷ counting_member_count`). The `COMBINED` cap applies to those athlete-level values (individual full, team share, mixed share), and the `CLUB` total is the sum of the club's athletes' **post-cap** values — a value dropped by the cap reaches no club or voivodeship total. When the roster is complete and nothing is capped, the shares sum back to the team's full table value, so the club sees the team's 9 points as 9.
 
-**Why:** The two consumers want different things. The club ranking wants the team's 9 points as 9. The athlete-level `COMBINED` table wants a per-athlete figure so the `Suma` column means something, and the user has confirmed the halved/thirded figure is the wanted display. Crediting the club directly rather than re-summing member shares also keeps the club total exact when a roster is missing or a member is dropped by the 3-of-4 rule.
+**Why:** The annex Zasady sit under "Klasyfikacja klubów i województw" — they define how the club/voivodeship classification is computed. "Każdy zawodnik może uzyskać punkty dwukrotnie/trzykrotnie" means the excess result yields no points at all, so it cannot reach the club either; "w konkurencji zespołowej punktuje tylko 3 zawodników z zespołu" says team points flow through the members. An earlier draft credited the club at full value independently of the cap — that overstates club totals whenever the cap binds (OOM and MM Młodzików, cap 2 over three classifications; presets 1–2 have cap 3 over three classifications, so their cap never binds).
+
+**Arithmetic must be exact:** shares like `22 ÷ 3` must sum back to 22. Credit the team value once and subtract dropped shares; never accumulate floating-point shares.
+
+**Empty-roster fallback:** a scored team with no roster rows still credits its full value to the club (no member attribution is possible), with a warning in the HTML view. Pragmatic divergence from the athlete-sum model, documented.
 
 ---
 
@@ -146,6 +160,25 @@ Club id resolves as `IF(EnCountry2 = 0, EnCountry, EnCountry2)`, matching ianseo
 **Decision:** Calculate on page load / PDF request. No result table.
 
 **Trade-off:** Recomputed every request. Acceptable — a few hundred athletes, plain SQL and PHP loops — and it avoids stale results when scores are corrected.
+
+---
+
+### D10 — Cutoff semantics
+
+**Decision:**
+
+- The cutoff applies to **every classification** carrying the flag (ind, tea, mix each), independently, per category — the annex says "ostatni zawodnik/zespół/mikst nie otrzymuje punktów".
+- **Starters are competition starters**: counted from qualification ranks (`IndRank`/`TeRank` valid and < 29999), regardless of the classification's rank source. "Liczba startujących" means who started, not who reached the eliminations; this also removes the ambiguity of an athlete who qualified for eliminations and withdrew (`IndRankFinal = 0`).
+- The condition is `starters < max(rank_to)` of the classification's bracket table.
+- When it fires, **every subject sharing the worst place** is zeroed. The annex's singular "ostatni" does not address ties; zeroing all tied subjects is the documented interpretation (rare in practice — the PL rank engine assigns unique sequential positions below the quarterfinals).
+
+---
+
+### D11 — ELIM rank reading
+
+**Decision:** `ELIM` places are read as `ABS(IndRankFinal)` / `ABS(TeRankFinal)`, and an event with no elimination phase (`Events.EvFinalFirstPhase = 0`) falls back to the qualification rank.
+
+**Why:** ianseo core writes negative final ranks in some flows — `Diplomas/Fun_Diploma.php:152` already wraps in `ABS()` and falls back with `IF(EvFinalFirstPhase=0, IndRank, ABS(IndRankFinal))`. Without the fallback, a category whose field was too small for an elimination round silently vanishes from the athlete tables **and** the club totals under an `ELIM` preset.
 
 ## File Structure
 
@@ -193,32 +226,44 @@ Both auto-installed via the `SHOW TABLES LIKE` pattern used elsewhere in the mod
 pl_points_calculate($tourId, $preset):
 
   categories = events in the tournament, filtered by $preset['scope']
+               (individual events by EnDivision/EnClass,
+                team events via their EventClass pairs)
 
   for each classification c in $preset:
       rows = load subjects for c            (IND | TEAM | MIXED, source QUAL|ELIM)
+             ELIM reads ABS(rank); EvFinalFirstPhase = 0 → fall back to QUAL rank
       for each category:
-          starters = count(rows with place < 29999)
+          starters = qualification starters in the category
+                     (IndRank/TeRank valid, < 29999 — regardless of c.source)
           for each row:
               points = bracket_lookup(c.brackets, row.place)
           if c.cutoff and starters < max(rank_to):
-              points[last placed row] = 0
+              zero every row sharing the worst place
 
       if c.subject is TEAM or MIXED:
           roster = TeamComponent (QUAL) | TeamFinComponent (ELIM)
           if preset.one_team_per_club: keep TeSubTeam = 0 only
           if preset.three_of_four and count(roster) = 4:
-              drop the worst qualifier (Events.EvCodeParent → Individuals.IndRank)
-          credit club       += points            (full value)
-          credit athlete[m] += points / count(counting members)
+              drop the worst qualifier (Events.EvCodeParent → Individuals.IndRank;
+              tie → higher entry id dropped)
+          athlete[m] value += points / count(counting members)
       else:
-          credit club       += points
-          credit athlete    += points
+          athlete value += points
+
+  cap = the preset's COMBINED report cap (no COMBINED → uncapped)
+  for each athlete, per category:
+      keep the top N positive values (N = 0 → all); dropped values reach no report
+
+  club total = Σ post-cap athlete values, club by IF(EnCountry2=0, EnCountry, EnCountry2)
+               + full team value for teams with an empty roster (warning)
+               (exact arithmetic: team value once minus dropped shares, no float sums)
+  voivodeship total = Σ club totals via PLVoivodeshipMap; empty CoCode = unmapped
 
   for each report r in $preset['reports']:
       SEPARATE(c)     → rows of c, per category, sorted points desc then place asc
-      COMBINED(cs,N)  → per athlete per category: values of cs,
-                        keep top N (N = 0 → all), sum
-      CLUB            → clubs sorted by credited club total
+      COMBINED(cs,N)  → per athlete per category (the athlete's own category):
+                        post-cap values of cs, sum; total 0 → omitted
+      CLUB            → clubs sorted by club total
       VOIVODESHIP     → PLVoivodeshipMap[club.CoCode] grouped, unmapped → "Nieprzypisane"
       skip r entirely if it produced no rows
 
@@ -231,7 +276,9 @@ pl_points_calculate($tourId, $preset):
 
 **[Risk] Overlapping or incomplete brackets in preset data.** Bracket tables are transcribed from PDF annexes and have already produced two defects: the OOM individual table was misread as `7-10` plus `9-16` (correct: `7-10 → 5`, `11-16 → 4`), and the MP Juniorów mixed table is printed in the annex itself as `6-7` followed by `7-10`, overlapping at place 7 (read as `8-10 → 3`). `PresetsTest.php` asserts no overlaps across every shipped preset, so a bad transcription fails the suite instead of silently awarding whichever bracket matches first.
 
-**[Known limitation] OOM voivodeship teams.** The OOM annex scores "zespoły klubowe / wojewódzkie". When a team is entered as a voivodeship rather than a club, `Teams.TeCoId` points at a voivodeship entity and the `CLUB` rollup would credit it as if it were a club. Out of scope here: OOM will get its own spec. Until then, run preset 5 only on tournaments whose teams are club teams.
+**[Known limitation] OOM voivodeship teams.** The OOM annex scores "zespoły klubowe / wojewódzkie" (confirmed in the 2026 annex — OOM only; MM Młodzików explicitly allows club teams only). When a team is entered as a voivodeship rather than a club, `Teams.TeCoId` points at a voivodeship entity and the `CLUB` rollup would credit it as if it were a club. Out of scope here: OOM will get its own spec. Until then, run preset 5 only on tournaments whose teams are club teams.
+
+**[Warning] MM Młodzików minimum participation.** The annex voids the classification below 3 clubs from at least 2 voivodeships. The preset declares `min_participation` and the UI shows a warning when unmet; the reports still render.
 
 **[Risk] Roster table empty for a scored team.** Club credit still lands (D5); the member split is skipped and the HTML view names the team in a warning. Never fails silently.
 
@@ -258,3 +305,7 @@ Resolved:
 - **Presets 1, 2 and 5 brackets** — supplied from the 2026 annexes (Uchwały 24/11/2026, 6/02/2026, 6/07/2026). Note this reassigns the values the earlier draft carried: the table previously labelled Młodzieżowe MP is in fact **MP Juniorów**, and Młodzieżowe MP uses a separate table topping out at 25. OOM no longer shares a table with MP Juniorów.
 - **Puchar Polski mixed, places 17-32** — intentionally absent; at most 16 pairs take part.
 - **LZS individual source** — `QUAL`: the competition shoots qualifications only, no elimination round.
+- **Cap reaches club totals** — the annex Zasady are the rules of the club/voivodeship classification; a value dropped by the cap reaches no club or voivodeship total. D5 revised accordingly (2026-08, from the July 2026 annex update).
+- **MP Juniorów cap is 3** — annex says "trzykrotnie"; the earlier draft carried 2.
+- **Cutoff wording** — applies to zawodnik/zespół/mikst each; "liczba startujących" = competition (qualification) starters; tied worst place → all zeroed (documented interpretation).
+- **MM Młodzików teams** — declared 3-person club rosters, any number per club, no 4th-athlete rule → `three_of_four` off for preset 4; club teams only.

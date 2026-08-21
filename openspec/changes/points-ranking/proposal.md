@@ -40,6 +40,6 @@ A single "preset produces one merged athlete total" model cannot express both. T
 
 - **New files:** `PointsRanking/` (~7 PHP files), two PL-prefixed DB tables (auto-installed).
 - **Modified files:** `menu.php` (two new entries). `CupRanking/Fun_CupRanking.php` if that branch lands first — its label/order helpers move to the shared file.
-- **ianseo tables read (never written):** `Individuals`, `Teams`, `TeamComponent`, `TeamFinComponent`, `Entries`, `Countries`, `Events`, `Divisions`, `Classes`.
+- **ianseo tables read (never written):** `Individuals`, `Teams`, `TeamComponent`, `TeamFinComponent`, `Entries`, `Countries`, `Events`, `EventClass`, `Divisions`, `Classes`.
 - **Reused PL code:** `Diplomas/PLDiplomaPdf.php`, `Diplomas/Fun_Diploma.php` (`pl_diploma_get_config`, `pl_diploma_ensure_tables`), `CupRanking/` conventions.
 - **Regulation reference:** PZŁucz competition annexes for Młodzieżowe MP, MP Juniorów, Puchar Polski (Uchwała Zarządu nr 24/11/2025), Międzywojewódzkie MM Młodzików, OOM, Mistrzostwa KZ LZS.

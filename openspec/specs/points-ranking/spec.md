@@ -16,6 +16,8 @@ The system SHALL allow the operator to select one competition preset for the cur
 ### Requirement: Preset scope filter
 Each preset SHALL declare the set of divisions and classes it scores. Athletes and teams whose event falls outside that scope SHALL be excluded from every classification, report and rollup. A preset with an empty scope declaration SHALL score every division and class present in the tournament.
 
+Individual results are scoped by `Entries.EnDivision` / `EnClass`. A team or mixed event SHALL be scoped through its `EventClass` division/class pairs: the event is in scope when at least one of its `EventClass` pairs falls inside the preset scope.
+
 #### Scenario: Out-of-scope category excluded
 - **WHEN** the LZS preset (scope: division `R`, classes `U24M,U24W,U21M,U21W,U18M,U18W`) is active and the tournament also contains `RM` (Seniorzy) entries
 - **THEN** no `RM` athlete appears in any report and no `RM` result contributes to club or voivodeship totals
@@ -30,6 +32,8 @@ Each preset SHALL declare the set of divisions and classes it scores. Athletes a
 All points assignment, cutoff evaluation, ranking and output sectioning SHALL be scoped to a **category**. For individual results the category is `Entries.EnDivision` concatenated with `Entries.EnClass`; for team and mixed results it is `Teams.TeEvent`. A place of 1 in one category and a place of 1 in another category each receive the full bracket value independently.
 
 Sections SHALL be ordered by division following the PZŁucz display order `R, C, B`, then by the tournament's `Classes.ClViewOrder`. Unknown divisions SHALL follow alphabetically. Section labels SHALL be built from `Divisions.DivDescription` and `Classes.ClDescription`.
+
+In `COMBINED`, `CLUB` and `VOIVODESHIP` reports, a team or mixed share SHALL be attributed to the member's own category (`EnDivision . EnClass`), not to the team event's category — the two members of a mixed pair land in two different sections.
 
 #### Scenario: Same place in two categories
 - **WHEN** athlete A places 1st in `RU21M` and athlete B places 1st in `RU21W`, and the bracket awards 25 points for place 1
@@ -46,7 +50,7 @@ Sections SHALL be ordered by division following the PZŁucz display order `R, C,
 ---
 
 ### Requirement: Rank source per classification
-Each classification SHALL declare its rank source as `QUAL` or `ELIM`. `QUAL` reads `Individuals.IndRank` for individuals and `Teams.TeRank` for teams. `ELIM` reads `Individuals.IndRankFinal` and `Teams.TeRankFinal`. A subject whose place in the declared source is `0` SHALL be treated as having no result and SHALL receive 0 points.
+Each classification SHALL declare its rank source as `QUAL` or `ELIM`. `QUAL` reads `Individuals.IndRank` for individuals and `Teams.TeRank` for teams. `ELIM` reads `Individuals.IndRankFinal` and `Teams.TeRankFinal` as absolute values (`ABS()` — ianseo core writes negative final ranks in some flows). For an event with no elimination phase (`Events.EvFinalFirstPhase = 0`) an `ELIM` classification SHALL fall back to the qualification rank, matching the Diplomas module. A subject whose place in the declared source is `0` SHALL be treated as having no result and SHALL receive 0 points.
 
 #### Scenario: Qualification-only competition
 - **WHEN** the LZS preset declares both its classifications as `QUAL` and the tournament has no elimination round
@@ -59,6 +63,10 @@ Each classification SHALL declare its rank source as `QUAL` or `ELIM`. `QUAL` re
 #### Scenario: No result in the declared source
 - **WHEN** an athlete has `IndRank = 5` but the classification source is `ELIM` and `IndRankFinal = 0`
 - **THEN** the athlete receives 0 points and is omitted from that classification's table
+
+#### Scenario: Category without an elimination round
+- **WHEN** an `ELIM` preset is active and a category's event has `EvFinalFirstPhase = 0` (no elimination round was shot)
+- **THEN** that category is scored from qualification ranks instead of silently disappearing from the reports and club totals
 
 ---
 
@@ -84,12 +92,9 @@ The system SHALL assign points to each athlete based on their place in the class
 ---
 
 ### Requirement: Team points assignment
-The system SHALL assign points to each team from the team's place using the classification's bracket table, then attribute those points twice:
+The system SHALL assign points to each team from the team's place using the classification's bracket table and credit them to the **counting team members** as even shares (`team_points ÷ counting_member_count`). The team's full value reaches the club through those shares (see Club ranking): with a complete roster and no cap drop, the shares sum back to the full table value; a share dropped by the combined cap reduces the club total by exactly that share.
 
-- **to the club**, at full value;
-- **to each counting team member**, split evenly (`team_points ÷ counting_member_count`).
-
-The roster SHALL be read from `TeamComponent` when the classification source is `QUAL`, and from `TeamFinComponent` when the source is `ELIM`. Team size SHALL be read from `Events.EvMaxTeamPerson` and SHALL NOT be hardcoded. The club of a team SHALL be resolved as `IF(EnCountry2 = 0, EnCountry, EnCountry2)`, matching ianseo's own team builder.
+The roster SHALL be read from `TeamComponent` when the classification source is `QUAL`, and from `TeamFinComponent` when the source is `ELIM`. Team size SHALL be read from `Events.EvMaxTeamPerson` and SHALL NOT be hardcoded. The club of a team SHALL be resolved as `IF(EnCountry2 = 0, EnCountry, EnCountry2)`, matching ianseo's own team builder. In the 3-of-4 rule, a tie for the worst qualification place SHALL be broken deterministically (the member with the higher entry id is dropped).
 
 When a preset declares `one_team_per_club`, only `Teams.TeSubTeam = 0` SHALL be scored; further sub-teams of the same club in the same category SHALL be ignored.
 
@@ -116,7 +121,7 @@ When a preset declares `one_team_per_club`, only `Teams.TeSubTeam = 0` SHALL be 
 ---
 
 ### Requirement: Mixed team points assignment
-The system SHALL treat a mixed team as a 2-member team: the pair's bracket points are credited to the club at full value and split evenly between the two members (`÷ 2`). Mixed team events are identified by `Events.EvMixedTeam = 1`.
+The system SHALL treat a mixed team as a 2-member team: the pair's bracket points are split evenly between the two members (`÷ 2`), and reach the club through those shares as for any team. Mixed team events are identified by `Events.EvMixedTeam = 1`.
 
 #### Scenario: Mixed pair ranked 1st
 - **WHEN** a mixed pair places 1st and the bracket awards 25 points
@@ -129,7 +134,9 @@ The system SHALL treat a mixed team as a 2-member team: the pair's bracket point
 ---
 
 ### Requirement: Cutoff rule
-When a classification has cutoff enabled, the system SHALL set the points of the last-placed subject **within each category independently** to 0 when the number of starters in that category (subjects with a valid place, place value < 29999) is less than the maximum `rank_to` in that classification's bracket table.
+When a classification has cutoff enabled, the system SHALL — **within each category independently** — set to 0 the points of every subject sharing the worst place in the classification's rank source, when the number of starters in that category is less than the maximum `rank_to` in that classification's bracket table. A preset's cutoff flag applies to each of its classifications (individual, team, mixed) independently — "ostatni zawodnik/zespół/mikst nie otrzymuje punktów".
+
+Starters SHALL be counted from **qualification** ranks (`IndRank` / `TeRank` valid and < 29999), regardless of the classification's rank source — the annex counts who started, not who reached the eliminations.
 
 #### Scenario: Cutoff applies within one category
 - **WHEN** 12 athletes compete in `RU21M`, the bracket table extends to place 15, and cutoff is enabled
@@ -142,6 +149,14 @@ When a classification has cutoff enabled, the system SHALL set the points of the
 #### Scenario: Cutoff disabled
 - **WHEN** the classification has cutoff disabled
 - **THEN** all subjects with a valid place receive their bracket points; the last subject is not zeroed
+
+#### Scenario: Tie at the worst place
+- **WHEN** the cutoff fires in a category and two subjects share the worst place
+- **THEN** both are zeroed
+
+#### Scenario: Starters counted from qualification
+- **WHEN** 16 athletes started qualification in a category, one qualified for eliminations but withdrew (`IndRankFinal = 0`), and the `ELIM` bracket table extends to place 16
+- **THEN** the starter count is 16 and the cutoff does not fire
 
 ---
 
@@ -172,7 +187,9 @@ A report that yields no rows SHALL be omitted from the output entirely.
 ---
 
 ### Requirement: Combined athlete total and max-events cap
-A `COMBINED` report SHALL sum, per athlete and per category, that athlete's points from each listed classification. When the report declares a cap `N > 0` and the athlete earned points in more than `N` of the listed classifications, only the `N` highest values SHALL be summed. A cap of `0` means unlimited.
+A `COMBINED` report SHALL sum, per athlete and per category (the athlete's own `EnDivision . EnClass`), that athlete's points from each listed classification. The values compared and summed are the athlete-level values: individual points at full value, team and mixed points as the athlete's share. When the report declares a cap `N > 0` and the athlete earned points in more than `N` of the listed classifications, only the `N` highest values SHALL be summed. A cap of `0` means unlimited.
+
+A value dropped by the cap SHALL reach no report — neither the athlete's `Suma` nor any club or voivodeship total. Athletes whose post-cap total is 0 SHALL be omitted from the table.
 
 #### Scenario: Cap drops the lowest value
 - **WHEN** an athlete earns 11 (team), 7 (individual) and 9,5 (mixed) and the cap is 2
@@ -189,7 +206,7 @@ A `COMBINED` report SHALL sum, per athlete and per category, that athlete's poin
 ---
 
 ### Requirement: Ranking order and ties
-Within each table and each section, subjects SHALL be sorted by points descending, then by place ascending. Subjects with equal points SHALL share the same displayed rank.
+Within each table and each section, subjects SHALL be sorted by points descending, then by place ascending. For `COMBINED` rows, whose total spans several classifications, the place tie-break is the best (lowest) place among the classifications that contributed to the total. Subjects with equal points SHALL share the same displayed rank.
 
 #### Scenario: Ordering within a shared bracket
 - **WHEN** athletes placed 9th and 12th both receive 5 points
@@ -202,11 +219,17 @@ Within each table and each section, subjects SHALL be sorted by points descendin
 ---
 
 ### Requirement: Club ranking
-A `CLUB` report SHALL rank clubs by the sum of all points credited to that club — athlete points from every classification listed by the preset, plus team and mixed points credited at full value. Clubs are identified within the tournament by `Countries.CoId` and across tournaments by `Countries.CoCode`. The table SHALL contain: Miejsce, Klub, Województwo (when a `VOIVODESHIP` report is also declared), Suma.
+A `CLUB` report SHALL rank clubs by the sum of the **post-cap** athlete values attributed to that club: each athlete contributes their combined total after the cap, so a value dropped by the cap reaches no club or voivodeship total. When the preset declares no `COMBINED` report, club totals are uncapped. Team and mixed points reach the club through the counting members' shares and therefore sum to the team's full table value when the roster is complete; the arithmetic SHALL be exact — credit the team value once and subtract dropped shares, never accumulate fractional shares. A scored team with no roster rows SHALL still credit its full value to the club (with a warning), as no member attribution is possible.
+
+The club of an athlete SHALL be resolved as `IF(EnCountry2 = 0, EnCountry, EnCountry2)` — the same rule as for teams, so an athlete's individual and team points always credit the same club. Clubs are identified within the tournament by `Countries.CoId` and across tournaments by `Countries.CoCode`. The table SHALL contain: Miejsce, Klub, Województwo (when a `VOIVODESHIP` report is also declared), Suma.
 
 #### Scenario: Club aggregation
 - **WHEN** athletes of "Łucznik Kraków" total 9, 7 and 5 individually and the club's team places 1st for 9 points
 - **THEN** the club total is 30
+
+#### Scenario: Cap reaches the club total
+- **WHEN** the cap is 2 and an athlete earns 6 (individual), 9 (team share) and 8 (mixed share)
+- **THEN** the individual 6 is dropped and the athlete contributes 17 to the club total, not 23
 
 #### Scenario: No club report declared
 - **WHEN** the active preset declares no `CLUB` report
@@ -215,7 +238,7 @@ A `CLUB` report SHALL rank clubs by the sum of all points credited to that club 
 ---
 
 ### Requirement: Voivodeship ranking
-A `VOIVODESHIP` report SHALL rank voivodeships by the sum of club totals, using the `PLVoivodeshipMap` mapping. Clubs with no mapping SHALL be shown in the club table with "Nieprzypisane" and SHALL be excluded from voivodeship totals.
+A `VOIVODESHIP` report SHALL rank voivodeships by the sum of club totals, using the `PLVoivodeshipMap` mapping. Clubs with no mapping — including clubs with an empty `CoCode` — SHALL be shown in the club table with "Nieprzypisane" and SHALL be excluded from voivodeship totals.
 
 #### Scenario: Voivodeship aggregation
 - **WHEN** three clubs mapped to "małopolskie" have totals 60, 45 and 30
@@ -295,13 +318,13 @@ Presets SHALL be defined as PHP constant arrays in `Presets.php` and read direct
 | # | Preset | Scope | Reports | Cutoff | Source |
 |---|---|---|---|---|---|
 | 1 | Młodzieżowe Mistrzostwa Polski | all | `COMBINED(ind,tea,mix, cap 3)`, `CLUB`, `VOIVODESHIP` | YES | ELIM |
-| 2 | Mistrzostwa Polski Juniorów | all | `COMBINED(ind,tea,mix, cap 2)`, `CLUB`, `VOIVODESHIP` | YES | ELIM |
+| 2 | Mistrzostwa Polski Juniorów | all | `COMBINED(ind,tea,mix, cap 3)`, `CLUB`, `VOIVODESHIP` | YES | ELIM |
 | 3 | Puchar Polski — runda | all | `SEPARATE(ind)`, `SEPARATE(mix)` | NO | ELIM |
 | 4 | Międzywojewódzkie Mistrzostwa Młodzików | all | `COMBINED(ind,tea,mix, cap 2)`, `CLUB`, `VOIVODESHIP` | YES | QUAL |
 | 5 | Ogólnopolska Olimpiada Młodzieży | all | `COMBINED(ind,tea,mix, cap 2)`, `CLUB`, `VOIVODESHIP` | YES | ELIM |
 | 6 | Mistrzostwa Krajowego Zrzeszenia LZS | `R` × `U24M,U24W,U21M,U21W,U18M,U18W` | `COMBINED(ind,tea, cap 0)`, `SEPARATE(tea)`, `CLUB`, `VOIVODESHIP` | NO | QUAL |
 
-Presets 1, 2, 4 and 5 enable `three_of_four`. Preset 6 enables `one_team_per_club`.
+Presets 1, 2 and 5 enable `three_of_four` (their annexes carry the 4th-athlete rule). Preset 4 does **not**: MM Młodzików teams and mixed teams are **declared** 3-person club rosters ("trzech zgłoszonych zawodników"), entered by the operator as ianseo team entries — any number of sub-teams per club, all scoring, club teams only. Preset 4 declares `min_participation` (3 clubs, 2 voivodeships). Preset 6 enables `one_team_per_club`.
 
 **Brackets — preset 3 (Puchar Polski), covers juniorzy młodsi, juniorzy and seniorzy in every division:**
 
@@ -357,6 +380,15 @@ Each classification's bracket table ends at a different place because the fields
 #### Scenario: Preset values change with the code
 - **WHEN** a preset's point value is edited in `Presets.php` and the module is updated
 - **THEN** the new value is used on the next calculation with no database migration or re-seed
+
+---
+
+### Requirement: Minimum participation warning
+A preset MAY declare a minimum participation threshold (`min_participation`: minimum number of clubs and minimum number of voivodeships represented in the scored results). When the threshold is not met, the system SHALL show a warning that the annex voids the classification, and SHALL still render the reports. Preset 4 (MM Młodzików) declares 3 clubs from 2 voivodeships.
+
+#### Scenario: Threshold unmet
+- **WHEN** the MM Młodzików preset is active and the scored results contain 2 clubs from 1 voivodeship
+- **THEN** a warning is shown and the reports are still rendered
 
 ---
 
