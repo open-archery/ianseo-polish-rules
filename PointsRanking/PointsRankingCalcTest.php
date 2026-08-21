@@ -90,6 +90,21 @@ final class PointsRankingCalcTest extends \PHPUnit\Framework\TestCase
         $this->assertSame(0, $result[2]['points']);
     }
 
+    public function testCutoffZeroesTheRealLastPlaceNotADsqSentinel(): void
+    {
+        // A DSQ row (place >= 29999) must not be picked as "worst place" — the
+        // real last-place finisher (12) is the one the cutoff should zero.
+        $rows = [
+            ['category' => 'RU21M', 'place' => 1, 'points' => 25],
+            ['category' => 'RU21M', 'place' => 12, 'points' => 5],
+            ['category' => 'RU21M', 'place' => 29999, 'points' => 0],
+        ];
+        $result = \pl_points_apply_cutoff($rows, 15, ['RU21M' => 12]);
+
+        $this->assertSame(0, $result[1]['points']); // real last place, zeroed
+        $this->assertSame(0, $result[2]['points']); // DSQ, already 0
+    }
+
     public function testCutoffIsPerCategory(): void
     {
         $rows = [

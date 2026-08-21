@@ -339,6 +339,20 @@ final class Fun_PointsRankingTest extends \PlTestCase
         $this->assertSame(4, $starters['team']['RM']);
     }
 
+    public function testLoadStartersFiltersToSubTeamZeroWhenOneTeamPerClub(): void
+    {
+        \pl_points_load_starters(1, ['team' => ['RM' => []]], true);
+
+        $this->assertCount(1, \FakeDb::executed('/AND Teams\.TeSubTeam = 0/'));
+    }
+
+    public function testLoadStartersDoesNotFilterSubTeamByDefault(): void
+    {
+        \pl_points_load_starters(1, ['team' => ['RM' => []]]);
+
+        $this->assertCount(0, \FakeDb::executed('/AND Teams\.TeSubTeam = 0/'));
+    }
+
     // --- pl_points_load_entries_directory -----------------------------------
 
     public function testLoadEntriesDirectoryMapsClubAndCategory(): void

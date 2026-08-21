@@ -463,9 +463,12 @@ function pl_points_load_parent_ranks($tourId, array $enIds, $teamEvent)
  * Qualification-starter counts per category, regardless of the classification's
  * own rank source (D10): IndRank/TeRank valid (> 0, < 29999).
  *
+ * @param bool $oneTeamPerClub When true, count only TeSubTeam = 0 — a club's
+ *   further sub-teams are never scored under that preset, so they must not
+ *   inflate the starter count the cutoff compares against.
  * @return array{individual: array<string,int>, team: array<string,int>}
  */
-function pl_points_load_starters($tourId, array $categories)
+function pl_points_load_starters($tourId, array $categories, bool $oneTeamPerClub = false)
 {
     $tourId = intval($tourId);
     $starters = ['individual' => [], 'team' => []];
@@ -492,6 +495,7 @@ function pl_points_load_starters($tourId, array $categories)
     $teamKeys = array_keys($categories['team'] ?? []);
     if (!empty($teamKeys)) {
         $inList = implode(',', array_map(fn ($k) => StrSafe_DB($k), $teamKeys));
+        $subTeamFilter = $oneTeamPerClub ? 'AND Teams.TeSubTeam = 0 ' : '';
         $sql = "
             SELECT Teams.TeEvent AS Category, COUNT(*) AS Cnt
             FROM Teams
@@ -499,6 +503,7 @@ function pl_points_load_starters($tourId, array $categories)
             AND Teams.TeFinEvent = 1
             AND Teams.TeRank > 0 AND Teams.TeRank < 29999
             AND Teams.TeEvent IN ($inList)
+            $subTeamFilter
             GROUP BY Category
         ";
         $Rs = safe_r_sql($sql);

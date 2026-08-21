@@ -57,8 +57,16 @@ function pl_points_apply_cutoff(array $rows, int $maxRankTo, array $startersByCa
         if ($starters >= $maxRankTo) {
             continue;
         }
-        $worstPlace = max(array_map(fn ($i) => $rows[$i]['place'], $indices));
-        foreach ($indices as $i) {
+        // DSQ/DNS/DNF (place >= 29999) already score 0 via the bracket lookup and
+        // must not be picked as the "worst place" — max() would otherwise let a
+        // DSQ sentinel outrank the real last-place finisher, who then keeps their
+        // bracket points instead of being the one the cutoff actually zeroes.
+        $validIndices = array_filter($indices, fn ($i) => $rows[$i]['place'] > 0 && $rows[$i]['place'] < 29999);
+        if (empty($validIndices)) {
+            continue;
+        }
+        $worstPlace = max(array_map(fn ($i) => $rows[$i]['place'], $validIndices));
+        foreach ($validIndices as $i) {
             if ($rows[$i]['place'] === $worstPlace) {
                 $rows[$i]['points'] = 0;
             }
@@ -548,7 +556,7 @@ function pl_points_calculate($tourId, array $preset): array
     require_once __DIR__ . '/Fun_PointsRanking.php';
 
     $categories = pl_points_load_categories($tourId, $preset['scope']);
-    $starters = pl_points_load_starters($tourId, $categories);
+    $starters = pl_points_load_starters($tourId, $categories, !empty($preset['one_team_per_club']));
     $directory = pl_points_load_entries_directory($tourId);
     $voivodeshipMap = pl_points_get_voivodeship_map();
 
