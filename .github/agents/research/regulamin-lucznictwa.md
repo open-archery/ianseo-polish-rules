@@ -2640,9 +2640,13 @@ słowa strzała rozumianego w ten sam sposób jak w łucznictwie tarczowym oraz 
 
 3.4.6.2. Na koniec każdej rundy, każda kategoria zmienia ścieżkę, na której odbywa się pojedynek tak, aby zawodnik nie strzelał dwa razy na tych samych celach
 
-3.4.6.3. Pojedynki w 1/8 oraz 1/4 rundy eliminacyjnej odbywają się na 6 celach. W 1/2 oraz finałach pojedynki odbywają się na 4 celach. W każdej grupie celów powinny występować wszystkie rozmiary tarcz. Pojedynek odbywa się na celach oznaczonych. Zawodnicy strzelają jednocześnie.
+3.4.6.3. Pojedynki w 1/8 oraz 1/4 rundy eliminacyjnej odbywają się na 6 celach. W 1/2 oraz finałach pojedynki odbywają się na 4 celach.
 
-3.4.6.4. Jeśli jest mniej niż 16 zawodników, wtedy koszyki będą składały się ze wszystkich dopuszczonych do zawodów zawodników.
+3.4.6.3.1. W przypadku łucznictwa terenowego pojedynek odbywa się na celach oznaczonych. Zawodnicy strzelają jednocześnie. Na celach w danej fazie rundy eliminacyjnej powinny być wykorzystane wszystkie rozmiary tarcz.
+
+3.4.6.3.2. W przypadku łucznictwa 3D pojedynek odbywa się na celach nieoznaczonych. Zawodnicy strzelają jednocześnie.
+
+3.4.6.4. Jeśli jest mniej niż 16 zawodników, wtedy w rundzie eliminacyjnej biorą udział wszyscy zawodnicy dopuszczeni do zawodów w danej kategorii.
 
 3.4.6.5. 8 najwyżej sklasyfikowanych zespołów strzela pojedynki ćwierćfinałowe składające się z 4 celów.
 
@@ -2704,7 +2708,7 @@ słowa strzała rozumianego w ten sam sposób jak w łucznictwie tarczowym oraz 
 
 - W rundzie terenowej, trzy strzały, na każdym celu podczas każdej rundy
 
-- W rundzie 3D, dwie strzały na cel podczas rundy kwalifikacyjnej, jedna strzała na cel podczas rundy eliminacyjnej i finałowej.
+- W rundzie 3D, dwie strzały na cel podczas rundy kwalifikacyjnej oraz dwie strzały na cel podczas rundy eliminacyjnej i finałowej.
 
 3.5.3.2. Strzelania drużynowe
 
@@ -2712,9 +2716,9 @@ słowa strzała rozumianego w ten sam sposób jak w łucznictwie tarczowym oraz 
 
 3.5.3.3. Strzelania zespołów mieszanych:
 
-- W zespołach mieszanych, zawodnicy strzelają po 2 strzały w przypadku zawodów terenowych i jedną strzałę podczas zawodów 3D. Na pierwszym celu wyżej sklasyfikowana drużyna decyduje, kto rozpoczyna strzelania. Na następnych celach rozpoczyna drużyna z niższym wynikiem całkowitym. W przypadku remisu rozpoczyna drużyna, która rozpoczęła pojedynek.
+- W zespołach mieszanych, zawodnicy strzelają po dwie strzały w przypadku zawodów terenowych oraz po dwie strzały podczas zawodów 3D. Na pierwszym celu wyżej sklasyfikowana drużyna decyduje, kto rozpoczyna strzelanie. Na następnych celach rozpoczyna drużyna z niższym wynikiem całkowitym. W przypadku remisu rozpoczyna drużyna, która rozpoczęła pojedynek.
 
-- Podczas strzelań zespołów mieszanych podczas zawodów terenowych, zawodnicy muszą zmieniać się po każdej strzale.
+- Podczas strzelań zespołów mieszanych w zawodach terenowych zawodnicy muszą zmieniać się po każdej strzale.
 
 3.5.4. Żaden zawodnik nie może podchodzić do celu, póki wszyscy zawodnicy nie zakończyli swoich strzelać, jeśli nie uzyskał zgody sędziego
 
@@ -2802,11 +2806,11 @@ strzelań w rundzie eliminacyjnej
 
 - 3D: 2 minuty podczas kwalifikacji
 
-- 3D: 1 minuta podczas eliminacji
+- 3D: 90 sekund podczas eliminacji
 
 - Zespołowe strzelania terenowe lub 3D: 2 minuty
 
-- Zawody 3D strzelania zespołów mieszanych: 90 sekund
+- Zawody 3D strzelania zespołów mieszanych: 160 sekund
 
 3.6.8.2. Jeśli sędziowie ponownie zmierzą przekroczenie limitu czasu przez zawodnika lub grupę wtedy ponownie ostrzegają zawodnika i zapisują odpowiednią informację na metryczce.
 
