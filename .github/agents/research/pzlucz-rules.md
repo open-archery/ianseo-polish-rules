@@ -88,7 +88,7 @@
 ### 1.5 3D Archery (§3.2, §3.4)
 
 - 24 targets (3D animal figures), 2 arrows per target in qualification = 48 arrows
-- 1 arrow per target in elimination
+- 2 arrows per target in elimination
 - Unmarked distances only:
   - Red peg (R, C): max 45m, min 5m
   - Blue peg (B, T, L): max 30m, min 5m
@@ -381,7 +381,7 @@ Same structure as outdoor teams (3 or 4 members, set/cumulative system).
 
 ### 6.6 Field/3D Elimination (§3.4)
 
-**Bracket:** Top 16 individuals → seeded bracket
+**Bracket:** Top 16 individuals → seeded bracket (if fewer than 16 are entered in a category, all eligible archers take part in the elimination round)
 
 **Field elimination match:**
 
@@ -392,8 +392,8 @@ Same structure as outdoor teams (3 or 4 members, set/cumulative system).
 
 **3D elimination match:**
 
-- 1/8 and 1/4: 6 targets, 1 arrow each
-- 1/2 and Finals: 4 targets, 1 arrow each
+- 1/8 and 1/4: 6 unmarked targets, 2 arrows each
+- 1/2 and Finals: 4 unmarked targets, 2 arrows each
 - Same set/cumulative rules
 
 ### 6.7 Finals Format (§2.5.3)
@@ -522,9 +522,9 @@ Calculated totals: e.g., 6-arrow end simultaneous = 180s; 3-arrow end simultaneo
 | Field elim.      | 2 min |
 | Field mixed team | 160s  |
 | 3D qual.         | 2 min |
-| 3D elim.         | 1 min |
+| 3D elim.         | 90s   |
 | Team field/3D    | 2 min |
-| 3D mixed team    | 90s   |
+| 3D mixed team    | 160s  |
 
 ---
 
