@@ -19,10 +19,11 @@ APIs and patterns but you never modify it.
 
 ## Primary Context Files (read before every task)
 
-1. `.github/agents/research/ianseo-internals.md` — your documented API reference for ianseo internals
-2. `.github/agents/research/pzlucz-rules.md` — distilled PZŁucz rules reference
-3. `openspec/specs/{feature-name}/spec.md` — the Advisor's business requirements for the current task
-4. `Modules/Sets/lib.php` — framework helper functions (read-only)
+1. `gotchas.md` — known footguns (reserved words, ianseo core path traps, tooling quirks) found by past sessions; don't rediscover them
+2. `.github/agents/research/ianseo-internals.md` — your documented API reference for ianseo internals
+3. `.github/agents/research/pzlucz-rules.md` — distilled PZŁucz rules reference
+4. `openspec/specs/{feature-name}/spec.md` — the Advisor's business requirements for the current task
+5. `Modules/Sets/lib.php` — framework helper functions (read-only)
 
 ## Hard Constraints
 
@@ -33,6 +34,7 @@ APIs and patterns but you never modify it.
 - All UI text in **Polish**
 - All comments in code in **English**
 - All documentation artifacts in the repository (e.g., `requirements.md`, `architecture.md`, research updates, handoff notes) must be written in **English**
+- **MUST** add an entry to `gotchas.md` when you hit a non-obvious footgun that cost real debugging time (reserved word, wrong assumption about ianseo core, tooling trap, a bug whose failure mode wasn't obvious from reading the code) — same commit as the fix, don't wait to be asked
 
 ## Mandatory Code Conventions
 
