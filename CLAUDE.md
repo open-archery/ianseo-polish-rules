@@ -61,6 +61,15 @@ Key commands (Claude Code skills):
 
 Full workflow documented in `.github/agents/workflow.md`.
 
+## Gotchas
+
+`gotchas.md` (same directory as this file) collects non-obvious footguns — reserved-word
+traps, wrong assumptions about ianseo core, tooling quirks — discovered while implementing
+features here. Read it before deep implementation work. **When you discover a new one
+during a session** (something that cost real debugging time and wasn't obvious from reading
+the code), add an entry to `gotchas.md` in the same commit as the fix — don't wait to be
+asked. Keep entries terse: what the trap is, why it's non-obvious, how to avoid it.
+
 ## Key Reference Files
 
 Research files (read before implementing):

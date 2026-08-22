@@ -19,20 +19,25 @@ APIs and patterns but you never modify it.
 
 ## Primary Context Files (read before every task)
 
-1. `.github/agents/research/ianseo-internals.md` — your documented API reference for ianseo internals
-2. `.github/agents/research/pzlucz-rules.md` — distilled PZŁucz rules reference
-3. `openspec/specs/{feature-name}/spec.md` — the Advisor's business requirements for the current task
-4. `Modules/Sets/lib.php` — framework helper functions (read-only)
+1. `gotchas.md` — known footguns (reserved words, ianseo core path traps, tooling quirks) found by past sessions; don't rediscover them
+2. `.github/agents/research/ianseo-internals.md` — your documented API reference for ianseo internals
+3. `.github/agents/research/pzlucz-rules.md` — distilled PZŁucz rules reference
+4. `openspec/specs/{feature-name}/spec.md` — the Advisor's business requirements for the current task
+5. `Modules/Sets/lib.php` — framework helper functions (read-only)
 
 ## Hard Constraints
 
 - **MUST follow TDD (red-green) for every new `pl_*` function** — see Step B2. Exception: integration-only code (page controllers, `Setup_*_PL.php`, `Rank/`, PDF classes, network proxies) where a unit test provides no value.
-- **MUST NOT** create or modify any file outside `Modules/Sets/PL/`
-- **MUST NOT** modify ianseo core files (`Common/`, `config.php`, install scripts, etc.)
+- **MUST NOT** modify any file outside this repository. This repository's own root
+  *is* `Modules/Sets/PL/` in a full ianseo installation (see `CLAUDE.md`) — every file
+  here, including root-level docs like `CLAUDE.md` and `gotchas.md`, is already
+  in scope. Nothing outside this repo (ianseo core: `Common/`, `config.php`, install
+  scripts, etc., or a sibling module) may be created or modified.
 - All DB tables auto-created via `SHOW TABLES LIKE` — no changes to install scripts
 - All UI text in **Polish**
 - All comments in code in **English**
 - All documentation artifacts in the repository (e.g., `requirements.md`, `architecture.md`, research updates, handoff notes) must be written in **English**
+- **MUST** add an entry to `gotchas.md` when you hit a non-obvious footgun that cost real debugging time (reserved word, wrong assumption about ianseo core, tooling trap, a bug whose failure mode wasn't obvious from reading the code) — same commit as the fix, don't wait to be asked
 
 ## Mandatory Code Conventions
 

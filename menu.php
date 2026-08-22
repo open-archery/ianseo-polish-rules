@@ -3,6 +3,8 @@
 if($on and $_SESSION["TourLocRule"]=='PL'){
   $ret['PRNT'][] = MENU_DIVIDER;
   $ret['PRNT'][] = 'Dyplomy|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/Diplomas/Diplomas.php';
+  $ret['PRNT'][] = 'Klasyfikacja punktowa|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/PointsRanking/PointsRanking.php';
+  $ret['PRNT'][] = 'Mapa województw|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/PointsRanking/VoivodeshipMap.php';
 
   $ret['PART']['SYNC'][] = 'Import by licence|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/Import/BibImport.php';
   $ret['PART']['SYNC'][] = MENU_DIVIDER;
