@@ -6,10 +6,15 @@ if($on and $_SESSION["TourLocRule"]=='PL'){
   $ret['PRNT'][] = 'Klasyfikacja punktowa|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/PointsRanking/PointsRanking.php';
   $ret['PRNT'][] = 'Mapa województw|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/PointsRanking/VoivodeshipMap.php';
 
+  $ret['QUAL'][] = MENU_DIVIDER;
+  $ret['QUAL'][] = 'Weryfikacja kart|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/ScorecardsOCR/ScorecardsOcr.php';
+
   $ret['PART']['SYNC'][] = 'Import by licence|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/Import/BibImport.php';
   $ret['PART']['TARG'][] = 'Rozstaw. tarcze ABC/ACD|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/Targets/SetTargetABCACD.php';
   $ret['PART']['SYNC'][] = MENU_DIVIDER;
   $ret['PART']['SYNC'][] = 'Install Sportzona|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/Lookup/Install.php';
+
+  $ret['MODS'][] = 'Konfiguracja OCR|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/ScorecardsOCR/OcrConfig.php';
 }
 /*
 
