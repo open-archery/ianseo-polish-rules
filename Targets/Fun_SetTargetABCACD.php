@@ -33,10 +33,11 @@ function pl_abc_acd_build_slots(int $from, int $to): array
  * Placing whole clubs in single columns keeps teammates on consecutive bosses
  * and on a consistent wave. Smaller clubs that don't fit in A or C get B or D.
  *
- * $waveTally biases the A-vs-C choice per club (PZŁucz §2.5.1.5, cross-class
- * balance within a session): a club that is wave1-heavy from classes already
- * saved in the same session prefers column C now, and vice versa. An empty
- * tally (the default) reproduces the plain rank-order behavior above.
+ * $waveTally biases the A-vs-C (and, for clubs 2+, B-vs-D) choice per club
+ * (PZŁucz §2.5.1.5, cross-class balance within a session): a club that is
+ * wave1-heavy from classes already saved in the same session prefers column
+ * C (and D over B) now, and vice versa. An empty tally (the default)
+ * reproduces the plain rank-order behavior above.
  *
  * @param  array $clubs     club_code => [[id, name, club], ...]  (sorted DESC by size)
  * @param  array $slots     ordered slot strings from pl_abc_acd_build_slots()
@@ -118,8 +119,8 @@ function pl_abc_acd_assign(array $clubs, array $slots, array $waveTally = []): a
 
     // Clubs 2+: fit the whole club into the first column that has enough room.
     // Priority: remaining A → remaining C → B → D → slot-by-slot fallback.
-    // A wave1-heavy club tries remaining C before remaining A; the B → D tail
-    // never changes (B/D are fixed leftover slots, not an assignable choice).
+    // needA also decides the B-vs-D order (B=wave1, D=wave2), same as A-vs-C:
+    // a wave1-heavy club tries remaining C then D before A then B.
     $pool = [
         'A' => array_slice($colA, $swap ? $idx1 : $idx0),
         'C' => array_slice($colC, $swap ? $idx0 : $idx1),
@@ -131,7 +132,7 @@ function pl_abc_acd_assign(array $clubs, array $slots, array $waveTally = []): a
     foreach (array_slice($clubCodes, 2) as $i => $code) {
         $athletes = $clubList[$i + 2];
         $n        = count($athletes);
-        $order    = $needA($code) < 0 ? ['C', 'A', 'B', 'D'] : ['A', 'C', 'B', 'D'];
+        $order    = $needA($code) < 0 ? ['C', 'A', 'D', 'B'] : ['A', 'C', 'B', 'D'];
 
         $placed = false;
         foreach ($order as $cn) {
@@ -142,12 +143,22 @@ function pl_abc_acd_assign(array $clubs, array $slots, array $waveTally = []): a
             }
         }
         if (!$placed) {
-            // Club is larger than any remaining single column — fill slot by slot
+            // Club is larger than any remaining single column — fill slot by
+            // slot in the same needA-biased order, skipping any slot whose
+            // boss this club already occupies so two of its athletes never
+            // land on the same boss.
+            $usedBosses = [];
             foreach ($athletes as $a) {
                 $done = false;
-                foreach (['A', 'C', 'B', 'D'] as $cn) {
+                foreach ($order as $cn) {
+                    while ($poolIdx[$cn] < count($pool[$cn])
+                        && in_array((int)$pool[$cn][$poolIdx[$cn]], $usedBosses, true)) {
+                        $poolIdx[$cn]++;
+                    }
                     if ($poolIdx[$cn] < count($pool[$cn])) {
-                        $assignments[$pool[$cn][$poolIdx[$cn]++]] = $a;
+                        $slot = $pool[$cn][$poolIdx[$cn]++];
+                        $assignments[$slot] = $a;
+                        $usedBosses[] = (int)$slot;
                         $done = true;
                         break;
                     }
@@ -224,7 +235,7 @@ function pl_abc_acd_session_wave_tally(int $tourId, int $sesOrder, string $exclu
         . " WHERE EnTournament=" . StrSafe_DB($tourId)
         . "   AND QuSession=" . StrSafe_DB($sesOrder)
         . "   AND QuTarget!=0"
-        . "   AND CONCAT(TRIM(EnDivision),TRIM(EnClass)) NOT LIKE " . StrSafe_DB($excludeEvent)
+        . "   AND CONCAT(TRIM(EnDivision),TRIM(EnClass)) != " . StrSafe_DB($excludeEvent)
     );
 
     $tally = [];

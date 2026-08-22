@@ -29,4 +29,8 @@ When assigning a class, the system SHALL compute each club's existing wave1 (let
 
 #### Scenario: Overflow clubs are biased too
 - **WHEN** a club placed via the "first column that fits" overflow rule (not the largest or second-largest club in the class) already has an imbalanced wave tally from earlier classes in the same session
-- **THEN** the system searches the column matching that club's greater need (remaining C before remaining A, or vice versa) before falling back to the default remaining-A-then-remaining-C order
+- **THEN** the system evaluates the columns in the order matching that club's greater need: remaining C before remaining A when the club is wave1-heavy, or remaining A before remaining C otherwise
+
+#### Scenario: Bias also reorders the B/D fallback columns
+- **WHEN** a club placed via the overflow rule is wave1-heavy and does not fit into a single remaining A or C column
+- **THEN** the system tries remaining D (wave2) before remaining B (wave1), and the slot-by-slot fallback (used when no single column has enough room) walks columns in that same club-specific order

@@ -163,6 +163,35 @@ final class SetTargetABCACDTest extends \PlTestCase
         $this->assertSame([], $unassigned);
     }
 
+    public function testSlotBySlotFallbackNeverDoublesUpAClubOnOneBoss(): void
+    {
+        // 2 bosses (1-2): club0 takes 1A, club1 takes 1C, leaving remaining
+        // A=[2A], C=[2C], B=[1B], D=[2D]. Club2 has 2 athletes and doesn't
+        // fit any single remaining column, so it falls back slot-by-slot.
+        // The naive A->C->B->D walk would place its first athlete on 2A and
+        // its second on 2C -- same boss, different columns. The fallback
+        // must skip 2C (boss already used) and take 1B instead.
+        $clubs = [
+            'C0' => [$this->athlete('1', 'C0')],
+            'C1' => [$this->athlete('2', 'C1')],
+            'C2' => [$this->athlete('3', 'C2'), $this->athlete('4', 'C2')],
+        ];
+        $slots = \pl_abc_acd_build_slots(1, 2); // 1A,1B,1C, 2A,2C,2D
+
+        [$assignments, $unassigned] = \pl_abc_acd_assign($clubs, $slots);
+
+        $this->assertSame('C2', $assignments['2A']['club']);
+        $this->assertSame('C2', $assignments['1B']['club']);
+        $this->assertArrayNotHasKey('2C', $assignments);
+        $this->assertSame([], $unassigned);
+
+        $bossesUsed = array_map(fn($slot) => (int)$slot, array_keys(array_filter(
+            $assignments,
+            fn($a) => $a['club'] === 'C2'
+        )));
+        $this->assertSame(count($bossesUsed), count(array_unique($bossesUsed)));
+    }
+
     public function testOverflowAthletesReportedAsUnassigned(): void
     {
         // 1 boss (3 slots: A,B,C), but 4 athletes in a single club.
@@ -270,6 +299,26 @@ final class SetTargetABCACDTest extends \PlTestCase
         $this->assertArrayNotHasKey('3A', $assignments);
     }
 
+    public function testOverflowClubWithWaveOneHeavyHistoryPrefersDOverB(): void
+    {
+        // 2 bosses (1-2): club0 fills 1A,2A; club1 fills 1C,2C, exhausting A/C.
+        // Remaining B/D: [1B] (wave1), [2D] (wave2). SMALL is wave1-heavy this
+        // session, so it should take remaining D (wave2) over remaining B.
+        $clubs = [
+            'BIG'   => [$this->athlete('1', 'BIG'), $this->athlete('2', 'BIG')],
+            'MID'   => [$this->athlete('3', 'MID'), $this->athlete('4', 'MID')],
+            'SMALL' => [$this->athlete('5', 'SMALL')],
+        ];
+        $slots = \pl_abc_acd_build_slots(1, 2); // 1A,1B,1C, 2A,2C,2D
+        $tally = ['SMALL' => ['wave1' => 3, 'wave2' => 0]];
+
+        [$assignments, $unassigned] = \pl_abc_acd_assign($clubs, $slots, $tally);
+
+        $this->assertSame('SMALL', $assignments['2D']['club']);
+        $this->assertArrayNotHasKey('1B', $assignments);
+        $this->assertSame([], $unassigned);
+    }
+
     // --- pl_abc_acd_session_wave_tally -----------------------------------------
 
     public function testSessionWaveTallySplitsWavesByLetterPerClub(): void
@@ -291,7 +340,23 @@ final class SetTargetABCACDTest extends \PlTestCase
     {
         \pl_abc_acd_session_wave_tally(7, 2, 'RMO');
 
-        $this->assertCount(1, \FakeDb::executed("/CONCAT\\(TRIM\\(EnDivision\\),TRIM\\(EnClass\\)\\) NOT LIKE 'RMO'/"));
+        $this->assertCount(1, \FakeDb::executed("/CONCAT\\(TRIM\\(EnDivision\\),TRIM\\(EnClass\\)\\) != 'RMO'/"));
+    }
+
+    public function testSessionWaveTallyExcludesOnlyExactClassWhenEventHasWildcards(): void
+    {
+        // Event values may contain SQL LIKE wildcards (%, _) since the page
+        // permits them for matching. The exclusion must compare the value
+        // literally so a wildcard-bearing event doesn't accidentally exclude
+        // every class and silently empty the tally.
+        \FakeDb::on('/SELECT CoCode EnCountry, QuLetter/', [
+            ['EnCountry' => 'AZS', 'QuLetter' => 'A'],
+        ]);
+
+        $tally = \pl_abc_acd_session_wave_tally(7, 2, 'R%');
+
+        $this->assertCount(1, \FakeDb::executed("/CONCAT\\(TRIM\\(EnDivision\\),TRIM\\(EnClass\\)\\) != 'R%'/"));
+        $this->assertSame(['wave1' => 1, 'wave2' => 0], $tally['AZS']);
     }
 
     public function testSessionWaveTallyFiltersByTournamentAndSession(): void
