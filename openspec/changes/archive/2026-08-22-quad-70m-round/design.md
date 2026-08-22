@@ -24,7 +24,7 @@ Pattern precedent: `FR/sets.php` registers ~10 named sub-rules under its single 
 
 ### Decision 1: Branch inside the existing `Setup_3_PL.php`, not a new file
 
-**Choice:** `$isDouble = ($SubRule === 'Poland-4x70m');` near the top of the script; everything downstream reads that flag.
+**Choice:** `$isDouble = (isset($subRuleName) && $subRuleName === 'Poland-4x70m');` near the top of the script; everything downstream reads that flag. `$SubRule` itself is a raw 1-based dropdown position from the real tournament-creation form (`Tournament/index.php`), not the rule name — `$subRuleName` is the actual looked-up string, reachable because `GetSetupFile()`'s `require_once` shares its own local scope with the required setup file.
 
 **Alternative considered:** A separate `Setup_3_PL_4x70m.php`. Rejected — ianseo's setup-file resolution keys only on `{Type}_{Lang}`, never on `$SubRule` (confirmed: `FR` handles ~10 sub-rules from one file). A second file would never be picked up.
 
@@ -35,22 +35,35 @@ Pattern precedent: `FR/sets.php` registers ~10 named sub-rules under its single 
 ```php
 function pl_double_legs($legs, $isDouble) {
     if (!$isDouble) return $legs;
+
+    $counts = array();
+    $order  = array();
+    foreach ($legs as $leg) {
+        $meters = $leg[1];
+        if (!isset($counts[$meters])) {
+            $counts[$meters] = 0;
+            $order[] = $meters;
+        }
+        $counts[$meters]++;
+    }
+
     $out = array();
-    foreach ($legs as $i => $leg) {
-        $out[] = array($leg[0] . 'a', $leg[1]);
-        $out[] = array($leg[0] . 'b', $leg[1]);
+    foreach ($order as $meters) {
+        for ($i = 1; $i <= $counts[$meters] * 2; $i++) {
+            $out[] = array($meters . 'm-' . $i, $meters);
+        }
     }
     return $out;
 }
 ```
 
-Wrap the existing distances argument at each of the ~13 `CreateDistanceNew()` call sites, e.g.:
+Wrap the existing distances argument at each of the 14 `CreateDistanceNew()` call sites, e.g.:
 
 ```php
 CreateDistanceNew($TourId, $TourType, 'RM', pl_double_legs(array(array('70m-1', 70), array('70m-2', 70)), $isDouble));
 ```
 
-This turns `[70m-1, 70m-2]` into `[70m-1a, 70m-1b, 70m-2a, 70m-2b]` (four 70m legs) and turns U15's `[40m, 20m]` into `[40m-a, 40m-b, 20m-a, 20m-b]` — exactly 40,40,20,20 — **without a special case for U15**. Repeating each existing leg in place, rather than concatenating the whole list to itself, is what produces the correct grouped order for the asymmetric U15 case.
+This groups legs by meters value (in first-appearance order) and relabels each group sequentially: `[70m-1, 70m-2]` (a single 70m group of 2) becomes `[70m-1, 70m-2, 70m-3, 70m-4]`, and U15's `[40m, 20m]` (two distinct groups of 1) becomes `[40m-1, 40m-2, 20m-1, 20m-2]` — **without a special case for U15**. Grouping by meters rather than doubling each leg in place is what keeps the two U15 distances from interleaving.
 
 **Alternative considered:** Hand-write a second full set of `CreateDistanceNew()` calls for the doubled variant (mirroring how `optR`/`optC`/`optB` already get mutated inline for U15/U18 today). Rejected — duplicates ~25 lines of per-class distance data that would need to stay in sync with the `Poland-Full` list forever; the wrapper keeps a single source of truth.
 
@@ -79,7 +92,7 @@ Types 1 and 6 keep only `Poland-Full`.
 
 **[Risk] `EvMatchArrowsNo`/`EvFinalAthTarget` (hardcoded `240`) don't obviously correspond to the 72- or 144-arrow qualification total** → Pre-existing in `Poland-Full`, unrelated to session-count doubling, left untouched. Out of scope for this change.
 
-**[Risk] Mechanical wrapping across ~13 `CreateDistanceNew()` call sites — easy to miss one** → Verification: after implementation, grep `Setup_3_PL.php` for `CreateDistanceNew(` and confirm every call's distances argument is wrapped in `pl_double_legs(...)`.
+**[Risk] Mechanical wrapping across all 14 `CreateDistanceNew()` call sites — easy to miss one** → Verification: after implementation, grep `Setup_3_PL.php` for `CreateDistanceNew(` and confirm every call's distances argument is wrapped in `pl_double_legs(...)`.
 
 **[Trade-off] `pl_double_legs()` is a local, unexported helper (not `lib.php`)** → Scoped to this one file since no other setup script needs session-doubling today; matches the file's existing style of keeping distance logic inline rather than in shared `lib.php`.
 
