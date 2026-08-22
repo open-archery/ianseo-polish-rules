@@ -18,10 +18,15 @@
  *   U15:  EvFinalFirstPhase=0  → brak eliminacji
  */
 
-$TourType = 3;
+$TourType  = 3;
+// $SubRule (from GetSetupFile's real UI caller) is a raw 1-based dropdown
+// position, not the rule name — $subRuleName is the actual looked-up string
+// ('Poland-4x70m'), shared into this scope because GetSetupFile() require_once's
+// this file from inside its own function body.
+$isDouble  = (isset($subRuleName) && $subRuleName === 'Poland-4x70m');   // Podwójna runda: double every session count
 
 $tourDetTypeName        = 'Type_70m Round';
-$tourDetNumDist         = '2';
+$tourDetNumDist         = $isDouble ? '4' : '2';
 $tourDetNumEnds         = '12';
 $tourDetMaxDistScore    = '360';
 $tourDetMaxFinIndScore  = '150';
@@ -35,9 +40,41 @@ $tourDetGoldsChars      = 'KL';
 $tourDetXNineChars      = 'K';
 $tourDetDouble          = '0';
 $DistanceInfoArray      = array(array(6, 6), array(6, 6));
+if ($isDouble) {
+    $DistanceInfoArray = array_merge($DistanceInfoArray, $DistanceInfoArray);
+}
 
 require_once(dirname(__FILE__) . '/lib.php');
 require_once(dirname(dirname(__FILE__)) . '/lib.php');
+
+// Groups legs by meters (in first-appearance order) and doubles each group's
+// session count with sequential "-N" labels, so every class shoots its
+// existing distance(s) twice as many sessions (Podwójna runda) without a
+// special case for the asymmetric U15 [40m, 20m] split — a single 70m×2
+// group becomes 70m-1..70m-4, while 40m×1 + 20m×1 becomes two groups:
+// 40m-1, 40m-2, 20m-1, 20m-2 (not interleaved).
+function pl_double_legs($legs, $isDouble) {
+    if (!$isDouble) return $legs;
+
+    $counts = array();
+    $order  = array();
+    foreach ($legs as $leg) {
+        $meters = $leg[1];
+        if (!isset($counts[$meters])) {
+            $counts[$meters] = 0;
+            $order[] = $meters;
+        }
+        $counts[$meters]++;
+    }
+
+    $out = array();
+    foreach ($order as $meters) {
+        for ($i = 1; $i <= $counts[$meters] * 2; $i++) {
+            $out[] = array($meters . 'm-' . $i, $meters);
+        }
+    }
+    return $out;
+}
 
 // ---- Divisions & Classes ---------------------------------------------------
 CreateStandardDivisions($TourId, $TourType);
@@ -45,29 +82,29 @@ CreateStandardClasses($TourId, $TourType);  // includes U15
 
 // ---- Distances -------------------------------------------------------------
 
-// Recurve — Senior / U24 / U21: 2 × 70 m
-CreateDistanceNew($TourId, $TourType, 'RM',    array(array('70m-1', 70), array('70m-2', 70)));
-CreateDistanceNew($TourId, $TourType, 'RW',    array(array('70m-1', 70), array('70m-2', 70)));
-CreateDistanceNew($TourId, $TourType, 'RU24M', array(array('70m-1', 70), array('70m-2', 70)));
-CreateDistanceNew($TourId, $TourType, 'RU24W', array(array('70m-1', 70), array('70m-2', 70)));
-CreateDistanceNew($TourId, $TourType, 'RU21M', array(array('70m-1', 70), array('70m-2', 70)));
-CreateDistanceNew($TourId, $TourType, 'RU21W', array(array('70m-1', 70), array('70m-2', 70)));
+// Recurve — Senior / U24 / U21: 2 × 70 m (4 × 70 m under Poland-4x70m)
+CreateDistanceNew($TourId, $TourType, 'RM',    pl_double_legs(array(array('70m-1', 70), array('70m-2', 70)), $isDouble));
+CreateDistanceNew($TourId, $TourType, 'RW',    pl_double_legs(array(array('70m-1', 70), array('70m-2', 70)), $isDouble));
+CreateDistanceNew($TourId, $TourType, 'RU24M', pl_double_legs(array(array('70m-1', 70), array('70m-2', 70)), $isDouble));
+CreateDistanceNew($TourId, $TourType, 'RU24W', pl_double_legs(array(array('70m-1', 70), array('70m-2', 70)), $isDouble));
+CreateDistanceNew($TourId, $TourType, 'RU21M', pl_double_legs(array(array('70m-1', 70), array('70m-2', 70)), $isDouble));
+CreateDistanceNew($TourId, $TourType, 'RU21W', pl_double_legs(array(array('70m-1', 70), array('70m-2', 70)), $isDouble));
 
-// Recurve — U18 / Master: 2 × 60 m
-CreateDistanceNew($TourId, $TourType, 'RU18M', array(array('60m-1', 60), array('60m-2', 60)));
-CreateDistanceNew($TourId, $TourType, 'RU18W', array(array('60m-1', 60), array('60m-2', 60)));
-CreateDistanceNew($TourId, $TourType, 'R50M',  array(array('60m-1', 60), array('60m-2', 60)));
-CreateDistanceNew($TourId, $TourType, 'R50W',  array(array('60m-1', 60), array('60m-2', 60)));
+// Recurve — U18 / Master: 2 × 60 m (4 × 60 m under Poland-4x70m)
+CreateDistanceNew($TourId, $TourType, 'RU18M', pl_double_legs(array(array('60m-1', 60), array('60m-2', 60)), $isDouble));
+CreateDistanceNew($TourId, $TourType, 'RU18W', pl_double_legs(array(array('60m-1', 60), array('60m-2', 60)), $isDouble));
+CreateDistanceNew($TourId, $TourType, 'R50M',  pl_double_legs(array(array('60m-1', 60), array('60m-2', 60)), $isDouble));
+CreateDistanceNew($TourId, $TourType, 'R50W',  pl_double_legs(array(array('60m-1', 60), array('60m-2', 60)), $isDouble));
 
-// Recurve — U15: 40 m + 20 m
-CreateDistanceNew($TourId, $TourType, 'RU15M', array(array('40m', 40), array('20m', 20)));
-CreateDistanceNew($TourId, $TourType, 'RU15W', array(array('40m', 40), array('20m', 20)));
+// Recurve — U15: 40 m + 20 m (40 m, 40 m, 20 m, 20 m under Poland-4x70m)
+CreateDistanceNew($TourId, $TourType, 'RU15M', pl_double_legs(array(array('40m', 40), array('20m', 20)), $isDouble));
+CreateDistanceNew($TourId, $TourType, 'RU15W', pl_double_legs(array(array('40m', 40), array('20m', 20)), $isDouble));
 
-// Compound — all: 2 × 50 m
-CreateDistanceNew($TourId, $TourType, 'C%', array(array('50m-1', 50), array('50m-2', 50)));
+// Compound — all: 2 × 50 m (4 × 50 m under Poland-4x70m)
+CreateDistanceNew($TourId, $TourType, 'C%', pl_double_legs(array(array('50m-1', 50), array('50m-2', 50)), $isDouble));
 
-// Barebow — all: 2 × 50 m
-CreateDistanceNew($TourId, $TourType, 'B%', array(array('50m-1', 50), array('50m-2', 50)));
+// Barebow — all: 2 × 50 m (4 × 50 m under Poland-4x70m)
+CreateDistanceNew($TourId, $TourType, 'B%', pl_double_legs(array(array('50m-1', 50), array('50m-2', 50)), $isDouble));
 
 // ---- Individual Events (with elimination, except U15) ----------------------
 $indFirstPhase  = 48;  // top 104

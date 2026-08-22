@@ -68,6 +68,20 @@ commit as the fix. Terse is fine; the goal is "don't step on this rake again," n
   (crash-page-and-exit on invalid session); use `false` only when you have a specific reason
   and actually check the result.
 
+- **`$SubRule` inside a `Setup_{Type}_{Lang}.php` script is a raw 1-based dropdown position
+  ('1', '2', ...), not the sub-rule's descriptive string** — `Tournament/index.php`'s real
+  form handler calls `GetSetupFile($TourId, $ToType, $Lang, $_REQUEST['d_SubRule'], $ToTypeSubRule)`,
+  and `$_REQUEST['d_SubRule']` is literally the `<option value="...">` position from the
+  sub-rule `<select>`, built as `$k+1` over `$SetType[...]['rules'][$ToType]`'s array
+  indices. The actual rule name (e.g. `'Poland-4x70m'`) only exists as `$subRuleName` (5th
+  param) — comparing `$SubRule === 'Poland-4x70m'` inside the setup script silently never
+  matches through the real UI, even though the sub-rule dropdown itself shows/stores the
+  right label and even though `GetSetupFile()` called *manually* with a literal string in
+  both the 4th and 5th argument positions (e.g. from a CLI smoke test) masks the bug by
+  coincidence. `require_once($file)` inside `GetSetupFile()` shares that function's local
+  scope, so the required setup script can read `$subRuleName` directly — compare against
+  that (with an `isset()` guard, since non-UI callers may not set it), not `$SubRule`.
+
 ## Docker / this repo's dev environment
 
 - **Apache's `error.log`/`access.log` inside the app container are symlinks to
@@ -85,6 +99,18 @@ commit as the fix. Terse is fine; the goal is "don't step on this rake again," n
   if you can't reach the container, but treat "works in the unit suite" and "works against
   the real container" as two separate checks — this repo's DB layer (raw SQL strings, no
   query builder) only gets validated by the second one.
+- **Calling `GetSetupFile()` (`Common/Fun_ScriptsOnNewTour.inc.php`) from a bare CLI script
+  exits 255 with empty stdout/stderr, even on the unmodified core path** (reproduces
+  identically for an unrelated `Poland-Full` call, not just a new sub-rule) — something
+  downstream of the setup script assumes an HTTP/session context that plain `php script.php`
+  doesn't have. The DB writes made *by the setup script itself* (Divisions, Classes,
+  `TournamentDistances`, Events, ...) commit fine before the crash; only steps at/after the
+  final `UpdateTourDetails()` call are unverified this way (`Tournament.ToNumDist`/
+  `ToTypeSubRule` were still unchanged after the crash in testing). To sanity-check a
+  `Setup_*_PL.php` change from the CLI: call `GetSetupFile()` in one `php` invocation, then
+  query the affected tables in a *separate* invocation — don't trust that script's own exit
+  code or trailing output, and don't treat `Tournament`-table columns as confirmed without a
+  real browser-driven tournament create/reset.
 
 ## Testing (`tests/Support/FakeDb.php`)
 
