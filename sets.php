@@ -18,3 +18,7 @@ foreach ($AllowedTypes as $val) {
         'Poland-Full',
     );
 }
+
+// Type 3 (70m Round) only: Podwójna runda — every class shoots double the
+// qualification sessions (§2.11.1.1 / §2.11.1.2).
+$SetType['PL']['rules']['3'][] = 'Poland-4x70m';

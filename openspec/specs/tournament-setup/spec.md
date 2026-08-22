@@ -97,12 +97,31 @@ The 1440 Round is **a qualification round only** — no elimination matches are 
 
 ### Format Description
 
-The Single-Distance Round is an outdoor competition where each archer shoots **72 arrows at one distance** (or two distances in the variant for Młodzicy). Used at the Polish Championships and the most common format for everyday competitions.
+The Single-Distance Round is an outdoor competition where each archer shoots **72 arrows at one distance** (or two distances in the variant for Młodzicy) — or double that under the `Poland-4x70m` sub-rule (see Sub-Rules below). Used at the Polish Championships and the most common format for everyday competitions.
 
-The script handles **two variants**:
+The script handles **two category variants** (available under either sub-rule):
 
-- **Variant A — 70m / 60m Round (Recurve, Compound, Barebow):** 72 arrows in 2 sessions of 36 arrows at a single distance appropriate for the category
-- **Variant B — 40m+20m Round (Młodzicy U15):** 36 arrows at 40 m + 36 arrows at 20 m
+- **Variant A — 70m / 60m Round (Recurve, Compound, Barebow):** one distance per session, appropriate for the category
+- **Variant B — 40m+20m Round (Młodzicy U15):** alternating 40 m and 20 m sessions
+
+### Sub-Rules
+
+`Setup_3_PL.php` supports two sub-rules, selected via `$SubRule`:
+
+- **`Poland-Full`** (existing, default): the standard round documented in this section — 72 arrows in 2 sessions (or 40m+20m for Młodzicy U15).
+- **`Poland-4x70m`** (Podwójna runda / Double Round, §2.11.1.1 Recurve/Barebow, §2.11.1.2 Compound): every class shoots its `Poland-Full` session structure **twice** — 144 arrows in 4 sessions — at the same distances, with no other change.
+
+| Class group | `Poland-Full` (2 sessions) | `Poland-4x70m` (4 sessions) |
+| --- | --- | --- |
+| R Senior/U24/U21 (M, W) | 70m, 70m | 70m, 70m, 70m, 70m |
+| R U18 / Master (50+) | 60m, 60m | 60m, 60m, 60m, 60m |
+| R Młodzik (U15) | 40m, 20m | 40m, 40m, 20m, 20m |
+| C (all categories) | 50m, 50m | 50m, 50m, 50m, 50m |
+| B (all categories) | 50m, 50m | 50m, 50m, 50m, 50m |
+
+Under `Poland-4x70m`, `tourDetNumDist` is `4` (instead of `2`); `tourDetMaxDistScore` stays `360` — a per-session cap, unaffected by session count. **Target faces, elimination/finals configuration, event codes, and team scoring are shared and unchanged between both sub-rules** — doubling only affects the qualification round's session count.
+
+`Poland-4x70m` is registered only under TourType 3 in `sets.php` — it is not available for `Setup_1_PL.php` (TourType 1) or `Setup_6_PL.php` (TourType 6).
 
 ### Bow Types
 
@@ -156,6 +175,8 @@ Additionally: **Młodzicy (U15M/U15W)** are active in this format.
 - 40 m session: 12 ends × 3 arrows = 36 arrows
 - 20 m session: 12 ends × 3 arrows = 36 arrows
 
+> Figures above are for `Poland-Full`. Under `Poland-4x70m`, each session is shot twice (see Sub-Rules) — 144 arrows total for every class, including U15 (40m, 40m, 20m, 20m).
+
 ### Tiebreaking
 
 Same as the 1440 Round — 10s first, then Xs, then same rank.
@@ -178,6 +199,8 @@ After qualification, **the top 104 archers** in each category advance to matches
 - Tie → shoot-off (1 arrow); if equal → closest to centre
 
 **Elimination distances = same as qualification distances.**
+
+> Elimination structure (cut counts, set/cumulative match format) is identical between `Poland-Full` and `Poland-4x70m` — doubling only affects the qualification round.
 
 > **Important — U15 at the Polish Championships:** Młodzicy (U15) have **no elimination phase** — the qualification score is the final result.
 
