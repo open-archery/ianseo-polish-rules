@@ -8,6 +8,8 @@
  * plain arrays PointsRankingCalc.php's pure functions consume.
  */
 
+require_once __DIR__ . '/Presets.php';
+
 /** Preferred render order for divisions; unknown divisions sort after, alphabetically (D3). */
 const PL_RANKING_DIVISION_ORDER = ['R' => 0, 'C' => 1, 'B' => 2];
 
@@ -42,7 +44,9 @@ function pl_points_ensure_tables()
 {
     $Rs = safe_r_sql("SHOW TABLES LIKE 'PLPointsTournamentConfig'");
     if (safe_num_rows($Rs) == 0) {
-        safe_w_sql("CREATE TABLE PLPointsTournamentConfig (
+        // IF NOT EXISTS: two concurrent first requests can both see the table
+        // missing; without it, one CREATE TABLE fails on a duplicate-table error.
+        safe_w_sql("CREATE TABLE IF NOT EXISTS PLPointsTournamentConfig (
             PltcTournament INT NOT NULL,
             PltcPresetKey VARCHAR(32) NOT NULL DEFAULT '',
             PRIMARY KEY (PltcTournament)
@@ -52,7 +56,7 @@ function pl_points_ensure_tables()
 
     $Rs = safe_r_sql("SHOW TABLES LIKE 'PLVoivodeshipMap'");
     if (safe_num_rows($Rs) == 0) {
-        safe_w_sql("CREATE TABLE PLVoivodeshipMap (
+        safe_w_sql("CREATE TABLE IF NOT EXISTS PLVoivodeshipMap (
             PlvmCoCode VARCHAR(10) NOT NULL,
             PlvmVoivodeship VARCHAR(64) NOT NULL DEFAULT '',
             PRIMARY KEY (PlvmCoCode)
@@ -77,6 +81,13 @@ function pl_points_get_tournament_preset($tourId)
 
 function pl_points_set_tournament_preset($tourId, $presetKey)
 {
+    // '' clears the selection (no preset active); anything else must be one of
+    // the read-only preset keys — a modified request must not persist a key
+    // absent from PL_POINTS_PRESETS.
+    if ($presetKey !== '' && !array_key_exists($presetKey, PL_POINTS_PRESETS)) {
+        return;
+    }
+
     $tourId = intval($tourId);
 
     $Rs = safe_r_sql("SELECT PltcTournament FROM PLPointsTournamentConfig WHERE PltcTournament = " . $tourId);
@@ -85,9 +96,10 @@ function pl_points_set_tournament_preset($tourId, $presetKey)
 
     if ($exists) {
         safe_w_sql("UPDATE PLPointsTournamentConfig SET PltcPresetKey = " . StrSafe_DB($presetKey) . " WHERE PltcTournament = " . $tourId);
-    } else {
-        safe_w_sql("INSERT INTO PLPointsTournamentConfig (PltcTournament, PltcPresetKey) VALUES (" . $tourId . ", " . StrSafe_DB($presetKey) . ")");
+        return;
     }
+
+    safe_w_sql("INSERT INTO PLPointsTournamentConfig (PltcTournament, PltcPresetKey) VALUES (" . $tourId . ", " . StrSafe_DB($presetKey) . ")");
 }
 
 // --- Voivodeship map ------------------------------------------------------

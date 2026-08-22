@@ -15,10 +15,9 @@ require_once('Presets.php');
 pl_points_ensure_tables();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['selectPreset'])) {
+    // pl_points_set_tournament_preset() rejects anything not '' or a real preset key.
     $presetKey = isset($_POST['PresetKey']) ? trim($_POST['PresetKey']) : '';
-    if ($presetKey === '' || array_key_exists($presetKey, PL_POINTS_PRESETS)) {
-        pl_points_set_tournament_preset($_SESSION['TourId'], $presetKey);
-    }
+    pl_points_set_tournament_preset($_SESSION['TourId'], $presetKey);
 }
 
 $activePresetKey = pl_points_get_tournament_preset($_SESSION['TourId']);
@@ -52,13 +51,14 @@ function pl_points_render_section_rows(array $rows, bool $isTeam, bool $isMixed)
 
 function pl_points_render_separate_report(array $report)
 {
-    $isMixed = ($report['subject'] ?? null) === 'MIXED';
+    $subject = $report['subject'] ?? 'IND';
+    $isMixed = $subject === 'MIXED';
+    $isTeam = $subject !== 'IND';
     $colCount = $isMixed ? 5 : 6;
 
     echo '<table class="Tabella">';
     echo '<tr><th class="Title" colspan="' . $colCount . '">' . htmlspecialchars($report['label']) . '</th></tr>';
     foreach ($report['sections'] as $section) {
-        $isTeam = !isset($section['rows'][0]['code']);
         echo '<tr><td colspan="' . $colCount . '" style="padding:6px;background:#e9ecef;font-weight:bold;">' . htmlspecialchars($section['label']) . '</td></tr>';
         if ($isMixed) {
             // No license number (a pair has two, not one); club identifies the

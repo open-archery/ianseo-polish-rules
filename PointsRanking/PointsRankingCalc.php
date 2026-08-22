@@ -157,9 +157,13 @@ function pl_points_combine(array $valuesByClassification, int $cap): array
  */
 function pl_points_rank(array $rows): array
 {
+    // Numeric (<=>), not identity (!==): team/mixed shares are float, IND
+    // bracket values and totals are often int — 9 !== 9.0 would otherwise
+    // split a tied rank between equal-valued int and float totals.
     usort($rows, function ($a, $b) {
-        if ($a['points'] !== $b['points']) {
-            return $b['points'] <=> $a['points'];
+        $pointsCmp = $b['points'] <=> $a['points'];
+        if ($pointsCmp !== 0) {
+            return $pointsCmp;
         }
         return ($a['place'] ?? 0) <=> ($b['place'] ?? 0);
     });
@@ -169,7 +173,7 @@ function pl_points_rank(array $rows): array
     $position = 0;
     foreach ($rows as &$row) {
         $position++;
-        if ($prevPoints === null || $row['points'] !== $prevPoints) {
+        if ($prevPoints === null || ($row['points'] <=> $prevPoints) !== 0) {
             $rank = $position;
             $prevPoints = $row['points'];
         }

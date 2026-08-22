@@ -40,14 +40,18 @@ class PointsRankingPdf extends IanseoPdf
         $this->SetFillColor(0xCC, 0xCC, 0xCC);
         $this->Cell($totalWidth, self::H_TITLE, $title, 1, 1, 'C', true);
 
-        $this->SetFont($this->FontStd, 'B', 8);
-        $this->SetFillColor(0xE0, 0xE0, 0xE0);
-        foreach ($columns as $i => $col) {
-            $this->Cell($col['width'], self::H_HEADER, $col['label'], 1, $i === $last ? 1 : 0, 'C', true);
-        }
+        $this->renderColumnHeader($columns, $last);
 
         $altFill = false;
+        $page = $this->PageNo();
         foreach ($rows as $row) {
+            if ($this->PageNo() !== $page) {
+                // SetAutoPageBreak() started a new page mid-table — repeat the
+                // header so the continued rows aren't unlabeled.
+                $page = $this->PageNo();
+                $this->renderColumnHeader($columns, $last);
+            }
+
             $shade = $altFill ? 0xF5 : 0xFF;
             $this->SetFillColor($shade, $shade, $shade);
             $altFill = !$altFill;
@@ -71,5 +75,14 @@ class PointsRankingPdf extends IanseoPdf
             }
         }
         $this->Ln(3);
+    }
+
+    private function renderColumnHeader(array $columns, int $last)
+    {
+        $this->SetFont($this->FontStd, 'B', 8);
+        $this->SetFillColor(0xE0, 0xE0, 0xE0);
+        foreach ($columns as $i => $col) {
+            $this->Cell($col['width'], self::H_HEADER, $col['label'], 1, $i === $last ? 1 : 0, 'C', true);
+        }
     }
 }

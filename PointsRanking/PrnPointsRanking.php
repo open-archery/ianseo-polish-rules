@@ -32,11 +32,11 @@ function pl_points_pdf_row_label(array $row)
 
 function pl_points_pdf_separate_report($pdf, array $report)
 {
-    $isMixed = ($report['subject'] ?? null) === 'MIXED';
+    $subject = $report['subject'] ?? 'IND';
+    $isMixed = $subject === 'MIXED';
+    $isTeam = $subject !== 'IND';
 
     foreach ($report['sections'] as $section) {
-        $isTeam = !isset($section['rows'][0]['code']);
-
         if ($isMixed) {
             // No license number (a pair has two, not one); club identifies the
             // entry, "Skład" (roster) names the pair.

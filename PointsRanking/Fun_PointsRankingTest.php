@@ -18,8 +18,8 @@ final class Fun_PointsRankingTest extends \PlTestCase
     {
         \pl_points_ensure_tables();
 
-        $this->assertCount(1, \FakeDb::executed('/CREATE TABLE PLPointsTournamentConfig/'));
-        $this->assertCount(1, \FakeDb::executed('/CREATE TABLE PLVoivodeshipMap/'));
+        $this->assertCount(1, \FakeDb::executed('/CREATE TABLE IF NOT EXISTS PLPointsTournamentConfig/'));
+        $this->assertCount(1, \FakeDb::executed('/CREATE TABLE IF NOT EXISTS PLVoivodeshipMap/'));
     }
 
     public function testEnsureTablesSkipsCreateWhenTablesExist(): void
@@ -53,6 +53,20 @@ final class Fun_PointsRankingTest extends \PlTestCase
         $writes = \FakeDb::executed('/INSERT INTO PLPointsTournamentConfig/');
         $this->assertCount(1, $writes);
         $this->assertStringContainsString("'lzs'", $writes[0]);
+    }
+
+    public function testSetTournamentPresetClearsSelectionWithEmptyString(): void
+    {
+        \pl_points_set_tournament_preset(7, '');
+
+        $this->assertCount(1, \FakeDb::executed('/INSERT INTO PLPointsTournamentConfig/'));
+    }
+
+    public function testSetTournamentPresetRejectsUnknownKey(): void
+    {
+        \pl_points_set_tournament_preset(7, 'not-a-real-preset');
+
+        $this->assertCount(0, \FakeDb::executed('/PLPointsTournamentConfig/'));
     }
 
     public function testSetTournamentPresetUpdatesWhenExists(): void

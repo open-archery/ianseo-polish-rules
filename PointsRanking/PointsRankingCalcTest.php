@@ -260,6 +260,20 @@ final class PointsRankingCalcTest extends \PHPUnit\Framework\TestCase
         $this->assertSame(3, $ranked[2]['rank']); // next rank skips the tied slot
     }
 
+    public function testRankSharesRankAcrossIntAndFloatOfEqualValue(): void
+    {
+        // Team/mixed shares are float (9.0), IND bracket values are int (9) —
+        // both must land on the same rank despite the different PHP type.
+        $rows = [
+            ['id' => 'a', 'points' => 9, 'place' => 1],
+            ['id' => 'b', 'points' => 9.0, 'place' => 2],
+        ];
+        $ranked = \pl_points_rank($rows);
+
+        $this->assertSame(1, $ranked[0]['rank']);
+        $this->assertSame(1, $ranked[1]['rank']);
+    }
+
     // --- pl_points_compute_club_totals: exact arithmetic & cap interplay ----
 
     public function testClubTotalIsExactWhenNothingDropped(): void
