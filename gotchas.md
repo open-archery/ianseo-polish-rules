@@ -26,10 +26,12 @@ commit as the fix. Terse is fine; the goal is "don't step on this rake again," n
 
 - **A POST field can be an array when you expect a string.** `$_POST['Field']` is `[...]`,
   not a string, whenever the request sends `Field[]=x` (trivial to craft, not just a typo).
-  Passing that into a strict-typed string function (`trim()`, `intval()` on a nested value,
-  etc.) throws a `TypeError` — a crafted request can 500 a page that otherwise validates its
-  input carefully. Guard with `is_string($_POST['Field'])` before calling string functions
-  on anything read from `$_POST`/`$_GET`, not just an `isset()` check.
+  Passing that into a string-only function — `trim()`, `str_*`, etc. — throws a `TypeError`
+  in PHP 8.2+, so a crafted request can 500 a page that otherwise validates its input
+  carefully. Guard with `is_string($_POST['Field'])` before calling string functions on
+  anything read from `$_POST`/`$_GET`, not just an `isset()` check. Note `intval()` is *not*
+  in this category — it silently accepts an array (`0` for empty, `1` for non-empty) rather
+  than throwing, so don't assume every scalar-looking builtin behaves the same way.
 
 - **`DIV` is a reserved MySQL keyword** (integer-division operator). A bare column alias
   `AS Div` breaks the SQL parser with a 1064 syntax error near the *next* token, which reads
