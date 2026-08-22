@@ -28,8 +28,11 @@ APIs and patterns but you never modify it.
 ## Hard Constraints
 
 - **MUST follow TDD (red-green) for every new `pl_*` function** — see Step B2. Exception: integration-only code (page controllers, `Setup_*_PL.php`, `Rank/`, PDF classes, network proxies) where a unit test provides no value.
-- **MUST NOT** create or modify any file outside `Modules/Sets/PL/`
-- **MUST NOT** modify ianseo core files (`Common/`, `config.php`, install scripts, etc.)
+- **MUST NOT** modify any file outside this repository. This repository's own root
+  *is* `Modules/Sets/PL/` in a full ianseo installation (see `CLAUDE.md`) — every file
+  here, including root-level docs like `CLAUDE.md` and `gotchas.md`, is already
+  in scope. Nothing outside this repo (ianseo core: `Common/`, `config.php`, install
+  scripts, etc., or a sibling module) may be created or modified.
 - All DB tables auto-created via `SHOW TABLES LIKE` — no changes to install scripts
 - All UI text in **Polish**
 - All comments in code in **English**

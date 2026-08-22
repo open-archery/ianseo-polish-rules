@@ -8,7 +8,28 @@ a reserved word, a wrong assumption about ianseo core, a tooling trap, a subtle 
 whose failure mode wasn't obvious from reading the code — add an entry here in the same
 commit as the fix. Terse is fine; the goal is "don't step on this rake again," not prose.
 
+## TCPDF
+
+- **Detecting a page break by polling `PageNo()` after the fact is one iteration too
+  late.** `SetAutoPageBreak(true, ...)` triggers `AddPage()` *inside* whatever `Cell()`
+  call doesn't fit — not between loop iterations. Checking "did the page number change"
+  at the top of the *next* iteration means the row that actually caused the break already
+  got drawn (unlabeled) on the new page one iteration earlier than the check catches it;
+  if that row is the *last* one, the check never runs again and the mislabeling is never
+  caught at all. To repeat a header (or otherwise react to a break) correctly, preflight
+  the row's height with the base class's own break check *before* drawing it — e.g. TCPDF's
+  `checkPageBreak($height)` (protected, but callable from a subclass method) returns `true`
+  and performs the break itself if the height doesn't fit, so you can act on that return
+  value before any of the row's cells are drawn, not after.
+
 ## PHP / MySQL
+
+- **A POST field can be an array when you expect a string.** `$_POST['Field']` is `[...]`,
+  not a string, whenever the request sends `Field[]=x` (trivial to craft, not just a typo).
+  Passing that into a strict-typed string function (`trim()`, `intval()` on a nested value,
+  etc.) throws a `TypeError` — a crafted request can 500 a page that otherwise validates its
+  input carefully. Guard with `is_string($_POST['Field'])` before calling string functions
+  on anything read from `$_POST`/`$_GET`, not just an `isset()` check.
 
 - **`DIV` is a reserved MySQL keyword** (integer-division operator). A bare column alias
   `AS Div` breaks the SQL parser with a 1064 syntax error near the *next* token, which reads

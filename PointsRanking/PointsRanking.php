@@ -15,9 +15,14 @@ require_once('Presets.php');
 pl_points_ensure_tables();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['selectPreset'])) {
-    // pl_points_set_tournament_preset() rejects anything not '' or a real preset key.
-    $presetKey = isset($_POST['PresetKey']) ? trim($_POST['PresetKey']) : '';
-    pl_points_set_tournament_preset($_SESSION['TourId'], $presetKey);
+    // trim() throws a TypeError on a non-string (a crafted PresetKey[]=...
+    // request makes $_POST['PresetKey'] an array) — reject without touching
+    // the stored preset, rather than letting trim() crash the page.
+    if (!isset($_POST['PresetKey']) || is_string($_POST['PresetKey'])) {
+        $presetKey = isset($_POST['PresetKey']) ? trim($_POST['PresetKey']) : '';
+        // pl_points_set_tournament_preset() itself rejects anything not '' or a real preset key.
+        pl_points_set_tournament_preset($_SESSION['TourId'], $presetKey);
+    }
 }
 
 $activePresetKey = pl_points_get_tournament_preset($_SESSION['TourId']);

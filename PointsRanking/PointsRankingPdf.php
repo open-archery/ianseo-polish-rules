@@ -43,12 +43,14 @@ class PointsRankingPdf extends IanseoPdf
         $this->renderColumnHeader($columns, $last);
 
         $altFill = false;
-        $page = $this->PageNo();
         foreach ($rows as $row) {
-            if ($this->PageNo() !== $page) {
-                // SetAutoPageBreak() started a new page mid-table — repeat the
-                // header so the continued rows aren't unlabeled.
-                $page = $this->PageNo();
+            // Preflight, not react: checking PageNo() *after* the row's own
+            // Cell() calls is one iteration too late — a break inside the last
+            // row's cells would leave that row's continuation on the new page
+            // with no header at all (nothing left to trigger the check). This
+            // reserves the row's height up front, breaking (and repeating the
+            // header) before any of the row's own cells are drawn.
+            if ($this->checkPageBreak(self::H_DATA)) {
                 $this->renderColumnHeader($columns, $last);
             }
 
