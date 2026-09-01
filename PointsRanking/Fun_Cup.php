@@ -405,12 +405,17 @@ function pl_cup_set_barrage($edition, $classification, $category, $identity, $or
         . " AND PlCbCategory = " . StrSafe_DB($category)
         . " AND PlCbIdentity = " . StrSafe_DB($identity);
 
-    safe_w_sql("DELETE FROM PLCupBarrage WHERE $where");
+    // Upsert rather than delete-then-insert: a failed insert would otherwise
+    // lose the recorded outcome and drop the rows back to a shared rank.
     if ($order > 0) {
         safe_w_sql("INSERT INTO PLCupBarrage (PlCbEdition, PlCbClassification, PlCbCategory, PlCbIdentity, PlCbOrder)
             VALUES ($edition, " . StrSafe_DB($classification) . ', ' . StrSafe_DB($category) . ', '
-            . StrSafe_DB($identity) . ", $order)");
+            . StrSafe_DB($identity) . ", $order)
+            ON DUPLICATE KEY UPDATE PlCbOrder = VALUES(PlCbOrder)");
+        return;
     }
+
+    safe_w_sql("DELETE FROM PLCupBarrage WHERE $where");
 }
 
 // --- CSV transport (design D7) ---------------------------------------------
@@ -447,6 +452,10 @@ function pl_cup_csv_escape($value)
  * Parse a round CSV. Nothing is written when any line fails (spec "Round import
  * from CSV") — the caller stores only when 'errors' is empty.
  *
+ * Records are read with fgetcsv(), not by splitting on newlines: a quoted field
+ * may itself contain a line break (pl_cup_csv_write() quotes those), and such a
+ * record has to survive the export/import round trip in one piece.
+ *
  * @param array $validCategories ['ind' => [code, ...], 'mix' => [code, ...]] — the
  *   tournament's *configured* categories, not the ones with entries (D8)
  * @return array{rows: array, errors: string[]}
@@ -454,20 +463,21 @@ function pl_cup_csv_escape($value)
 function pl_cup_csv_parse($content, array $validCategories)
 {
     $content = preg_replace('/^\xEF\xBB\xBF/', '', (string) $content);
-    $lines = preg_split('/\r\n|\r|\n/', $content);
+
+    $handle = fopen('php://memory', 'r+');
+    fwrite($handle, $content);
+    rewind($handle);
 
     $rows = [];
     $errors = [];
     $lineNo = 0;
     $headerSeen = false;
 
-    foreach ($lines as $line) {
+    while (($cells = fgetcsv($handle, 0, ';', '"', '\\')) !== false) {
         $lineNo++;
-        if (trim($line) === '') {
+        if ($cells === [null] || (count($cells) === 1 && trim((string) $cells[0]) === '')) {
             continue;
         }
-
-        $cells = str_getcsv($line, ';', '"', '\\');
 
         if (!$headerSeen) {
             $headerSeen = true;
@@ -477,50 +487,89 @@ function pl_cup_csv_parse($content, array $validCategories)
             }
         }
 
-        if (count($cells) !== count(PL_CUP_CSV_COLUMNS)) {
-            $errors[] = 'Wiersz ' . $lineNo . ': oczekiwano ' . count(PL_CUP_CSV_COLUMNS) . ' kolumn, znaleziono ' . count($cells) . '.';
+        $parsed = pl_cup_csv_parse_row($cells, $lineNo, $validCategories);
+        if (!empty($parsed['errors'])) {
+            $errors = array_merge($errors, $parsed['errors']);
             continue;
         }
-
-        [$classification, $category, $identity, $name, $clubName, $place, $points, $qual] = array_map('trim', $cells);
-
-        if (!in_array($classification, ['ind', 'mix'], true)) {
-            $errors[] = 'Wiersz ' . $lineNo . ': nieznana klasyfikacja "' . $classification . '" (dozwolone: ind, mix).';
-            continue;
-        }
-        if (!in_array($category, $validCategories[$classification] ?? [], true)) {
-            $errors[] = 'Wiersz ' . $lineNo . ': nieznana kategoria "' . $category . '".';
-            continue;
-        }
-
-        $numeric = true;
-        foreach (['Miejsce' => $place, 'Punkty' => $points, 'Kwalifikacje' => $qual] as $label => $value) {
-            if (!pl_cup_is_numeric($value)) {
-                $errors[] = 'Wiersz ' . $lineNo . ': kolumna ' . $label . ' nie jest liczbą ("' . $value . '").';
-                $numeric = false;
-            }
-        }
-        if (!$numeric) {
-            continue;
-        }
-
-        $rows[] = [
-            'classification' => $classification,
-            'category' => $category,
-            'identity' => $identity,
-            'name' => $name,
-            'club_name' => $clubName,
-            'place' => pl_cup_to_int($place),
-            'points' => pl_cup_to_int($points),
-            'qual' => pl_cup_to_int($qual),
-        ];
+        $rows[] = $parsed['row'];
     }
+    fclose($handle);
 
     if (empty($errors)) {
         $errors = pl_cup_validate_rows($rows);
     }
 
     return ['rows' => $rows, 'errors' => $errors];
+}
+
+/**
+ * Validate and normalise one CSV record.
+ *
+ * Values a stored round cannot hold are rejected here rather than persisted: a
+ * snapshot never produces a row without a place, with a DSQ/DNS sentinel, or
+ * with a negative point or qualification value, and such a row would distort the
+ * totals and the tie-break of everyone in its category.
+ *
+ * @return array{row: array|null, errors: string[]}
+ */
+function pl_cup_csv_parse_row(array $cells, $lineNo, array $validCategories)
+{
+    $prefix = 'Wiersz ' . $lineNo . ': ';
+
+    if (count($cells) !== count(PL_CUP_CSV_COLUMNS)) {
+        return ['row' => null, 'errors' => [$prefix . 'oczekiwano ' . count(PL_CUP_CSV_COLUMNS) . ' kolumn, znaleziono ' . count($cells) . '.']];
+    }
+
+    [$classification, $category, $identity, $name, $clubName, $place, $points, $qual] = array_map(
+        fn ($cell) => trim((string) $cell),
+        $cells
+    );
+
+    if (!in_array($classification, ['ind', 'mix'], true)) {
+        return ['row' => null, 'errors' => [$prefix . 'nieznana klasyfikacja "' . $classification . '" (dozwolone: ind, mix).']];
+    }
+    if (!in_array($category, $validCategories[$classification] ?? [], true)) {
+        return ['row' => null, 'errors' => [$prefix . 'nieznana kategoria "' . $category . '".']];
+    }
+
+    $errors = [];
+    foreach (['Miejsce' => $place, 'Punkty' => $points, 'Kwalifikacje' => $qual] as $label => $value) {
+        if (!pl_cup_is_numeric($value)) {
+            $errors[] = $prefix . 'kolumna ' . $label . ' nie jest liczbą ("' . $value . '").';
+        }
+    }
+    if (!empty($errors)) {
+        return ['row' => null, 'errors' => $errors];
+    }
+
+    $place = pl_cup_to_int($place);
+    $points = pl_cup_to_int($points);
+    $qual = pl_cup_to_int($qual);
+
+    if ($place <= 0 || $place >= 29999) {
+        $errors[] = $prefix . 'miejsce poza zakresem (' . $place . ') - runda zapisuje tylko sklasyfikowanych zawodników.';
+    }
+    if ($points < 0) {
+        $errors[] = $prefix . 'ujemna liczba punktów (' . $points . ').';
+    }
+    if ($qual < 0) {
+        $errors[] = $prefix . 'ujemny wynik kwalifikacji (' . $qual . ').';
+    }
+    if (!empty($errors)) {
+        return ['row' => null, 'errors' => $errors];
+    }
+
+    return ['row' => [
+        'classification' => $classification,
+        'category' => $category,
+        'identity' => $identity,
+        'name' => $name,
+        'club_name' => $clubName,
+        'place' => $place,
+        'points' => $points,
+        'qual' => $qual,
+    ], 'errors' => []];
 }
 
 /** Both decimal separators are accepted on reading (D7); an empty cell counts as 0. */

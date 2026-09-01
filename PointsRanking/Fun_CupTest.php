@@ -264,13 +264,19 @@ final class Fun_CupTest extends PlTestCase
 
     // --- Baraż -------------------------------------------------------------
 
-    public function testBarrageOutcomeIsStoredAndCleared()
+    public function testBarrageOutcomeIsUpsertedNotDeletedAndReinserted()
     {
         pl_cup_set_barrage(2026, 'ind', 'RU18M', 'PL0001', 1);
-        $this->assertCount(1, FakeDb::executed('/INSERT INTO PLCupBarrage/'));
 
-        FakeDb::reset();
+        // Delete-then-insert would lose the recorded outcome if the insert failed.
+        $this->assertCount(1, FakeDb::executed('/INSERT INTO PLCupBarrage .*ON DUPLICATE KEY UPDATE PlCbOrder/s'));
+        $this->assertSame([], FakeDb::executed('/DELETE FROM PLCupBarrage/'));
+    }
+
+    public function testBarrageOutcomeIsClearedByAZeroOrder()
+    {
         pl_cup_set_barrage(2026, 'ind', 'RU18M', 'PL0001', 0);
+
         $this->assertCount(1, FakeDb::executed('/DELETE FROM PLCupBarrage/'));
         $this->assertSame([], FakeDb::executed('/INSERT INTO PLCupBarrage/'));
     }
@@ -361,6 +367,47 @@ final class Fun_CupTest extends PlTestCase
         $this->assertCount(1, $parsed['errors']);
         $this->assertStringContainsString('Wiersz 3', $parsed['errors'][0]);
         $this->assertStringContainsString('"XX"', $parsed['errors'][0]);
+    }
+
+    public function testCsvKeepsAFieldContainingALineBreak()
+    {
+        $rows = $this->csvRows();
+        $rows[0]['club_name'] = "KS Alfa
+Oddział Zielona Góra";
+
+        $parsed = pl_cup_csv_parse(pl_cup_csv_write($rows), ['ind' => ['RM'], 'mix' => []]);
+
+        $this->assertSame([], $parsed['errors']);
+        $this->assertSame($rows, $parsed['rows']);
+    }
+
+    public function testCsvRejectsValuesAStoredRoundCannotHold()
+    {
+        $cases = [
+            'brak miejsca' => [0, 25, 645, 'miejsce poza zakresem'],
+            'sentinel DNS' => [29999, 0, 645, 'miejsce poza zakresem'],
+            'ujemne punkty' => [1, -5, 645, 'ujemna liczba punktów'],
+            'ujemne kwalifikacje' => [1, 25, -1, 'ujemny wynik kwalifikacji'],
+        ];
+
+        foreach ($cases as $label => [$place, $points, $qual, $needle]) {
+            $parsed = pl_cup_csv_parse("ind;RM;PL0001;Jan;Klub;$place;$points;$qual
+", ['ind' => ['RM'], 'mix' => []]);
+
+            $this->assertSame([], $parsed['rows'], $label);
+            $this->assertStringContainsString($needle, $parsed['errors'][0], $label);
+        }
+    }
+
+    public function testCsvAcceptsAPlacedRowWithoutPoints()
+    {
+        $csv = "ind;RM;PL0001;Jan;Klub;40;0;540
+";
+
+        $parsed = pl_cup_csv_parse($csv, ['ind' => ['RM'], 'mix' => []]);
+
+        $this->assertSame([], $parsed['errors']);
+        $this->assertSame(540, $parsed['rows'][0]['qual']);
     }
 
     public function testCsvRejectsANonNumericPlace()
