@@ -132,3 +132,22 @@ commit as the fix. Terse is fine; the goal is "don't step on this rake again," n
   branch -a` for a referenced file before assuming it's missing by mistake; the design may
   simply predate a merge that hasn't happened. Implement the shared piece standalone and
   leave a note for whoever merges the other branch later, rather than blocking on it.
+
+## Docker Desktop bind mounts (Windows)
+
+- **New files added to an already-mounted subdirectory can stay invisible inside the
+  container until it is restarted.** The `Modules/Sets/PL` bind mount showed a *newly created
+  directory* (`openspec/changes/cup-ranking/`) immediately, but files newly created in the
+  long-existing `PointsRanking/` directory never appeared: `ls` kept returning the old
+  listing and the directory's mtime stayed frozen at its old value, so a page 404'd / an
+  `include` silently failed while the file was plainly there on the host. Touching the
+  directory from the host does not flush it; `docker restart <app-container>` does. Before
+  debugging "my new module file isn't loading", check `docker exec <c> ls <dir>` — if the
+  file is missing there, it's the mount, not your code.
+- **`docker cp` writes into the container as root, but `docker exec` runs as the image's
+  user**, so a tree copied in that way can't be `rm -rf`'d by a later `docker exec` (every
+  entry fails with "Permission denied"). Use `docker exec -u root` for the cleanup, and
+  remember `docker cp SRC container:/path` *nests* (`/path/SRC`) when `/path` already exists.
+- **`docker cp`/`docker exec` with an absolute container path mangles under Git Bash**
+  (MSYS path conversion turns `/tmp/x.php` into `C:/...`). Prefix the command with
+  `MSYS_NO_PATHCONV=1`, or write the path as `//tmp/x.php`.

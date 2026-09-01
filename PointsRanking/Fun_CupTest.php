@@ -1,0 +1,362 @@
+<?php
+
+require_once __DIR__ . '/Fun_Cup.php';
+
+/**
+ * Data-layer tests for the cup module: table install, per-tournament config,
+ * qualification scores, snapshot building, round storage and the CSV transport.
+ */
+final class Fun_CupTest extends PlTestCase
+{
+    private function resultRow(array $overrides = [])
+    {
+        return array_merge([
+            'enId' => 10, 'name' => 'Jan Kowalski', 'code' => 'PL0001', 'category' => 'RM',
+            'club_id' => 5, 'club_code' => 'KLUB1', 'club_name' => 'Klub Pierwszy',
+            'place' => 1, 'points' => 25, 'rank' => 1,
+        ], $overrides);
+    }
+
+    private function separateResult(array $indRows, array $mixRows = [])
+    {
+        $reports = [[
+            'kind' => 'SEPARATE', 'label' => 'Klasyfikacja indywidualna', 'subject' => 'IND',
+            'sections' => [['category' => 'RM', 'label' => 'Senior', 'order' => [0, 1], 'rows' => $indRows]],
+        ]];
+        if (!empty($mixRows)) {
+            $reports[] = [
+                'kind' => 'SEPARATE', 'label' => 'Klasyfikacja mikstów', 'subject' => 'MIXED',
+                'sections' => [['category' => 'RMX', 'label' => 'Mikst', 'order' => [0, 9], 'rows' => $mixRows]],
+            ];
+        }
+        return ['reports' => $reports, 'warnings' => []];
+    }
+
+    // --- Auto-install ------------------------------------------------------
+
+    public function testEnsureTablesCreatesAllThreeTables()
+    {
+        pl_cup_ensure_tables();
+
+        $this->assertCount(1, FakeDb::executed('/CREATE TABLE IF NOT EXISTS PLCupConfig/'));
+        $this->assertCount(1, FakeDb::executed('/CREATE TABLE IF NOT EXISTS PLCupRound/'));
+        $this->assertCount(1, FakeDb::executed('/CREATE TABLE IF NOT EXISTS PLCupBarrage/'));
+
+        $this->assertCount(1, FakeDb::executed('/PRIMARY KEY \(PlCcTournament\)/'));
+        $this->assertCount(1, FakeDb::executed('/PRIMARY KEY \(PlCrEdition, PlCrRound, PlCrClassification, PlCrCategory, PlCrIdentity\)/'));
+        $this->assertCount(1, FakeDb::executed('/PRIMARY KEY \(PlCbEdition, PlCbClassification, PlCbCategory, PlCbIdentity\)/'));
+    }
+
+    public function testEnsureTablesSkipsCreationWhenTablesExist()
+    {
+        FakeDb::on('/SHOW TABLES LIKE/', [['x' => 'PLCupConfig']]);
+
+        pl_cup_ensure_tables();
+
+        $this->assertSame([], FakeDb::executed('/CREATE TABLE/'));
+    }
+
+    // --- Configuration -----------------------------------------------------
+
+    public function testConfigDefaultsToTheTournamentEndYear()
+    {
+        $_SESSION['TourRealWhenTo'] = '2026-09-13';
+
+        $config = pl_cup_get_config(1);
+
+        $this->assertSame(2026, $config['Edition']);
+        $this->assertSame(0, $config['Round']);
+        $this->assertSame('', $config['DiplomaName']);
+    }
+
+    public function testConfigIsReadBack()
+    {
+        FakeDb::on('/SELECT PlCcEdition/', [[
+            'PlCcEdition' => 2025, 'PlCcRound' => 4, 'PlCcDiplomaName' => 'Puchar Polski 2025',
+        ]]);
+
+        $config = pl_cup_get_config(1);
+
+        $this->assertSame(['Edition' => 2025, 'Round' => 4, 'DiplomaName' => 'Puchar Polski 2025'], $config);
+    }
+
+    public function testSetConfigInsertsThenUpdates()
+    {
+        pl_cup_set_config(7, 2026, 4, 'Puchar Polski 2026');
+        $this->assertCount(1, FakeDb::executed('/INSERT INTO PLCupConfig .*VALUES \(7, 2026, 4/s'));
+
+        FakeDb::on('/SELECT PlCcTournament FROM PLCupConfig/', [['PlCcTournament' => 7]]);
+        pl_cup_set_config(7, 2026, 2, 'Inna nazwa');
+        $this->assertCount(1, FakeDb::executed('/UPDATE PLCupConfig SET PlCcEdition = 2026, PlCcRound = 2/'));
+    }
+
+    public function testSetConfigRejectsARoundOutsideTheCup()
+    {
+        pl_cup_set_config(7, 2026, 9, '');
+
+        $this->assertCount(1, FakeDb::executed('/VALUES \(7, 2026, 0,/'));
+    }
+
+    // --- Qualification scores ----------------------------------------------
+
+    public function testLoadQualScoresBuildsBothMaps()
+    {
+        FakeDb::on('/FROM Individuals/', [['EnId' => 10, 'QualScore' => 645], ['EnId' => 11, 'QualScore' => 638]]);
+        FakeDb::on('/FROM Teams/', [['ClubId' => 5, 'Event' => 'RMX', 'QualScore' => 1290]]);
+
+        $scores = pl_cup_load_qual_scores(1);
+
+        $this->assertSame([10 => 645, 11 => 638], $scores['ind']);
+        $this->assertSame(['5_RMX' => 1290], $scores['mix']);
+    }
+
+    // --- Snapshot ----------------------------------------------------------
+
+    public function testSnapshotRowsCarryIdentityPlacePointsAndQualification()
+    {
+        $result = $this->separateResult(
+            [$this->resultRow()],
+            [[
+                'category' => 'RMX', 'club_id' => 5, 'club_code' => 'KLUB1', 'club_name' => 'Klub Pierwszy',
+                'points' => 21, 'place' => 2, 'rank' => 2, 'members' => [], 'roster_empty' => false,
+                'name' => 'Anna K. / Jan K.',
+            ]]
+        );
+
+        $rows = pl_cup_rows_from_result($result, ['ind' => [10 => 645], 'mix' => ['5_RMX' => 1290]]);
+
+        $this->assertSame([
+            ['classification' => 'ind', 'category' => 'RM', 'identity' => 'PL0001', 'name' => 'Jan Kowalski',
+             'club_name' => 'Klub Pierwszy', 'place' => 1, 'points' => 25, 'qual' => 645],
+            ['classification' => 'mix', 'category' => 'RMX', 'identity' => 'KLUB1', 'name' => 'Anna K. / Jan K.',
+             'club_name' => 'Klub Pierwszy', 'place' => 2, 'points' => 21, 'qual' => 1290],
+        ], $rows);
+    }
+
+    public function testSnapshotSkipsRowsThatScoredNothing()
+    {
+        $result = $this->separateResult([
+            $this->resultRow(),
+            $this->resultRow(['enId' => 11, 'code' => 'PL0002', 'points' => 0, 'place' => 40]),
+        ]);
+
+        $rows = pl_cup_rows_from_result($result, ['ind' => [], 'mix' => []]);
+
+        $this->assertSame(['PL0001'], array_column($rows, 'identity'));
+    }
+
+    public function testMissingLicenceRejectsTheWholeSet()
+    {
+        $rows = pl_cup_rows_from_result(
+            $this->separateResult([$this->resultRow(['code' => ''])]),
+            ['ind' => [], 'mix' => []]
+        );
+
+        $errors = pl_cup_validate_rows($rows);
+
+        $this->assertCount(1, $errors);
+        $this->assertStringContainsString('Brak numeru licencji', $errors[0]);
+        $this->assertStringContainsString('Jan Kowalski', $errors[0]);
+    }
+
+    public function testMissingClubCodeOnAMixedRowIsRejected()
+    {
+        $errors = pl_cup_validate_rows([[
+            'classification' => 'mix', 'category' => 'RMX', 'identity' => '', 'name' => 'Para',
+            'club_name' => 'Klub Pierwszy', 'place' => 1, 'points' => 25, 'qual' => 0,
+        ]]);
+
+        $this->assertCount(1, $errors);
+        $this->assertStringContainsString('Brak kodu klubu', $errors[0]);
+    }
+
+    public function testTwoMixedPairsOfOneClubAreRejected()
+    {
+        $row = [
+            'classification' => 'mix', 'category' => 'RMX', 'identity' => 'KLUB1', 'name' => 'Para',
+            'club_name' => 'Klub Pierwszy', 'place' => 1, 'points' => 25, 'qual' => 0,
+        ];
+
+        $errors = pl_cup_validate_rows([$row, $row]);
+
+        $this->assertCount(1, $errors);
+        $this->assertStringContainsString('Dwa miksty tego samego klubu', $errors[0]);
+    }
+
+    // --- Round storage -----------------------------------------------------
+
+    public function testStoreRoundDeletesThenInserts()
+    {
+        $error = pl_cup_store_round(2026, 4, [[
+            'classification' => 'ind', 'category' => 'RM', 'identity' => 'PL0001', 'name' => 'Jan Kowalski',
+            'club_name' => 'Klub Pierwszy', 'place' => 1, 'points' => 25, 'qual' => 645,
+        ]]);
+
+        $this->assertSame('', $error);
+        $this->assertSame(['begin', 'commit'], FakeDb::$tx);
+
+        $writes = FakeDb::executed('/DELETE FROM PLCupRound|INSERT INTO PLCupRound/');
+        $this->assertCount(2, $writes);
+        $this->assertStringStartsWith('DELETE FROM PLCupRound', $writes[0]);
+        $this->assertStringStartsWith('INSERT INTO PLCupRound', $writes[1]);
+    }
+
+    public function testStoreRoundRollsBackOnAFailedWrite()
+    {
+        FakeDb::throwOn('/INSERT INTO PLCupRound/', 'duplicate key');
+
+        $error = pl_cup_store_round(2026, 4, [[
+            'classification' => 'ind', 'category' => 'RM', 'identity' => 'PL0001', 'name' => 'Jan',
+            'club_name' => 'Klub', 'place' => 1, 'points' => 25, 'qual' => 0,
+        ]]);
+
+        $this->assertStringContainsString('duplicate key', $error);
+        $this->assertSame(['begin', 'rollback'], FakeDb::$tx);
+    }
+
+    public function testLoadRoundsReadsStoredRows()
+    {
+        FakeDb::on('/FROM PLCupRound/', [[
+            'PlCrRound' => 2, 'PlCrClassification' => 'ind', 'PlCrCategory' => 'RM', 'PlCrIdentity' => 'PL0001',
+            'PlCrName' => 'Jan Kowalski', 'PlCrClubName' => 'Klub Pierwszy', 'PlCrPlace' => 3,
+            'PlCrPoints' => 18, 'PlCrQualScore' => 630,
+        ]]);
+
+        $rows = pl_cup_load_rounds(2026, 2);
+
+        $this->assertSame(2, $rows[0]['round']);
+        $this->assertSame(18, $rows[0]['points']);
+        $this->assertSame(630, $rows[0]['qual']);
+    }
+
+    // --- Baraż -------------------------------------------------------------
+
+    public function testBarrageOutcomeIsStoredAndCleared()
+    {
+        pl_cup_set_barrage(2026, 'ind', 'RU18M', 'PL0001', 1);
+        $this->assertCount(1, FakeDb::executed('/INSERT INTO PLCupBarrage/'));
+
+        FakeDb::reset();
+        pl_cup_set_barrage(2026, 'ind', 'RU18M', 'PL0001', 0);
+        $this->assertCount(1, FakeDb::executed('/DELETE FROM PLCupBarrage/'));
+        $this->assertSame([], FakeDb::executed('/INSERT INTO PLCupBarrage/'));
+    }
+
+    public function testBarragesAreLoadedKeyedByIdentity()
+    {
+        FakeDb::on('/FROM PLCupBarrage/', [[
+            'PlCbClassification' => 'ind', 'PlCbCategory' => 'RU18M', 'PlCbIdentity' => 'PL0001', 'PlCbOrder' => 2,
+        ]]);
+
+        $this->assertSame(['ind|RU18M|PL0001' => 2], pl_cup_load_barrages(2026));
+    }
+
+    // --- CSV ---------------------------------------------------------------
+
+    private function csvRows()
+    {
+        return [[
+            'classification' => 'ind', 'category' => 'RM', 'identity' => 'PL0001', 'name' => 'Jan Kowalski',
+            'club_name' => 'Klub Pierwszy', 'place' => 1, 'points' => 25, 'qual' => 645,
+        ]];
+    }
+
+    public function testCsvWriteEmitsBomHeaderAndRow()
+    {
+        $csv = pl_cup_csv_write($this->csvRows());
+
+        $this->assertStringStartsWith("\xEF\xBB\xBF" . 'Klasyfikacja;Kategoria;Identyfikator;Nazwa;Klub;Miejsce;Punkty;Kwalifikacje', $csv);
+        $this->assertStringContainsString('ind;RM;PL0001;Jan Kowalski;Klub Pierwszy;1;25;645', $csv);
+    }
+
+    public function testCsvRoundTripKeepsTheRowsIdentical()
+    {
+        $parsed = pl_cup_csv_parse(pl_cup_csv_write($this->csvRows()), ['ind' => ['RM'], 'mix' => []]);
+
+        $this->assertSame([], $parsed['errors']);
+        $this->assertSame($this->csvRows(), $parsed['rows']);
+    }
+
+    public function testCsvQuotesSeparatorsInNames()
+    {
+        $rows = $this->csvRows();
+        $rows[0]['club_name'] = 'Klub "A"; Oddział';
+
+        $parsed = pl_cup_csv_parse(pl_cup_csv_write($rows), ['ind' => ['RM'], 'mix' => []]);
+
+        $this->assertSame($rows, $parsed['rows']);
+    }
+
+    public function testCsvAcceptsACommaDecimalSeparator()
+    {
+        $csv = "Klasyfikacja;Kategoria;Identyfikator;Nazwa;Klub;Miejsce;Punkty;Kwalifikacje\r\nind;RM;PL0001;Jan;Klub;1;25,0;645\r\n";
+
+        $parsed = pl_cup_csv_parse($csv, ['ind' => ['RM'], 'mix' => []]);
+
+        $this->assertSame([], $parsed['errors']);
+        $this->assertSame(25, $parsed['rows'][0]['points']);
+    }
+
+    public function testCsvRejectsAWrongColumnCount()
+    {
+        $csv = "ind;RM;PL0001;Jan;Klub;1;25\r\n";
+
+        $parsed = pl_cup_csv_parse($csv, ['ind' => ['RM'], 'mix' => []]);
+
+        $this->assertCount(1, $parsed['errors']);
+        $this->assertStringContainsString('Wiersz 1', $parsed['errors'][0]);
+        $this->assertStringContainsString('8 kolumn', $parsed['errors'][0]);
+    }
+
+    public function testCsvRejectsAnUnknownClassification()
+    {
+        $csv = "tea;RM;PL0001;Jan;Klub;1;25;645\r\n";
+
+        $parsed = pl_cup_csv_parse($csv, ['ind' => ['RM'], 'mix' => []]);
+
+        $this->assertStringContainsString('nieznana klasyfikacja', $parsed['errors'][0]);
+    }
+
+    public function testCsvRejectsAnUnknownCategoryWithItsLineNumber()
+    {
+        $csv = "Klasyfikacja;Kategoria;Identyfikator;Nazwa;Klub;Miejsce;Punkty;Kwalifikacje\r\n"
+            . "ind;RM;PL0001;Jan;Klub;1;25;645\r\n"
+            . "ind;XX;PL0002;Adam;Klub;2;21;630\r\n";
+
+        $parsed = pl_cup_csv_parse($csv, ['ind' => ['RM'], 'mix' => []]);
+
+        $this->assertCount(1, $parsed['errors']);
+        $this->assertStringContainsString('Wiersz 3', $parsed['errors'][0]);
+        $this->assertStringContainsString('"XX"', $parsed['errors'][0]);
+    }
+
+    public function testCsvRejectsANonNumericPlace()
+    {
+        $csv = "ind;RM;PL0001;Jan;Klub;pierwszy;25;645\r\n";
+
+        $parsed = pl_cup_csv_parse($csv, ['ind' => ['RM'], 'mix' => []]);
+
+        $this->assertStringContainsString('kolumna Miejsce', $parsed['errors'][0]);
+    }
+
+    public function testCsvReportsIdentityViolations()
+    {
+        $csv = "ind;RM;;Jan;Klub;1;25;645\r\n";
+
+        $parsed = pl_cup_csv_parse($csv, ['ind' => ['RM'], 'mix' => []]);
+
+        $this->assertStringContainsString('Brak numeru licencji', $parsed['errors'][0]);
+    }
+
+    public function testValidCategoriesComeFromConfiguredClassesAndMixedEvents()
+    {
+        FakeDb::on('/FROM Divisions/', [['DivId' => 'R', 'DivDescription' => 'Łuk klasyczny']]);
+        FakeDb::on('/FROM Classes/', [['ClId' => 'M', 'ClDescription' => 'Senior', 'ClViewOrder' => 1]]);
+        FakeDb::on('/EvMixedTeam = 1/', [['Event' => 'RMX']]);
+
+        $categories = pl_cup_valid_categories(1);
+
+        $this->assertSame(['RM'], $categories['ind']);
+        $this->assertSame(['RMX'], $categories['mix']);
+    }
+}
