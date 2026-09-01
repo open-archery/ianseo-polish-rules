@@ -161,6 +161,17 @@ function pl_cup_compare_regulation(array $a, array $b, array $steps)
  * @return array rows with 'rank', 'tie_mark' ('' | 'SHARED' | 'BARRAGE'),
  *   'barrage_resolved' and 'tie_group' (-1 when the row is not tied)
  */
+/**
+ * The shoot-off position recorded for one row, or null when none is.
+ *
+ * @param array $barrages "classification|category|identity" => order (1 = winner)
+ */
+function pl_cup_barrage_order(array $row, array $barrages)
+{
+    $order = $barrages[$row['classification'] . '|' . $row['category'] . '|' . $row['identity']] ?? 0;
+    return $order > 0 ? $order : null;
+}
+
 function pl_cup_rank_category(array $rows, array $rule, array $barrages, $barrageAllowed)
 {
     usort($rows, fn ($a, $b) => pl_cup_compare_regulation($a, $b, $rule['steps']));
@@ -189,11 +200,8 @@ function pl_cup_rank_category(array $rows, array $rule, array $barrages, $barrag
         // Sub-groups that still share a rank after the shoot-off step.
         $blocks = [$group];
         if ($tied && $useBarrage) {
-            $orderOf = function (array $row) use ($barrages) {
-                $key = $row['classification'] . '|' . $row['category'] . '|' . $row['identity'];
-                $order = $barrages[$key] ?? 0;
-                return $order > 0 ? $order : PHP_INT_MAX;
-            };
+            // Unrecorded rows sort last and stay tied among themselves.
+            $orderOf = fn (array $row) => pl_cup_barrage_order($row, $barrages) ?? PHP_INT_MAX;
             usort($group, fn ($a, $b) => $orderOf($a) <=> $orderOf($b));
 
             $blocks = [];
@@ -210,13 +218,15 @@ function pl_cup_rank_category(array $rows, array $rule, array $barrages, $barrag
         foreach ($blocks as $block) {
             $rank = $position + 1;
             $stillTied = count($block) > 1;
-            // A row the shoot-off actually separated: it was tied by the
-            // regulation, and now stands alone.
-            $resolved = $tied && $useBarrage && !$stillTied;
+            // Only a recorded position resolves a row. The last row of a
+            // partially recorded group also ends up alone in its block, but
+            // nobody shot it off — it keeps the "baraż" mark.
+            $recorded = $tied && $useBarrage && pl_cup_barrage_order($block[0], $barrages) !== null;
+            $resolved = $recorded && !$stillTied;
 
             foreach ($block as $row) {
                 $row['rank'] = $rank;
-                $row['tie_mark'] = $stillTied ? $rule['terminator'] : '';
+                $row['tie_mark'] = ($stillTied || ($tied && $useBarrage && !$recorded)) ? $rule['terminator'] : '';
                 $row['barrage_resolved'] = $resolved;
                 $row['tie_group'] = $groupId;
                 $ranked[] = $row;

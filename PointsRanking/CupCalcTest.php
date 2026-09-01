@@ -245,6 +245,21 @@ final class CupCalcTest extends PlTestCase
         $this->assertSame(['BARRAGE', 'BARRAGE'], [$ranked[1]['tie_mark'], $ranked[2]['tie_mark']]);
     }
 
+    public function testTheLastUnrecordedRowOfAGroupIsNotTreatedAsResolved()
+    {
+        // Two of three positions recorded: the third row ends up alone in its
+        // block, but nobody shot it off - it must not read as decided.
+        $ranked = $this->rank([
+            $this->row(1, 'RU18M', 'A', 25, 1, 610),
+            $this->row(1, 'RU18M', 'B', 25, 1, 610),
+            $this->row(1, 'RU18M', 'C', 25, 1, 610),
+        ], 'ind', 'RU18M', ['ind|RU18M|B' => 1, 'ind|RU18M|A' => 2]);
+
+        $this->assertSame(['B', 'A', 'C'], array_column($ranked, 'identity'));
+        $this->assertSame([true, true, false], array_column($ranked, 'barrage_resolved'));
+        $this->assertSame(['', '', 'BARRAGE'], array_column($ranked, 'tie_mark'));
+    }
+
     public function testOutcomeIsIgnoredBeforeTheFinalRoundIsStored()
     {
         $ranked = $this->rank([

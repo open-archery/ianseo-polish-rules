@@ -89,12 +89,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['snapshot'])) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
     $importRound = pl_cup_post_int('ImportRound');
+    // A CsvFile[] request makes tmp_name an array, which is_uploaded_file()
+    // rejects with a TypeError rather than a false.
+    $uploaded = isset($_FILES['CsvFile']['tmp_name']) && is_string($_FILES['CsvFile']['tmp_name'])
+        ? $_FILES['CsvFile']['tmp_name']
+        : '';
+
     if ($importRound < 1 || $importRound > PL_CUP_ROUNDS) {
         $errors[] = 'Wybierz numer rundy do zaimportowania.';
-    } elseif (!isset($_FILES['CsvFile']) || !is_uploaded_file($_FILES['CsvFile']['tmp_name'] ?? '')) {
+    } elseif ($config['Round'] >= 1 && $importRound === $config['Round']) {
+        // The local round is calculated, not typed: importing over it would
+        // silently replace the snapshot with a hand-made file.
+        $errors[] = 'Runda ' . $importRound . ' to bieżące zawody - zapisz ją przyciskiem "Zapisz bieżącą rundę" zamiast importować.';
+    } elseif ($uploaded === '' || !is_uploaded_file($uploaded)) {
         $errors[] = 'Wybierz plik CSV.';
     } else {
-        $parsed = pl_cup_csv_parse(file_get_contents($_FILES['CsvFile']['tmp_name']), pl_cup_valid_categories($tourId));
+        $parsed = pl_cup_csv_parse(file_get_contents($uploaded), pl_cup_valid_categories($tourId));
         if (!empty($parsed['errors'])) {
             // Atomic: a single bad line leaves the stored round untouched.
             $errors = array_merge($errors, $parsed['errors']);
@@ -111,14 +121,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['saveBarrage'])) {
     $orders = isset($_POST['BarrageOrder']) && is_array($_POST['BarrageOrder']) ? $_POST['BarrageOrder'] : [];
+
+    // The form is only offered for rows the regulation sends to a shoot-off,
+    // once the cup's final round is stored - the request has to be held to the
+    // same rules, or a crafted POST could store an outcome for anything.
+    $known = [];
+    foreach (pl_cup_load_rounds($config['Edition']) as $row) {
+        $known[$row['classification'] . '|' . $row['category'] . '|' . $row['identity']] = true;
+    }
+    $finalRoundStored = in_array(PL_CUP_ROUNDS, pl_cup_stored_rounds($config['Edition']), true);
+
     $saved = 0;
-    foreach ($orders as $key => $order) {
-        $parts = explode('|', (string) $key);
-        if (count($parts) !== 3 || !is_scalar($order)) {
-            continue;
+    if (!$finalRoundStored) {
+        $errors[] = 'Baraż rozstrzyga się dopiero po zapisaniu ostatniej rundy Pucharu Polski.';
+    } else {
+        foreach ($orders as $key => $order) {
+            $parts = explode('|', (string) $key);
+            if (count($parts) !== 3 || !is_scalar($order) || !isset($known[$key])) {
+                continue;
+            }
+            if (pl_cup_tiebreak_rule($parts[0], $parts[1])['terminator'] !== 'BARRAGE') {
+                continue;
+            }
+            pl_cup_set_barrage($config['Edition'], $parts[0], $parts[1], $parts[2], intval($order));
+            $saved++;
         }
-        pl_cup_set_barrage($config['Edition'], $parts[0], $parts[1], $parts[2], intval($order));
-        $saved++;
     }
     if ($saved > 0) {
         $messages[] = 'Zapisano wynik barażu.';
