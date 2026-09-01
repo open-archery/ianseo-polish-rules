@@ -182,8 +182,14 @@ function pl_cup_load_qual_scores($tourId)
 
 /**
  * Turn a `pp` calculation plus qualification scores into round rows.
- * Rows that scored no points are left out: they cannot change any sum, and
- * every row here has to be transcribable into the CSV by hand.
+ *
+ * Rows that scored no points are kept as long as the athlete/pair has a valid
+ * place: the regulation's tie-break reads the best place and the highest
+ * qualification score "w dowolnej rundzie", so a round outside the point
+ * brackets still carries data that can decide the cup. Only rows with no
+ * result at all (place 0, or a DSQ/DNS/DNF sentinel >= 29999) are dropped.
+ * Rows that never score anywhere are left out of the classification itself,
+ * not of the stored round (see pl_cup_aggregate()).
  *
  * @param array $result pl_points_calculate() output
  * @param array $qualScores pl_cup_load_qual_scores() output
@@ -203,7 +209,8 @@ function pl_cup_rows_from_result(array $result, array $qualScores)
 
         foreach ($report['sections'] as $section) {
             foreach ($section['rows'] as $row) {
-                if ($row['points'] <= 0) {
+                $place = intval($row['place']);
+                if ($place <= 0 || $place >= 29999) {
                     continue;
                 }
                 if ($isMixed) {
@@ -261,7 +268,7 @@ function pl_cup_build_snapshot($tourId)
 function pl_cup_validate_rows(array $rows)
 {
     $errors = [];
-    $seenMixed = [];
+    $seen = [];
 
     foreach ($rows as $row) {
         $identity = trim((string) $row['identity']);
@@ -274,14 +281,17 @@ function pl_cup_validate_rows(array $rows)
             continue;
         }
 
-        if ($row['classification'] === 'mix') {
-            $key = $row['category'] . '|' . $identity;
-            if (isset($seenMixed[$key])) {
-                $errors[] = 'Dwa miksty tego samego klubu w kategorii ' . $row['category'] . ': ' . $identity;
-                continue;
-            }
-            $seenMixed[$key] = true;
+        // A repeated identity is also the stored round's primary key, and a
+        // duplicate-key INSERT dies inside ianseo's safe_w_sql() (an error page
+        // and exit(), no exception to roll back) - so it has to be caught here.
+        $key = $row['classification'] . '|' . $row['category'] . '|' . $identity;
+        if (isset($seen[$key])) {
+            $errors[] = $row['classification'] === 'mix'
+                ? 'Dwa miksty tego samego klubu w kategorii ' . $row['category'] . ': ' . $identity
+                : 'Ten sam numer licencji dwa razy w kategorii ' . $row['category'] . ': ' . $identity;
+            continue;
         }
+        $seen[$key] = true;
     }
 
     return $errors;

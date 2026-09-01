@@ -133,16 +133,49 @@ final class Fun_CupTest extends PlTestCase
         ], $rows);
     }
 
-    public function testSnapshotSkipsRowsThatScoredNothing()
+    public function testSnapshotKeepsPlacedRowsThatScoredNoPoints()
     {
+        // Their place and qualification score can still decide a tie-break
+        // ("w dowolnej rundzie"), so the round has to carry them.
         $result = $this->separateResult([
             $this->resultRow(),
             $this->resultRow(['enId' => 11, 'code' => 'PL0002', 'points' => 0, 'place' => 40]),
         ]);
 
+        $rows = pl_cup_rows_from_result($result, ['ind' => [11 => 540], 'mix' => []]);
+
+        $this->assertSame(['PL0001', 'PL0002'], array_column($rows, 'identity'));
+        $this->assertSame(['place' => 40, 'points' => 0, 'qual' => 540], [
+            'place' => $rows[1]['place'], 'points' => $rows[1]['points'], 'qual' => $rows[1]['qual'],
+        ]);
+    }
+
+    public function testSnapshotSkipsRowsWithoutAResult()
+    {
+        $result = $this->separateResult([
+            $this->resultRow(),
+            $this->resultRow(['enId' => 11, 'code' => 'PL0002', 'points' => 0, 'place' => 0]),
+            $this->resultRow(['enId' => 12, 'code' => 'PL0003', 'points' => 0, 'place' => 29999]),
+        ]);
+
         $rows = pl_cup_rows_from_result($result, ['ind' => [], 'mix' => []]);
 
         $this->assertSame(['PL0001'], array_column($rows, 'identity'));
+    }
+
+    public function testTheSameLicenceTwiceInOneCategoryIsRejected()
+    {
+        // Also the stored round's primary key - a duplicate INSERT dies inside
+        // ianseo's safe_w_sql() without an exception to roll back.
+        $row = [
+            'classification' => 'ind', 'category' => 'RM', 'identity' => 'PL0001', 'name' => 'Jan Kowalski',
+            'club_name' => 'Klub Pierwszy', 'place' => 1, 'points' => 25, 'qual' => 0,
+        ];
+
+        $errors = pl_cup_validate_rows([$row, $row]);
+
+        $this->assertCount(1, $errors);
+        $this->assertStringContainsString('Ten sam numer licencji dwa razy', $errors[0]);
     }
 
     public function testMissingLicenceRejectsTheWholeSet()

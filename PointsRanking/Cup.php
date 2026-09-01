@@ -42,9 +42,14 @@ $errors = [];
 // --- Export (must run before any page output) ------------------------------
 
 if (isset($_GET['action']) && $_GET['action'] === 'export') {
-    $rows = pl_cup_load_rounds($config['Edition'], intval($_GET['Round'] ?? $config['Round']));
+    // is_scalar, not just isset: intval() takes an array without complaining.
+    $exportRound = isset($_GET['Round']) && is_scalar($_GET['Round']) ? intval($_GET['Round']) : $config['Round'];
+    if ($exportRound < 1 || $exportRound > PL_CUP_ROUNDS) {
+        die('Nieprawidłowy numer rundy do eksportu.');
+    }
+    $rows = pl_cup_load_rounds($config['Edition'], $exportRound);
     header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="puchar_polski_' . intval($config['Edition']) . '_runda_' . intval($_GET['Round'] ?? $config['Round']) . '.csv"');
+    header('Content-Disposition: attachment; filename="puchar_polski_' . intval($config['Edition']) . '_runda_' . $exportRound . '.csv"');
     echo pl_cup_csv_write($rows);
     exit;
 }

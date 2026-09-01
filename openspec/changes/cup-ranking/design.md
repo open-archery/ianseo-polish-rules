@@ -61,6 +61,12 @@ A new `pl_cup_load_qual_scores($tourId)` reads `Individuals.IndScore` keyed by `
 
 Mixed rows lose `TeSubTeam` inside `pl_points_calculate()`, so the team score lookup is keyed by club + event only — safe exactly because D3 rejects two pairs of one club.
 
+### D4a — A stored round keeps placed rows that scored nothing
+
+The tie-break reads the best place and the highest qualification score "w dowolnej rundzie", so a round outside the points brackets still carries data that can decide the cup — dropping those rows would silently rank the wrong archer first. They are stored, and filtered out only at the classification's own level: a competitor whose rounds sum to zero is not listed.
+
+Cost: a bigger stored round (every placed archer, not only the scoring ones). Imported rounds are unaffected — the CSV carries whatever rows the earlier host's PDF lists, and a missing row simply contributes nothing.
+
 ### D5 — Staleness by rebuilding, not by hashing
 
 On every view of the cup page, the snapshot builder runs against the live tournament and its output is compared row-for-row against the stored rows of this tournament's round. Differences are counted and reported. No stored checksum, no cache to invalidate: the same function produces both sides, so a change in the builder cannot make an old checksum lie.

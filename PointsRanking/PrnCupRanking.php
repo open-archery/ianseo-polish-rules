@@ -37,25 +37,39 @@ $classifications = pl_cup_build_classifications(
 
 const PL_CUP_PDF_WIDTH = 190; // A4 portrait, IanseoPdf's 10mm side margins
 
-$cupName = $config['DiplomaName'] !== '' ? $config['DiplomaName'] : 'Puchar Polski ' . $config['Edition'];
+// The header must carry the edition even when the configured name omits it,
+// so PDFs of two seasons cannot be confused.
+$cupName = $config['DiplomaName'] !== '' ? $config['DiplomaName'] : 'Puchar Polski';
+if (strpos($cupName, (string) $config['Edition']) === false) {
+    $cupName .= ' ' . $config['Edition'];
+}
+
+/**
+ * Short marks, kept inside the column's width at 8 pt: "baraż" alone would read
+ * the same on a row a shoot-off decided and on one still waiting for it, and the
+ * PDF is the official output, so it says which.
+ */
+const PL_CUP_PDF_MARKS = ['BARRAGE' => 'baraż', 'SHARED' => 'm. dzielone'];
 
 function pl_cup_pdf_mark($row)
 {
     if (!empty($row['barrage_resolved'])) {
-        return 'baraż';
+        return 'po barażu';
     }
-    return $row['tie_mark'] === '' ? '' : (PL_CUP_MARK_LABELS[$row['tie_mark']] ?? '');
+    return $row['tie_mark'] === '' ? '' : (PL_CUP_PDF_MARKS[$row['tie_mark']] ?? '');
 }
 
 function pl_cup_pdf_classification($pdf, array $classification, $isMixed, $cupName)
 {
     $roundWidth = 9;
-    $fixed = 14 + 45 + 40 + 20 + PL_CUP_ROUNDS * $roundWidth + 14;
+    $nameWidth = 44;
+    $clubWidth = 36;
+    $fixed = 14 + $nameWidth + $clubWidth + 20 + PL_CUP_ROUNDS * $roundWidth + 14;
 
     $columns = [
         ['label' => 'Miejsce', 'width' => 14, 'align' => 'C', 'bold' => true],
-        ['label' => $isMixed ? 'Klub' : 'Zawodnik', 'width' => 45, 'align' => 'L', 'bold' => !$isMixed],
-        ['label' => $isMixed ? 'Skład' : 'Klub', 'width' => 40, 'align' => 'L'],
+        ['label' => $isMixed ? 'Klub' : 'Zawodnik', 'width' => $nameWidth, 'align' => 'L', 'bold' => !$isMixed],
+        ['label' => $isMixed ? 'Skład' : 'Klub', 'width' => $clubWidth, 'align' => 'L'],
         ['label' => $isMixed ? 'Kod klubu' : 'Nr licencji', 'width' => 20, 'align' => 'C'],
     ];
     for ($round = 1; $round <= PL_CUP_ROUNDS; $round++) {

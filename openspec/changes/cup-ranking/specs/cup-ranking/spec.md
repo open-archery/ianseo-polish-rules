@@ -31,11 +31,19 @@ Cup data SHALL be scoped by a cup edition (a calendar year) so that rounds of di
 ---
 
 ### Requirement: Snapshot of the current round
-The system SHALL store the current tournament's `pp` result as one round of the selected edition. The snapshot SHALL cover both `pp` classifications — individual and mixed — and SHALL record, per row, the category, the row identity, the display name, the club name, the place in that round, the points awarded and the qualification score. Re-running the snapshot SHALL replace that round's stored rows in full.
+The system SHALL store the current tournament's `pp` result as one round of the selected edition. The snapshot SHALL cover both `pp` classifications — individual and mixed — and SHALL record, per row, the category, the row identity, the display name, the club name, the place in that round, the points awarded and the qualification score. A row that placed but scored no points SHALL be stored too, because its place and qualification score can still decide a tie-break in a later round; only rows with no result at all (no place, or a DSQ/DNS/DNF) SHALL be left out. Re-running the snapshot SHALL replace that round's stored rows in full.
 
 #### Scenario: Snapshot stored
 - **WHEN** the operator snapshots the current tournament as round 4
-- **THEN** every scored individual and mixed row of the `pp` calculation is stored under edition/round 4 with its place, points and qualification score
+- **THEN** every placed individual and mixed row of the `pp` calculation is stored under edition/round 4 with its place, points and qualification score
+
+#### Scenario: Placed but unscored row kept
+- **WHEN** an athlete finishes outside the points brackets in this round
+- **THEN** the row is stored with 0 points, and its place and qualification score are available to the tie-break
+
+#### Scenario: No result at all
+- **WHEN** an athlete has no place, or was disqualified or did not start
+- **THEN** no row is stored for them
 
 #### Scenario: Re-snapshot replaces
 - **WHEN** a result is corrected in ianseo and the operator snapshots round 4 again
@@ -104,7 +112,7 @@ The system SHALL export the current tournament's round in exactly the format the
 ### Requirement: Combined cup classification
 The system SHALL present two cup classifications — individual and mixed — each sectioned per category with the same section order and labels as the round reports. A row SHALL show the identity, the display name, the club, the points scored in each of the four rounds, and their sum. A round in which the row scored nothing SHALL be shown as empty and SHALL not reduce the sum. No minimum number of started rounds is required.
 
-Rounds not yet imported or snapshotted SHALL simply be absent, so the classification is also usable as a standing after two or three rounds.
+Rounds not yet imported or snapshotted SHALL simply be absent, so the classification is also usable as a standing after two or three rounds. A competitor whose stored rounds add up to zero points SHALL NOT be classified, even though their stored rows still feed the tie-break of the competitors who did score.
 
 #### Scenario: Full cup
 - **WHEN** all four rounds are present and an athlete scored 25, 21, 0 and 18

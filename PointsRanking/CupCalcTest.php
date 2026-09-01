@@ -96,6 +96,30 @@ final class CupCalcTest extends PlTestCase
         $this->assertSame(46, $rows[0]['total']);
     }
 
+    public function testAZeroPointRoundStillFeedsTheTieBreak()
+    {
+        // Barebow decides on the highest qualification score in ANY round - a
+        // round outside the point brackets included.
+        $ranked = $this->rank([
+            $this->row(1, 'BM', 'A', 0, 35, 540),
+            $this->row(4, 'BM', 'A', 5, 10, 500),
+            $this->row(4, 'BM', 'B', 5, 10, 520),
+        ], 'ind', 'BM');
+
+        $this->assertSame(['A', 'B'], array_column($ranked, 'identity'));
+        $this->assertSame([1, 2], array_column($ranked, 'rank'));
+    }
+
+    public function testACompetitorWhoNeverScoredIsNotClassified()
+    {
+        $ranked = $this->rank([
+            $this->row(1, 'BM', 'A', 25, 1, 540),
+            $this->row(1, 'BM', 'B', 0, 35, 500),
+        ], 'ind', 'BM');
+
+        $this->assertSame(['A'], array_column($ranked, 'identity'));
+    }
+
     // --- Tie-break map -----------------------------------------------------
 
     public function testTiebreakRulePerSeries()

@@ -245,7 +245,10 @@ function pl_cup_build_classifications(array $roundRows, array $barrages, array $
     foreach (['ind', 'mix'] as $classification) {
         $byCategory = [];
         foreach ($aggregated as $row) {
-            if ($row['classification'] === $classification) {
+            // Stored rounds also hold placed rows that scored nothing (they carry
+            // the place and qualification score the tie-break may need); someone
+            // who never scored in any round is not classified.
+            if ($row['classification'] === $classification && $row['total'] > 0) {
                 $byCategory[$row['category']][] = $row;
             }
         }
