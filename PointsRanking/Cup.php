@@ -85,8 +85,7 @@ function pl_cup_post_int($field)
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['saveConfig'])) {
-    $diplomaName = (isset($_POST['DiplomaName']) && is_string($_POST['DiplomaName'])) ? trim($_POST['DiplomaName']) : '';
-    pl_cup_set_config($tourId, pl_cup_post_int('Edition'), pl_cup_post_int('Round'), $diplomaName);
+    pl_cup_set_config($tourId, pl_cup_post_int('Edition'), pl_cup_post_int('Round'));
     $config = pl_cup_get_config($tourId);
     $messages[] = 'Ustawienia Pucharu Polski zapisane.';
 }
@@ -393,10 +392,10 @@ echo '<option value="0"' . ($config['Round'] === 0 ? ' selected' : '') . '>-- ni
 for ($round = 1; $round <= PL_CUP_ROUNDS; $round++) {
     echo '<option value="' . $round . '"' . ($config['Round'] === $round ? ' selected' : '') . '>' . $round . '</option>';
 }
-echo '</select> &nbsp; Nazwa na dyplomach: <input type="text" name="DiplomaName" size="40" value="'
-    . htmlspecialchars($config['DiplomaName']) . '" placeholder="np. Puchar Polski 2026">';
 echo ' <input type="submit" value="Zapisz">';
 echo '</form>';
+echo '<div style="padding-top:6px;color:#555;">Nazwa zawodów na dyplomach wynika z kategorii i edycji '
+    . '(np. "w Pucharze Polski Juniorek Młodszych ' . intval($config['Edition']) . '") - nie trzeba jej wpisywać.</div>';
 echo '</td></tr>';
 echo '</table><br>';
 

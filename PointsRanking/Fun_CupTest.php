@@ -64,37 +64,33 @@ final class Fun_CupTest extends PlTestCase
 
         $config = pl_cup_get_config(1);
 
-        $this->assertSame(2026, $config['Edition']);
-        $this->assertSame(0, $config['Round']);
-        $this->assertSame('', $config['DiplomaName']);
+        $this->assertSame(['Edition' => 2026, 'Round' => 0], $config);
     }
 
     public function testConfigIsReadBack()
     {
-        FakeDb::on('/SELECT PlCcEdition/', [[
-            'PlCcEdition' => 2025, 'PlCcRound' => 4, 'PlCcDiplomaName' => 'Puchar Polski 2025',
-        ]]);
+        FakeDb::on('/SELECT PlCcEdition/', [['PlCcEdition' => 2025, 'PlCcRound' => 4]]);
 
         $config = pl_cup_get_config(1);
 
-        $this->assertSame(['Edition' => 2025, 'Round' => 4, 'DiplomaName' => 'Puchar Polski 2025'], $config);
+        $this->assertSame(['Edition' => 2025, 'Round' => 4], $config);
     }
 
     public function testSetConfigInsertsThenUpdates()
     {
-        pl_cup_set_config(7, 2026, 4, 'Puchar Polski 2026');
-        $this->assertCount(1, FakeDb::executed('/INSERT INTO PLCupConfig .*VALUES \(7, 2026, 4/s'));
+        pl_cup_set_config(7, 2026, 4);
+        $this->assertCount(1, FakeDb::executed('/INSERT INTO PLCupConfig .*VALUES \(7, 2026, 4\)/s'));
 
         FakeDb::on('/SELECT PlCcTournament FROM PLCupConfig/', [['PlCcTournament' => 7]]);
-        pl_cup_set_config(7, 2026, 2, 'Inna nazwa');
+        pl_cup_set_config(7, 2026, 2);
         $this->assertCount(1, FakeDb::executed('/UPDATE PLCupConfig SET PlCcEdition = 2026, PlCcRound = 2/'));
     }
 
     public function testSetConfigRejectsARoundOutsideTheCup()
     {
-        pl_cup_set_config(7, 2026, 9, '');
+        pl_cup_set_config(7, 2026, 9);
 
-        $this->assertCount(1, FakeDb::executed('/VALUES \(7, 2026, 0,/'));
+        $this->assertCount(1, FakeDb::executed('/VALUES \(7, 2026, 0\)/'));
     }
 
     // --- Qualification scores ----------------------------------------------

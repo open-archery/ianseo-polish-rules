@@ -238,6 +238,48 @@ final class CupCalcTest extends PlTestCase
         $this->assertSame(['steps' => [], 'terminator' => 'SHARED'], pl_cup_tiebreak_rule('ind', 'RU15M'));
     }
 
+    // --- Diploma competition names -----------------------------------------
+
+    public function testDiplomaCompetitionNamePerCategory()
+    {
+        $name = fn ($classification, $category) => pl_cup_diploma_competition_name($classification, $category, 2026);
+
+        // Recurve: the age series names the cup, gendered.
+        $this->assertSame('Pucharze Polski Seniorów 2026', $name('ind', 'RM'));
+        $this->assertSame('Pucharze Polski Seniorek 2026', $name('ind', 'RW'));
+        $this->assertSame('Pucharze Polski Juniorów 2026', $name('ind', 'RU21M'));
+        $this->assertSame('Pucharze Polski Juniorek 2026', $name('ind', 'RU21W'));
+        $this->assertSame('Pucharze Polski Juniorów Młodszych 2026', $name('ind', 'RU18M'));
+        $this->assertSame('Pucharze Polski Juniorek Młodszych 2026', $name('ind', 'RU18W'));
+        $this->assertSame('Pucharze Polski Młodzieżowców 2026', $name('ind', 'RU24M'));
+        $this->assertSame('Pucharze Polski Młodziczek 2026', $name('ind', 'RU15W'));
+        $this->assertSame('Pucharze Polski Dzieci 2026', $name('ind', 'RU12W'));
+        $this->assertSame('Pucharze Polski Masters 2026', $name('ind', 'R50M'));
+
+        // Compound and barebow: named by the bow, gender left to the category line.
+        $this->assertSame('Pucharze Polski Łuków Bloczkowych 2026', $name('ind', 'CM'));
+        $this->assertSame('Pucharze Polski Łuków Bloczkowych 2026', $name('ind', 'CW'));
+        $this->assertSame('Pucharze Polski Łuków Barebow 2026', $name('ind', 'BW'));
+        $this->assertSame('Pucharze Polski Łuków Bloczkowych Juniorów Młodszych 2026', $name('ind', 'CU18M'));
+        $this->assertSame('Pucharze Polski Łuków Barebow Juniorek 2026', $name('ind', 'BU21W'));
+
+        // Mixed: the club competes, so no gender anywhere in the name.
+        $this->assertSame('Pucharze Polski Mikstów 2026', $name('mix', 'RX'));
+        $this->assertSame('Pucharze Polski Mikstów Juniorów Młodszych 2026', $name('mix', 'RU18X'));
+        $this->assertSame('Pucharze Polski Mikstów Łuków Bloczkowych 2026', $name('mix', 'CX'));
+        $this->assertSame('Pucharze Polski Mikstów Łuków Barebow Juniorów 2026', $name('mix', 'BU21X'));
+    }
+
+    public function testDiplomaCompetitionNameFallsBackToThePlainCupName()
+    {
+        $this->assertSame('Pucharze Polski 2026', pl_cup_diploma_competition_name('ind', 'RXYZ', 2026));
+    }
+
+    public function testDiplomaCompetitionNameCarriesItsEdition()
+    {
+        $this->assertSame('Pucharze Polski Juniorów 2025', pl_cup_diploma_competition_name('ind', 'RU21M', 2025));
+    }
+
     // --- Tie-breaking (spec scenarios) -------------------------------------
 
     public function testJuniorSeriesBestPlaceDecides()

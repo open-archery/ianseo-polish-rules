@@ -49,7 +49,6 @@ function pl_cup_ensure_tables()
             PlCcTournament INT NOT NULL,
             PlCcEdition INT NOT NULL DEFAULT 0,
             PlCcRound INT NOT NULL DEFAULT 0,
-            PlCcDiplomaName VARCHAR(255) NOT NULL DEFAULT '',
             PRIMARY KEY (PlCcTournament)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     }
@@ -122,27 +121,26 @@ function pl_cup_default_edition()
 }
 
 /**
- * @return array{Edition:int, Round:int, DiplomaName:string}
+ * @return array{Edition:int, Round:int}
  */
 function pl_cup_get_config($tourId)
 {
-    $config = ['Edition' => pl_cup_default_edition(), 'Round' => 0, 'DiplomaName' => ''];
+    $config = ['Edition' => pl_cup_default_edition(), 'Round' => 0];
 
-    $Rs = safe_r_sql("SELECT PlCcEdition, PlCcRound, PlCcDiplomaName FROM PLCupConfig WHERE PlCcTournament = " . intval($tourId));
+    $Rs = safe_r_sql("SELECT PlCcEdition, PlCcRound FROM PLCupConfig WHERE PlCcTournament = " . intval($tourId));
     if (safe_num_rows($Rs) > 0) {
         $row = safe_fetch($Rs);
         if (intval($row->PlCcEdition) > 0) {
             $config['Edition'] = intval($row->PlCcEdition);
         }
         $config['Round'] = intval($row->PlCcRound);
-        $config['DiplomaName'] = $row->PlCcDiplomaName;
     }
     safe_free_result($Rs);
 
     return $config;
 }
 
-function pl_cup_set_config($tourId, $edition, $round, $diplomaName)
+function pl_cup_set_config($tourId, $edition, $round)
 {
     $tourId = intval($tourId);
     $edition = intval($edition);
@@ -156,13 +154,11 @@ function pl_cup_set_config($tourId, $edition, $round, $diplomaName)
     safe_free_result($Rs);
 
     if ($exists) {
-        safe_w_sql("UPDATE PLCupConfig SET PlCcEdition = $edition, PlCcRound = $round, "
-            . "PlCcDiplomaName = " . StrSafe_DB($diplomaName) . " WHERE PlCcTournament = " . $tourId);
+        safe_w_sql("UPDATE PLCupConfig SET PlCcEdition = $edition, PlCcRound = $round WHERE PlCcTournament = " . $tourId);
         return;
     }
 
-    safe_w_sql("INSERT INTO PLCupConfig (PlCcTournament, PlCcEdition, PlCcRound, PlCcDiplomaName) "
-        . "VALUES ($tourId, $edition, $round, " . StrSafe_DB($diplomaName) . ")");
+    safe_w_sql("INSERT INTO PLCupConfig (PlCcTournament, PlCcEdition, PlCcRound) VALUES ($tourId, $edition, $round)");
 }
 
 // --- Qualification scores (not read by the points engine, D4) --------------

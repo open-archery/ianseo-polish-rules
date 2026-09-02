@@ -34,7 +34,7 @@ PLCupConfig                          PLCupRound
   PlCcTournament   PK                  PlCrEdition        \
   PlCcEdition                          PlCrRound           |
   PlCcRound                            PlCrClassification  | PK
-  PlCcDiplomaName                      PlCrCategory        |
+                                       PlCrCategory        |
                                        PlCrIdentity       /
                                        PlCrName
                                        PlCrClubName
@@ -45,7 +45,7 @@ PLCupConfig                          PLCupRound
 
 `PLCupBarrage` (D6a) is the third table and is edition-scoped like `PLCupRound`.
 
-`PLCupRound` is deliberately **not** keyed by tournament: rounds 1–3 have no tournament here. The edition (a year) is the season boundary, so 2025 and 2026 rows coexist without bleeding. `PLCupConfig` holds only what is per-tournament: which edition/round this tournament is, and the diploma name.
+`PLCupRound` is deliberately **not** keyed by tournament: rounds 1–3 have no tournament here. The edition (a year) is the season boundary, so 2025 and 2026 rows coexist without bleeding. `PLCupConfig` holds only what is per-tournament: which edition and round this tournament is. Diploma wording is not stored at all — it follows from the category and the edition (see the cup-diplomas requirement).
 
 All three tables auto-install with the module's `SHOW TABLES LIKE` pattern (`pl_cup_ensure_tables()`).
 

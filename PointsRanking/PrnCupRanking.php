@@ -41,10 +41,7 @@ const PL_CUP_PDF_WIDTH = 190; // A4 portrait, IanseoPdf's 10mm side margins
 // Every table title ends with the edition, so two seasons' printouts cannot be
 // confused (spec "Cup PDF report").
 define('PL_CUP_PDF_EDITION', (string) $config['Edition']);
-$cupName = $config['DiplomaName'] !== '' ? $config['DiplomaName'] : 'Puchar Polski';
-if (strpos($cupName, PL_CUP_PDF_EDITION) === false) {
-    $cupName .= ' ' . PL_CUP_PDF_EDITION;
-}
+$cupName = 'Puchar Polski ' . PL_CUP_PDF_EDITION;
 
 /**
  * Short marks, kept inside the column's width at 8 pt: "baraż" alone would read

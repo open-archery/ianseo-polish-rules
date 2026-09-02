@@ -49,14 +49,16 @@ $classifications = pl_cup_build_classifications(
 );
 
 $diplomaConfig = pl_diploma_get_config($tourId);
-// Everything but the name comes from the round's own diploma configuration -
-// the cup diploma is handed out on the last day of the final round.
-$competitionName = $config['DiplomaName'] !== '' ? $config['DiplomaName'] : $diplomaConfig['CompetitionName'];
-
-$pdf = PLDiplomaPdf::createInstance('Dyplomy - ' . $competitionName);
+// Everything but the competition name comes from the round's own diploma
+// configuration - the cup diploma is handed out on the last day of the final
+// round. The name itself is derived per category (see below).
+$pdf = PLDiplomaPdf::createInstance('Dyplomy - Puchar Polski ' . intval($config['Edition']));
 $printed = 0;
 
 foreach ($classifications[$classKey]['sections'] as $section) {
+    // Each category names its own cup: "w Pucharze Polski Juniorek Młodszych 2026".
+    $competitionName = pl_cup_diploma_competition_name($classKey, $section['category'], $config['Edition']);
+
     foreach ($section['rows'] as $row) {
         if ($row['rank'] < $diplomaConfig['PlaceFrom'] || $row['rank'] > $diplomaConfig['PlaceTo']) {
             continue;

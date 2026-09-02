@@ -69,6 +69,69 @@ const PL_CUP_INDIVIDUAL_GENDER = ['M' => 'indywidualna mężczyzn', 'W' => 'indy
 const PL_CUP_TITLE_PREFIX = 'Klasyfikacja generalna Pucharu Polski';
 
 /**
+ * Series names as a diploma spells them: title case, and in the locative phrase
+ * the diploma builds — "za zajęcie 1 miejsca **w Pucharze Polski Juniorów
+ * Młodszych 2026**". Recurve cups are named by age and gender, the compound and
+ * barebow cups by their bow, with gender left to the "w kategorii" line.
+ */
+const PL_CUP_DIPLOMA_AGE_SERIES = [
+    '' => ['M' => 'Seniorów', 'W' => 'Seniorek'],
+    'U24' => ['M' => 'Młodzieżowców', 'W' => 'Młodzieżowczyń'],
+    'U21' => ['M' => 'Juniorów', 'W' => 'Juniorek'],
+    'U18' => ['M' => 'Juniorów Młodszych', 'W' => 'Juniorek Młodszych'],
+    'U15' => ['M' => 'Młodzików', 'W' => 'Młodziczek'],
+    'U12' => ['M' => 'Dzieci', 'W' => 'Dzieci'],
+    '50' => ['M' => 'Masters', 'W' => 'Masters'],
+];
+
+/** Bow-named cups, in the same title case. */
+const PL_CUP_DIPLOMA_BOW = ['C' => 'Łuków Bloczkowych', 'B' => 'Łuków Barebow'];
+
+/** Opening of every diploma's competition name, in the locative. */
+const PL_CUP_DIPLOMA_PREFIX = 'Pucharze Polski';
+
+/**
+ * The competition name printed on one category's cup diplomas, e.g.
+ *   "Pucharze Polski Juniorek Młodszych 2026"
+ *   "Pucharze Polski Łuków Bloczkowych 2026"
+ *   "Pucharze Polski Mikstów Łuków Barebow 2026"
+ *
+ * Derived, not configured: every part of it is fixed by the category and the
+ * edition, so there is nothing for an operator to type or mistype.
+ */
+function pl_cup_diploma_competition_name($classification, $category, $edition)
+{
+    $parts = pl_cup_split_category($classification, $category);
+    $series = $parts ? (PL_CUP_DIPLOMA_AGE_SERIES[$parts['age']] ?? null) : null;
+
+    if ($parts === null || $series === null) {
+        return trim(PL_CUP_DIPLOMA_PREFIX . ' ' . $edition);
+    }
+
+    $bow = PL_CUP_DIPLOMA_BOW[$parts['division']] ?? '';
+    $name = PL_CUP_DIPLOMA_PREFIX;
+
+    if ($classification === 'mix') {
+        // The pair competes for the club, so the name carries no gender.
+        $name .= ' Mikstów';
+        $name .= $bow !== '' ? ' ' . $bow : '';
+        $name .= $parts['age'] !== '' ? ' ' . $series['M'] : '';
+        return $name . ' ' . $edition;
+    }
+
+    if ($bow === '') {
+        // Recurve: the age series is the cup's name and carries the gender.
+        return $name . ' ' . $series[$parts['gender']] . ' ' . $edition;
+    }
+
+    // Compound and barebow are named by the bow; only a younger class needs its
+    // series added, so that two sections cannot share one name.
+    $name .= ' ' . $bow;
+    $name .= $parts['age'] !== '' ? ' ' . $series[$parts['gender']] : '';
+    return $name . ' ' . $edition;
+}
+
+/**
  * Split a category code into its division, age and gender parts.
  *
  * Individual codes are division + class ("RU18W"); mixed event codes are

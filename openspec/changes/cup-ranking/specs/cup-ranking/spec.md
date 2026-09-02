@@ -351,13 +351,19 @@ The system SHALL generate a single A4 PDF containing the individual and mixed cu
 ---
 
 ### Requirement: Cup diplomas
-The system SHALL produce cup diplomas with the same renderer and the same per-tournament diploma configuration as the round diplomas — dates, location, body text, head judge, organizer and place range — except the competition name, which SHALL come from a cup-specific name configured in the cup settings, so the diploma states that it is won in the whole Puchar Polski and not in a single round.
+The system SHALL produce cup diplomas with the same renderer and the same per-tournament diploma configuration as the round diplomas — dates, location, body text, head judge, organizer and place range — except the competition name, which SHALL be **derived per category** so the diploma states which cup was won and in which season: "w Pucharze Polski Juniorek Młodszych 2026", "w Pucharze Polski Łuków Bloczkowych 2026", "w Pucharze Polski Mikstów Łuków Barebow 2026".
+
+Recurve cups SHALL be named by their age series and gender; the compound and barebow cups SHALL be named by the bow, leaving the gender to the diploma's own category line, and SHALL add the age series only for classes younger than senior. A mixed cup SHALL be named "Mikstów" plus the bow and, for younger classes, the age series, never a gender. The edition SHALL close every name. Nothing about the name SHALL be configurable: every part of it follows from the category and the edition.
 
 Only rows whose cup rank falls inside the configured place range SHALL be printed. An individual diploma SHALL name the athlete with their club; a mixed diploma SHALL name the club with no athlete line and no roster list. The diploma's category line SHALL be the row's category label.
 
 #### Scenario: Cup name printed
-- **WHEN** the cup name is set to "Puchar Polski 2026" and cup diplomas are printed
-- **THEN** the diplomas carry that name while their dates, location and body text come from the tournament's diploma configuration
+- **WHEN** cup diplomas are printed for `RU18W` in edition 2026
+- **THEN** they read "za zajęcie … miejsca w Pucharze Polski Juniorek Młodszych 2026", while their dates, location and body text come from the tournament's diploma configuration
+
+#### Scenario: Bow-named cup
+- **WHEN** cup diplomas are printed for `CW`
+- **THEN** they read "w Pucharze Polski Łuków Bloczkowych 2026", with the gender left to the "w kategorii" line
 
 #### Scenario: Place range respected
 - **WHEN** the diploma configuration covers places 1–3 and a category has 20 classified athletes
