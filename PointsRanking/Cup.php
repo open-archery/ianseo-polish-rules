@@ -262,6 +262,11 @@ function pl_cup_render_classification(array $classification, $isMixed)
             echo '<th>R' . $round . '</th>';
         }
         echo '<th>Suma</th><th>Uwagi</th></tr>';
+        // The PDF stays a plain points table; the page is where a result is
+        // checked, so every round shows what the tie-break would read.
+        echo '<tr><td colspan="' . $colCount . '" style="padding:2px 6px;font-size:85%;color:#666;">'
+            . 'W kolumnach rund: <strong>punkty</strong>, miejsce w zawodach (m.) i wynik kwalifikacji (kw.).'
+            . '</td></tr>';
 
         foreach ($section['rows'] as $row) {
             echo '<tr>';
@@ -273,11 +278,23 @@ function pl_cup_render_classification(array $classification, $isMixed)
             echo '<td style="text-align:center;">' . htmlspecialchars($row['identity']) . '</td>';
             for ($round = 1; $round <= PL_CUP_ROUNDS; $round++) {
                 $points = $row['rounds'][$round] ?? null;
-                $title = $points === null ? '' : ' title="Miejsce: ' . intval($row['places'][$round] ?? 0)
-                    . ', kwalifikacje: ' . intval($row['quals'][$round] ?? 0) . '"';
-                echo '<td style="text-align:center;"' . $title . '>' . ($points === null ? '' : intval($points)) . '</td>';
+                if ($points === null) {
+                    echo '<td style="text-align:center;color:#bbb;">-</td>';
+                    continue;
+                }
+                echo '<td style="text-align:center;white-space:nowrap;">'
+                    . '<strong>' . intval($points) . '</strong>'
+                    . '<div style="font-size:85%;color:#666;">m. ' . intval($row['places'][$round] ?? 0)
+                    . ' &middot; kw. ' . intval($row['quals'][$round] ?? 0) . '</div>'
+                    . '</td>';
             }
-            echo '<td style="text-align:center;font-weight:bold;">' . intval($row['total']) . '</td>';
+            // The sum decides the cup; the best place and score are what the
+            // regulation reaches for next, so they belong beside it.
+            echo '<td style="text-align:center;white-space:nowrap;">'
+                . '<strong>' . intval($row['total']) . '</strong>'
+                . '<div style="font-size:85%;color:#666;">najl. m. ' . ($row['best_place'] > 0 ? intval($row['best_place']) : '-')
+                . ' &middot; najl. kw. ' . ($row['best_qual'] > 0 ? intval($row['best_qual']) : '-') . '</div>'
+                . '</td>';
             echo '<td style="text-align:center;color:#a00;">' . htmlspecialchars(pl_cup_mark_label($row)) . '</td>';
             echo '</tr>';
         }

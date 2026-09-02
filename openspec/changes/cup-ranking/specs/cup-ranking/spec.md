@@ -213,13 +213,17 @@ The system SHALL present two cup classifications — individual and mixed — ea
 
 Every section SHALL be headed by its cup's own Polish name — "Klasyfikacja generalna Pucharu Polski Juniorek młodszych", "… łuków barebow - indywidualna mężczyzn", "… Seniorów - miksty" — never the raw category code.
 
-An individual row SHALL show the licence number, the athlete, the club, the points scored in each of the four rounds, and their sum. A mixed row SHALL show the club and its code in place of the athlete: the competitor is the club, and its pair may be two different athletes in every round, so no athlete names are stored or displayed. A round in which the row scored nothing SHALL be shown as empty and SHALL not reduce the sum. No minimum number of started rounds is required.
+An individual row SHALL show the licence number, the athlete, the club, the points scored in each of the four rounds, and their sum. In the page — not in the PDF, which stays a plain points table — each round SHALL additionally show that round's place and qualification score, and the sum SHALL be accompanied by the best place and the best qualification score of the whole cup, since those are what the tie-break reaches for next. Points SHALL be emphasised over that supporting data. A mixed row SHALL show the club and its code in place of the athlete: the competitor is the club, and its pair may be two different athletes in every round, so no athlete names are stored or displayed. A round in which the row scored nothing SHALL be shown as empty and SHALL not reduce the sum. No minimum number of started rounds is required.
 
 Rounds not yet imported or snapshotted SHALL simply be absent, so the classification is also usable as a standing after two or three rounds. A competitor whose stored rounds add up to zero points SHALL NOT be classified, even though their stored rows still feed the tie-break of the competitors who did score.
 
 #### Scenario: Full cup
 - **WHEN** all four rounds are present and an athlete scored 25, 21, 0 and 18
 - **THEN** the row shows those per-round values and a sum of 64
+
+#### Scenario: Round detail in the page
+- **WHEN** an athlete placed 2nd in round 1 with a qualification score of 607
+- **THEN** that round's cell shows 21 points, place 2 and 607, and the sum column also shows the athlete's best place and best qualification score
 
 #### Scenario: One round only
 - **WHEN** an athlete competed in round 1 only and scored 13
