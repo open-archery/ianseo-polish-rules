@@ -265,7 +265,7 @@ function pl_cup_render_classification(array $classification, $isMixed)
         // The PDF stays a plain points table; the page is where a result is
         // checked, so every round shows what the tie-break would read.
         echo '<tr><td colspan="' . $colCount . '" style="padding:2px 6px;font-size:85%;color:#666;">'
-            . 'W kolumnach rund: <strong>punkty</strong>, miejsce w zawodach (m.) i wynik kwalifikacji (kw.).'
+            . 'W kolumnach rund: punkty, miejsce w zawodach (m.) i wynik kwalifikacji (kw.).'
             . '</td></tr>';
 
         foreach ($section['rows'] as $row) {
@@ -282,8 +282,10 @@ function pl_cup_render_classification(array $classification, $isMixed)
                     echo '<td style="text-align:center;color:#bbb;">-</td>';
                     continue;
                 }
+                // Only the total is emphasised: the per-round points are read
+                // together with their place and score, not picked out of the row.
                 echo '<td style="text-align:center;white-space:nowrap;">'
-                    . '<strong>' . intval($points) . '</strong>'
+                    . intval($points)
                     . '<div style="font-size:85%;color:#666;">m. ' . intval($row['places'][$round] ?? 0)
                     . ' &middot; kw. ' . intval($row['quals'][$round] ?? 0) . '</div>'
                     . '</td>';
