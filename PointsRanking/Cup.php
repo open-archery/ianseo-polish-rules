@@ -425,7 +425,8 @@ echo '</select> <input type="file" name="CsvFile" accept=".csv,text/csv"> <input
 echo '</form>';
 echo '<div style="padding-top:6px;color:#555;">Import zastępuje tylko kategorie zawarte w pliku - '
     . 'rundę można złożyć z kilku źródeł (np. juniorzy z ianseo, bloczkowe i barebow z plików CSV).<br>'
-    . 'Wymagane kolumny: Klasyfikacja, Kategoria, Identyfikator, Nazwa (zawodnicy), Miejsce, Kwalifikacje (0 gdy brak). '
+    . 'Wymagane kolumny: Klasyfikacja, Kategoria, Identyfikator (numer licencji, a dla mikstów kod klubu, np. ZRYDOB), '
+    . 'Nazwa (zawodnicy), Miejsce, Kwalifikacje (0 gdy brak). '
     . 'Punkty są zawsze wyliczane z miejsca według tabeli Pucharu Polski - kolumna Punkty w pliku służy tylko do kontroli.</div>';
 echo '</td></tr>';
 echo '<tr><td style="padding:8px;" colspan="2">';

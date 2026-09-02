@@ -84,6 +84,8 @@ An individual row SHALL be identified by the athlete's licence number and its ca
 ### Requirement: Round import from CSV
 The system SHALL import one round of an edition from a CSV file, since earlier rounds' ianseo databases are not available. One row SHALL carry classification, category, identity, display name, club name, place, points and qualification score.
 
+A mixed row SHALL carry its club code in the identity column; the club name alone SHALL NOT identify it, because hosts write the same club differently. A row without a club code SHALL be rejected with a message saying where the code belongs.
+
 A row whose place says the archer has no result — a marker such as `DNF`, `DNS`, `DSQ`, `ABS` or `-`, or a value outside the classified range — SHALL be skipped rather than rejected: a result list exported by another host names everyone who entered, and such a row has nothing to contribute to the cup. The number of skipped rows SHALL be reported after the import. A place that is neither a number nor a known marker SHALL remain an error, so a typo is not silently dropped.
 
 Every other row SHALL state its classification, category, identity, place and qualification score, and — for an individual row — the athlete's name, which identifies them against the rounds already stored. A qualification score of 0 SHALL be written explicitly, because an empty cell is far more often a forgotten column than a real zero. The club name is optional and is display data only.
@@ -157,7 +159,7 @@ Contradictions inside one file SHALL be reported the same way.
 
 Club names SHALL NOT be compared: the same club is written differently by different hosts, and an athlete absent from the final round has no single spelling to fall back on — the club shown is the one from that athlete's most recent stored round.
 
-Mixed rows SHALL NOT take part in this check: a mixed row is a club, and its pair may be two different athletes in every round.
+Mixed rows SHALL be checked on their own identity instead, since their pair may be two different athletes in every round: one club appearing under two club codes SHALL be reported the same way, because it would give that club two separate cup rows. Club names SHALL be compared exactly, once case, diacritics and spacing are normalised away. The reverse — one code carrying differently written club names — SHALL NOT be a contradiction, since hosts spell the same club differently, which is why the code is the identity.
 
 A snapshot of the current tournament SHALL report the same contradictions as a warning rather than refusing to store: the snapshot is calculated, so a contradiction there means an imported round holds the wrong licence.
 
@@ -180,6 +182,14 @@ A snapshot of the current tournament SHALL report the same contradictions as a w
 #### Scenario: Two athletes one letter apart
 - **WHEN** "Zapała Daria" and "Zapała Maria" appear under their own licences
 - **THEN** the import is accepted and they are classified as two athletes
+
+#### Scenario: One club, two club codes
+- **WHEN** a file gives "MKŁ Strzała Warszawa" the code `STRZAL` and round 1 already has that club under `STRZWA`
+- **THEN** the import is rejected and the message names the club and both codes
+
+#### Scenario: One club code, two spellings
+- **WHEN** the same code carries "ULKS Zryw Dobrcz" in one round and "Uczniowski LKS Zryw Dobrcz" in the file
+- **THEN** the import is accepted
 
 #### Scenario: Contradiction inside one file
 - **WHEN** one file uses the same licence for two different athletes

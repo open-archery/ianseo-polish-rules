@@ -310,7 +310,8 @@ function pl_cup_validate_rows(array $rows)
 
         if ($identity === '') {
             $errors[] = $row['classification'] === 'mix'
-                ? 'Brak kodu klubu dla miksta: ' . $label . ' [' . $row['category'] . ']'
+                ? 'Brak kodu klubu dla miksta "' . trim((string) $row['club_name']) . '" [' . $row['category']
+                    . '] - kod klubu (np. ZRYDOB) wpisuje się w kolumnie Identyfikator.'
                 : 'Brak numeru licencji: ' . $label . ' [' . $row['category'] . ']';
             continue;
         }
@@ -805,6 +806,18 @@ function pl_cup_points_for_place($classification, $place)
 
 // --- Athlete identity across rounds ----------------------------------------
 
+/** A club name reduced for comparison: no case, no diacritics, single spaces. */
+function pl_cup_normalize_club_name($name)
+{
+    $name = mb_strtolower(trim((string) $name), 'UTF-8');
+    $name = strtr($name, [
+        'ą' => 'a', 'ć' => 'c', 'ę' => 'e', 'ł' => 'l', 'ń' => 'n',
+        'ó' => 'o', 'ś' => 's', 'ź' => 'z', 'ż' => 'z',
+    ]);
+    $name = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $name);
+    return trim(preg_replace('/\s+/', ' ', $name));
+}
+
 /**
  * A name reduced to what a comparison should care about: no case, no diacritics,
  * no punctuation, no word order ("Kowalski Jan" == "Jan Kowalski").
@@ -864,8 +877,14 @@ function pl_cup_same_person($a, $b)
  * imported round cannot be corrected afterwards without knowing which row is
  * wrong — so the caller rejects the whole file and the operator fixes the CSV.
  *
- * Only individual rows are compared: a mixed row is a club, and its pair may be
- * two different athletes in every round.
+ * Mixed rows get the same treatment one level up, on their own identity: one
+ * club appearing under two club codes is the same mistake, and it would split
+ * that club's cup row in two. The reverse — one code carrying differently
+ * written club names — is *not* a contradiction: hosts spell the same club
+ * differently, which is exactly why the code, not the name, is the identity.
+ *
+ * A mixed row's athletes are never compared: its pair may be two different
+ * people in every round.
  *
  * @param array $rows the incoming rows
  * @param array $storedRows rows already stored for the edition (any round)
@@ -885,7 +904,8 @@ function pl_cup_identity_conflicts(array $rows, array $storedRows)
         ];
     }
 
-    $conflicts = [];
+    $conflicts = array_merge([], pl_cup_mixed_club_conflicts($rows, $storedRows));
+
     foreach ($rows as $row) {
         if ($row['classification'] !== 'ind' || trim((string) $row['name']) === '') {
             continue;
@@ -907,6 +927,48 @@ function pl_cup_identity_conflicts(array $rows, array $storedRows)
     }
 
     return array_values(array_unique($conflicts));
+}
+
+/**
+ * One club under two club codes — a code mistyped or left off in one of the
+ * rounds, which would otherwise give that club two separate cup rows.
+ *
+ * @return string[]
+ */
+function pl_cup_mixed_club_conflicts(array $rows, array $storedRows)
+{
+    $known = [];
+    foreach ($storedRows as $row) {
+        if ($row['classification'] !== 'mix' || trim((string) $row['club_name']) === '') {
+            continue;
+        }
+        $known[] = [
+            'identity' => $row['identity'],
+            'club' => $row['club_name'],
+            'where' => 'runda ' . intval($row['round'] ?? 0),
+        ];
+    }
+
+    $conflicts = [];
+    foreach ($rows as $row) {
+        if ($row['classification'] !== 'mix' || trim((string) $row['club_name']) === '') {
+            continue;
+        }
+        foreach ($known as $seen) {
+            if ($seen['identity'] === $row['identity']) {
+                continue;
+            }
+            // Exact once normalised, as for an athlete's name across licences:
+            // two clubs can be written a letter apart and still be two clubs.
+            if (pl_cup_normalize_club_name($seen['club']) === pl_cup_normalize_club_name($row['club_name'])) {
+                $conflicts[] = 'Mikst "' . trim((string) $row['club_name']) . '": w pliku kod klubu '
+                    . $row['identity'] . ', a w zapisanych danych ' . $seen['identity'] . ' (' . $seen['where'] . ').';
+            }
+        }
+        $known[] = ['identity' => $row['identity'], 'club' => $row['club_name'], 'where' => 'ten sam plik'];
+    }
+
+    return $conflicts;
 }
 
 /** Both decimal separators are accepted on reading (D7); an empty cell counts as 0. */

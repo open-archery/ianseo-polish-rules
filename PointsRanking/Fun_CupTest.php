@@ -220,6 +220,7 @@ final class Fun_CupTest extends PlTestCase
 
         $this->assertCount(1, $errors);
         $this->assertStringContainsString('Brak kodu klubu', $errors[0]);
+        $this->assertStringContainsString('kolumnie Identyfikator', $errors[0]);
     }
 
     public function testTwoMixedPairsOfOneClubAreRejected()
@@ -761,6 +762,76 @@ Oddział Zielona Góra";
 
         $this->assertCount(1, $conflicts);
         $this->assertStringContainsString('ten sam plik', $conflicts[0]);
+    }
+
+    public function testOneClubUnderTwoClubCodesIsAConflict()
+    {
+        $stored = [[
+            'round' => 1, 'classification' => 'mix', 'category' => 'CX', 'identity' => 'STRZWA',
+            'name' => '', 'club_name' => 'MKŁ Strzała Warszawa', 'place' => 1, 'points' => 25, 'qual' => 1365,
+        ]];
+        $incoming = [[
+            'classification' => 'mix', 'category' => 'CX', 'identity' => 'STRZAL',
+            'name' => '', 'club_name' => 'MKŁ Strzała Warszawa', 'place' => 2, 'points' => 21, 'qual' => 1340,
+        ]];
+
+        $conflicts = pl_cup_identity_conflicts($incoming, $stored);
+
+        $this->assertCount(1, $conflicts);
+        $this->assertStringContainsString('MKŁ Strzała Warszawa', $conflicts[0]);
+        $this->assertStringContainsString('STRZAL', $conflicts[0]);
+        $this->assertStringContainsString('STRZWA', $conflicts[0]);
+    }
+
+    public function testOneClubCodeWithADifferentlyWrittenClubNameIsNotAConflict()
+    {
+        // Hosts spell the same club differently - which is why the code is the
+        // identity in the first place.
+        $stored = [[
+            'round' => 1, 'classification' => 'mix', 'category' => 'CX', 'identity' => 'ZRYDOB',
+            'name' => '', 'club_name' => 'ULKS Zryw Dobrcz', 'place' => 1, 'points' => 25, 'qual' => 1365,
+        ]];
+        $incoming = [[
+            'classification' => 'mix', 'category' => 'CX', 'identity' => 'ZRYDOB',
+            'name' => '', 'club_name' => 'Uczniowski LKS Zryw Dobrcz', 'place' => 2, 'points' => 21, 'qual' => 1340,
+        ]];
+
+        $this->assertSame([], pl_cup_identity_conflicts($incoming, $stored));
+    }
+
+    public function testTwoDifferentClubsAreNotAConflict()
+    {
+        $stored = [[
+            'round' => 1, 'classification' => 'mix', 'category' => 'CX', 'identity' => 'STRZWA',
+            'name' => '', 'club_name' => 'MKŁ Strzała Warszawa', 'place' => 1, 'points' => 25, 'qual' => 1365,
+        ]];
+        $incoming = [[
+            'classification' => 'mix', 'category' => 'CX', 'identity' => 'MARYWA',
+            'name' => '', 'club_name' => 'SŁ Marymont Warszawa', 'place' => 2, 'points' => 21, 'qual' => 1340,
+        ]];
+
+        $this->assertSame([], pl_cup_identity_conflicts($incoming, $stored));
+    }
+
+    public function testTwoCodesForOneClubInsideOneFileAreAConflict()
+    {
+        $incoming = [
+            ['classification' => 'mix', 'category' => 'CX', 'identity' => 'RASZOW',
+             'name' => '', 'club_name' => 'LZS SKS Raszówka', 'place' => 1, 'points' => 25, 'qual' => 1300],
+            ['classification' => 'mix', 'category' => 'BX', 'identity' => 'RASZ',
+             'name' => '', 'club_name' => 'LZS SKS Raszówka', 'place' => 1, 'points' => 25, 'qual' => 1200],
+        ];
+
+        $conflicts = pl_cup_identity_conflicts($incoming, []);
+
+        $this->assertCount(1, $conflicts);
+        $this->assertStringContainsString('ten sam plik', $conflicts[0]);
+    }
+
+    public function testClubNamesAreComparedIgnoringCaseDiacriticsAndSpacing()
+    {
+        $this->assertSame('mkl strzala warszawa', pl_cup_normalize_club_name('  MKŁ   Strzała Warszawa '));
+        $this->assertSame('lzs sks raszowka', pl_cup_normalize_club_name('LZS SKS Raszówka'));
     }
 
     public function testMixedRowsAreNotComparedByName()
