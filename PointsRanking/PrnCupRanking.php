@@ -32,7 +32,8 @@ $classifications = pl_cup_build_classifications(
     $roundRows,
     pl_cup_load_barrages($config['Edition']),
     pl_cup_category_meta($tourId),
-    in_array(PL_CUP_ROUNDS, $storedRounds, true)
+    in_array(PL_CUP_ROUNDS, $storedRounds, true),
+    pl_cup_current_directory($tourId)
 );
 
 const PL_CUP_PDF_WIDTH = 190; // A4 portrait, IanseoPdf's 10mm side margins

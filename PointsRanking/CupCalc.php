@@ -231,6 +231,31 @@ function pl_cup_aggregate(array $roundRows)
     return array_values($byKey);
 }
 
+/**
+ * Replace an aggregated row's display name and club with the current
+ * competition's own, where it knows the competitor. A row it does not know —
+ * an athlete who scored earlier and did not enter this competition — keeps what
+ * their most recent round carried, the only source available for them.
+ */
+function pl_cup_apply_directory(array $rows, array $directory)
+{
+    foreach ($rows as &$row) {
+        $current = $directory[$row['classification']][$row['identity']] ?? null;
+        if ($current === null) {
+            continue;
+        }
+        if (trim((string) ($current['name'] ?? '')) !== '') {
+            $row['name'] = $current['name'];
+        }
+        if (trim((string) ($current['club_name'] ?? '')) !== '') {
+            $row['club_name'] = $current['club_name'];
+        }
+    }
+    unset($row);
+
+    return $rows;
+}
+
 /** Comparator over the steps the regulation actually states for this series. */
 function pl_cup_compare_regulation(array $a, array $b, array $steps)
 {
@@ -353,11 +378,14 @@ function pl_cup_rank_category(array $rows, array $rule, array $barrages, $barrag
  * own order.
  *
  * @param array $categoryMeta ['ind' => [code => ['label','order']], 'mix' => [...]]
+ * @param array $directory names and clubs as the current competition holds them,
+ *   keyed by identity — they win over whatever an import carried, since the same
+ *   club is written differently by different hosts
  * @return array ['ind' => ['label' => string, 'sections' => [...]], 'mix' => [...]]
  */
-function pl_cup_build_classifications(array $roundRows, array $barrages, array $categoryMeta, $barrageAllowed)
+function pl_cup_build_classifications(array $roundRows, array $barrages, array $categoryMeta, $barrageAllowed, array $directory = [])
 {
-    $aggregated = pl_cup_aggregate($roundRows);
+    $aggregated = pl_cup_apply_directory(pl_cup_aggregate($roundRows), $directory);
 
     $labels = ['ind' => 'Klasyfikacja indywidualna Pucharu Polski', 'mix' => 'Klasyfikacja mikstów Pucharu Polski'];
     $out = [];

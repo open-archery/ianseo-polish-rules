@@ -950,6 +950,44 @@ function pl_cup_valid_categories($tourId)
 }
 
 /**
+ * Names and clubs as **this competition** holds them, keyed by the cup's own
+ * identity: the licence for athletes, the club code for mixed rows.
+ *
+ * The classification prefers these over what an import carried, so an athlete
+ * entered here is shown with this competition's spelling of their club. An
+ * athlete who is not entered here — someone who scored in an earlier round and
+ * did not come to this one — keeps the spelling of their most recent round,
+ * which is then the only source there is.
+ *
+ * @return array{ind: array<string,array>, mix: array<string,array>}
+ */
+function pl_cup_current_directory($tourId)
+{
+    $tourId = intval($tourId);
+    $directory = ['ind' => [], 'mix' => []];
+
+    foreach (pl_points_load_entries_directory($tourId) as $entry) {
+        $code = trim((string) $entry['code']);
+        if ($code === '') {
+            continue;
+        }
+        $directory['ind'][$code] = ['name' => $entry['name'], 'club_name' => $entry['club_name']];
+    }
+
+    $Rs = safe_r_sql("SELECT CoCode, CoName FROM Countries WHERE CoTournament = $tourId");
+    while ($row = safe_fetch($Rs)) {
+        $code = trim((string) $row->CoCode);
+        if ($code === '') {
+            continue;
+        }
+        $directory['mix'][$code] = ['name' => '', 'club_name' => $row->CoName];
+    }
+    safe_free_result($Rs);
+
+    return $directory;
+}
+
+/**
  * Section labels and order for the categories **this competition runs**.
  *
  * The stored rounds cover the whole cup, so a junior competition would otherwise

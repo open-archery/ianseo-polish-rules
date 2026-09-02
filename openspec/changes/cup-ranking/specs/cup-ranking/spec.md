@@ -223,7 +223,9 @@ The system SHALL present two cup classifications — individual and mixed — ea
 
 Every section SHALL be headed by its cup's own Polish name — "Klasyfikacja generalna Pucharu Polski Juniorek młodszych", "… łuków barebow - indywidualna mężczyzn", "… Seniorów - miksty" — never the raw category code.
 
-An individual row SHALL show the licence number, the athlete, the club, the points scored in each of the four rounds, and their sum. In the page — not in the PDF, which stays a plain points table — each round SHALL additionally show that round's place and qualification score, and the sum SHALL be accompanied by the best place and the best qualification score of the whole cup, since those are what the tie-break reaches for next. Only the sum SHALL be emphasised; the per-round points are read together with their place and score, not picked out of the row. A mixed row SHALL show the club and its code in place of the athlete: the competitor is the club, and its pair may be two different athletes in every round, so no athlete names are stored or displayed. A round in which the row scored nothing SHALL be shown as empty and SHALL not reduce the sum. No minimum number of started rounds is required.
+An individual row SHALL show the licence number, the athlete, the club, the points scored in each of the four rounds, and their sum. In the page — not in the PDF, which stays a plain points table — each round SHALL additionally show that round's place and qualification score, and the sum SHALL be accompanied by the best place and the best qualification score of the whole cup, since those are what the tie-break reaches for next. Only the sum SHALL be emphasised; the per-round points are read together with their place and score, not picked out of the row. A mixed row SHALL show the club and its code in place of the athlete: the competitor is the club, and its pair may be two different athletes in every round, so no athlete names are stored or displayed.
+
+The name and club displayed SHALL be the current competition's own whenever it holds the competitor — the same club is written differently by different hosts, and this competition's entries are the authority for everyone entered in it. Only for a competitor absent from it, who scored in an earlier round and did not come to this one, SHALL the data of their most recent stored round be shown; there is no other source for them. A round in which the row scored nothing SHALL be shown as empty and SHALL not reduce the sum. No minimum number of started rounds is required.
 
 Rounds not yet imported or snapshotted SHALL simply be absent, so the classification is also usable as a standing after two or three rounds. A competitor whose stored rounds add up to zero points SHALL NOT be classified, even though their stored rows still feed the tie-break of the competitors who did score.
 
@@ -250,6 +252,10 @@ Rounds not yet imported or snapshotted SHALL simply be absent, so the classifica
 #### Scenario: Display data for an absent athlete
 - **WHEN** an athlete is present in earlier rounds but not in the current tournament
 - **THEN** the name and club stored with their most recent round are displayed
+
+#### Scenario: This competition's spelling wins
+- **WHEN** an athlete entered in the current competition was imported from another round under a differently written club ("Uczniowski LKS Zryw Dobrcz" against this competition's "ULKS Zryw Dobrcz")
+- **THEN** the classification, its PDF and its diplomas show this competition's spelling of the name and the club
 
 ---
 

@@ -796,6 +796,26 @@ Oddział Zielona Góra";
         $this->assertStringContainsString('Brak numeru licencji', $parsed['errors'][0]);
     }
 
+    public function testCurrentDirectoryIsKeyedByLicenceAndClubCode()
+    {
+        FakeDb::on('/FROM Entries/', [[
+            'EnId' => 10, 'EnCode' => 'PL0001', 'EnName' => 'Kądziela-Niemczewska', 'EnFirstName' => 'Agata',
+            'EnDivision' => 'R', 'EnClass' => 'U18W', 'ClubId' => 5,
+        ], [
+            // No licence: nothing in the cup can be keyed to them.
+            'EnId' => 11, 'EnCode' => '', 'EnName' => 'Nowak', 'EnFirstName' => 'Jan',
+            'EnDivision' => 'R', 'EnClass' => 'M', 'ClubId' => 5,
+        ]]);
+        FakeDb::on('/FROM Countries/', [['CoId' => 5, 'CoCode' => 'ZRYDOB', 'CoName' => 'ULKS Zryw Dobrcz']]);
+
+        $directory = pl_cup_current_directory(1);
+
+        $this->assertSame(['PL0001'], array_keys($directory['ind']));
+        $this->assertSame('Agata Kądziela-Niemczewska', $directory['ind']['PL0001']['name']);
+        $this->assertSame('ULKS Zryw Dobrcz', $directory['ind']['PL0001']['club_name']);
+        $this->assertSame('ULKS Zryw Dobrcz', $directory['mix']['ZRYDOB']['club_name']);
+    }
+
     public function testCategoryMetaCoversOnlyWhatThisCompetitionRuns()
     {
         FakeDb::on('/FROM Divisions/', [['DivId' => 'R', 'DivDescription' => 'Łuk klasyczny']]);

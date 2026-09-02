@@ -215,7 +215,13 @@ $barrages = pl_cup_load_barrages($config['Edition']);
 // A baraż settles the cup, not a standing after round 2 (D6a) - gated on the
 // final round being stored, not on this tournament being it.
 $barrageAllowed = in_array(PL_CUP_ROUNDS, $storedRounds, true);
-$classifications = pl_cup_build_classifications($roundRows, $barrages, pl_cup_category_meta($tourId), $barrageAllowed);
+$classifications = pl_cup_build_classifications(
+    $roundRows,
+    $barrages,
+    pl_cup_category_meta($tourId),
+    $barrageAllowed,
+    pl_cup_current_directory($tourId)
+);
 
 $staleCount = 0;
 if ($config['Round'] >= 1 && in_array($config['Round'], $storedRounds, true)) {

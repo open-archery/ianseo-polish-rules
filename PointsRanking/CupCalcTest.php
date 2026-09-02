@@ -79,6 +79,51 @@ final class CupCalcTest extends PlTestCase
         $this->assertSame(1, $ranked[0]['rank']);
     }
 
+    public function testThisCompetitionsSpellingWinsOverAnImport()
+    {
+        // The same club is written differently by different hosts; the archer is
+        // entered here, so this competition's own data decides.
+        $built = pl_cup_build_classifications(
+            [$this->row(1, 'RM', 'PL1', 25, 1, 640, 'ind', 'A. Kądziela-Niemczewska', 'Uczniowski LKS Zryw Dobrcz')],
+            [],
+            ['ind' => ['RM' => ['label' => 'Senior', 'order' => [0, 1]]], 'mix' => []],
+            true,
+            ['ind' => ['PL1' => ['name' => 'Agata Kądziela-Niemczewska', 'club_name' => 'ULKS Zryw Dobrcz']], 'mix' => []]
+        );
+
+        $row = $built['ind']['sections'][0]['rows'][0];
+        $this->assertSame('Agata Kądziela-Niemczewska', $row['name']);
+        $this->assertSame('ULKS Zryw Dobrcz', $row['club_name']);
+    }
+
+    public function testAnAthleteAbsentFromThisCompetitionKeepsTheImportedSpelling()
+    {
+        $built = pl_cup_build_classifications(
+            [$this->row(1, 'RM', 'PL9', 25, 1, 640, 'ind', 'Jan Kowalski', 'KS Alfa')],
+            [],
+            ['ind' => ['RM' => ['label' => 'Senior', 'order' => [0, 1]]], 'mix' => []],
+            true,
+            ['ind' => ['PL1' => ['name' => 'Ktoś Inny', 'club_name' => 'Inny Klub']], 'mix' => []]
+        );
+
+        $row = $built['ind']['sections'][0]['rows'][0];
+        $this->assertSame('Jan Kowalski', $row['name']);
+        $this->assertSame('KS Alfa', $row['club_name']);
+    }
+
+    public function testAMixedRowTakesTheClubNameFromThisCompetition()
+    {
+        $built = pl_cup_build_classifications(
+            [$this->row(1, 'RMX', 'KLUB1', 25, 1, 1300, 'mix', '', 'Zryw Dobrcz')],
+            [],
+            ['ind' => [], 'mix' => ['RMX' => ['label' => 'Mikst', 'order' => [0, 9]]]],
+            true,
+            ['ind' => [], 'mix' => ['KLUB1' => ['name' => '', 'club_name' => 'ULKS Zryw Dobrcz']]]
+        );
+
+        $this->assertSame('ULKS Zryw Dobrcz', $built['mix']['sections'][0]['rows'][0]['club_name']);
+    }
+
     public function testDisplayDataComesFromTheMostRecentRound()
     {
         $rows = pl_cup_aggregate([
