@@ -38,6 +38,7 @@ pl_cup_ensure_tables();
 $config = pl_cup_get_config($tourId);
 $messages = [];
 $errors = [];
+$warnings = [];
 
 // --- Export (must run before any page output) ------------------------------
 
@@ -111,6 +112,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['snapshot'])) {
                 $errors[] = 'Brak wyników do zapisania - żaden zawodnik nie zdobył punktów.';
             } else {
                 $messages[] = 'Zapisano rundę ' . $config['Round'] . ' (' . count($snapshot['rows']) . ' wierszy).';
+                // Not a blocker here: the snapshot is calculated, so a
+                // contradiction means an *imported* round holds the wrong
+                // licence - which is fixed by re-importing that round's file.
+                $warnings = array_merge($warnings, pl_cup_identity_conflicts(
+                    $snapshot['rows'],
+                    pl_cup_load_rounds($config['Edition'])
+                ));
             }
         }
     }
@@ -134,10 +142,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
         $errors[] = 'Wybierz plik CSV.';
     } else {
         $parsed = pl_cup_csv_parse(file_get_contents($uploaded), pl_cup_valid_categories($tourId));
-        if (!empty($parsed['errors'])) {
+        // A licence carrying two different athletes, or one athlete under two
+        // licences, is a wrong number somewhere - the whole file is rejected so
+        // it can be corrected before anything is stored.
+        $conflicts = empty($parsed['errors'])
+            ? pl_cup_identity_conflicts($parsed['rows'], pl_cup_load_rounds($config['Edition']))
+            : [];
+
+        if (!empty($parsed['errors']) || !empty($conflicts)) {
             // Atomic: a single bad line leaves the stored round untouched.
-            $errors = array_merge($errors, $parsed['errors']);
+            $errors = array_merge($errors, $parsed['errors'], $conflicts);
         } else {
+            $warnings = array_merge($warnings, $parsed['warnings']);
             // The file names its own competition when it was exported from this
             // module; otherwise the file name is the only provenance there is.
             $source = $parsed['source'] !== ''
@@ -319,8 +335,16 @@ function pl_cup_render_barrage_form(array $classifications, array $barrages)
 $PAGE_TITLE = 'Puchar Polski - klasyfikacja';
 include('Common/Templates/head.php');
 
-foreach ($errors as $error) {
-    pl_cup_render_notice(htmlspecialchars($error), '#f8d7da', '#dc3545');
+if (!empty($errors)) {
+    pl_cup_render_notice(
+        '<strong>Import odrzucony - nic nie zostało zapisane.</strong> Popraw plik CSV i zaimportuj ponownie.'
+        . '<ul style="margin:6px 0 0 18px;"><li>' . implode('</li><li>', array_map('htmlspecialchars', $errors)) . '</li></ul>',
+        '#f8d7da',
+        '#dc3545'
+    );
+}
+foreach ($warnings as $warning) {
+    pl_cup_render_notice(htmlspecialchars($warning), '#fff3cd', '#ffc107');
 }
 foreach ($messages as $message) {
     pl_cup_render_notice(htmlspecialchars($message), '#d4edda', '#28a745');
@@ -376,7 +400,9 @@ for ($round = 1; $round <= PL_CUP_ROUNDS; $round++) {
 echo '</select> <input type="file" name="CsvFile" accept=".csv,text/csv"> <input type="submit" value="Importuj CSV">';
 echo '</form>';
 echo '<div style="padding-top:6px;color:#555;">Import zastępuje tylko kategorie zawarte w pliku - '
-    . 'rundę można złożyć z kilku źródeł (np. juniorzy z ianseo, bloczkowe i barebow z plików CSV).</div>';
+    . 'rundę można złożyć z kilku źródeł (np. juniorzy z ianseo, bloczkowe i barebow z plików CSV).<br>'
+    . 'Wymagane kolumny: Klasyfikacja, Kategoria, Identyfikator, Nazwa (zawodnicy), Miejsce, Kwalifikacje (0 gdy brak). '
+    . 'Punkty są zawsze wyliczane z miejsca według tabeli Pucharu Polski - kolumna Punkty w pliku służy tylko do kontroli.</div>';
 echo '</td></tr>';
 echo '<tr><td style="padding:8px;" colspan="2">';
 echo '<a href="CupImports.php" style="font-weight:bold;">Historia importu</a> - co składa się na tę edycję i usuwanie importów.';

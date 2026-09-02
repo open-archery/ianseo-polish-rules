@@ -610,6 +610,7 @@ function pl_cup_csv_parse($content, array $validCategories)
 
     $rows = [];
     $errors = [];
+    $warnings = [];
     $source = '';
     $lineNo = 0;
     $headerSeen = false;
@@ -638,6 +639,7 @@ function pl_cup_csv_parse($content, array $validCategories)
         }
 
         $parsed = pl_cup_csv_parse_row($cells, $lineNo, $validCategories);
+        $warnings = array_merge($warnings, $parsed['warnings']);
         if (!empty($parsed['errors'])) {
             $errors = array_merge($errors, $parsed['errors']);
             continue;
@@ -650,7 +652,7 @@ function pl_cup_csv_parse($content, array $validCategories)
         $errors = pl_cup_validate_rows($rows);
     }
 
-    return ['rows' => $rows, 'errors' => $errors, 'source' => $source];
+    return ['rows' => $rows, 'errors' => $errors, 'warnings' => $warnings, 'source' => $source];
 }
 
 /**
@@ -661,14 +663,20 @@ function pl_cup_csv_parse($content, array $validCategories)
  * with a negative point or qualification value, and such a row would distort the
  * totals and the tie-break of everyone in its category.
  *
- * @return array{row: array|null, errors: string[]}
+ * Points are always computed from the place with this cup's own bracket table,
+ * never taken from the file: under the `pp` preset the points are a pure
+ * function of the place, so a file scored under another annex — or not scored at
+ * all — still imports correctly. A points column that disagrees is reported as a
+ * warning, since that usually means the place is wrong.
+ *
+ * @return array{row: array|null, errors: string[], warnings: string[]}
  */
 function pl_cup_csv_parse_row(array $cells, $lineNo, array $validCategories)
 {
     $prefix = 'Wiersz ' . $lineNo . ': ';
 
     if (count($cells) !== count(PL_CUP_CSV_COLUMNS)) {
-        return ['row' => null, 'errors' => [$prefix . 'oczekiwano ' . count(PL_CUP_CSV_COLUMNS) . ' kolumn, znaleziono ' . count($cells) . '.']];
+        return ['row' => null, 'warnings' => [], 'errors' => [$prefix . 'oczekiwano ' . count(PL_CUP_CSV_COLUMNS) . ' kolumn, znaleziono ' . count($cells) . '.']];
     }
 
     [$classification, $category, $identity, $name, $clubName, $place, $points, $qual] = array_map(
@@ -677,37 +685,54 @@ function pl_cup_csv_parse_row(array $cells, $lineNo, array $validCategories)
     );
 
     if (!in_array($classification, ['ind', 'mix'], true)) {
-        return ['row' => null, 'errors' => [$prefix . 'nieznana klasyfikacja "' . $classification . '" (dozwolone: ind, mix).']];
+        return ['row' => null, 'warnings' => [], 'errors' => [$prefix . 'nieznana klasyfikacja "' . $classification . '" (dozwolone: ind, mix).']];
     }
     if (!in_array($category, $validCategories[$classification] ?? [], true)) {
-        return ['row' => null, 'errors' => [$prefix . 'nieznana kategoria "' . $category . '".']];
+        return ['row' => null, 'warnings' => [], 'errors' => [$prefix . 'nieznana kategoria "' . $category . '".']];
     }
 
     $errors = [];
+    // The name identifies the athlete against the rounds already stored, so it
+    // is required; the qualification score has to be stated even when it is 0,
+    // because an empty cell is far more often a forgotten column than a real
+    // zero, and the tie-break reads it.
+    if ($classification === 'ind' && $name === '') {
+        $errors[] = $prefix . 'brak nazwiska zawodnika (kolumna Nazwa).';
+    }
+    if ($place === '') {
+        $errors[] = $prefix . 'brak miejsca w zawodach (kolumna Miejsce).';
+    }
+    if ($qual === '') {
+        $errors[] = $prefix . 'brak wyniku kwalifikacji (kolumna Kwalifikacje) - wpisz 0, jeśli wyniku nie ma.';
+    }
     foreach (['Miejsce' => $place, 'Punkty' => $points, 'Kwalifikacje' => $qual] as $label => $value) {
-        if (!pl_cup_is_numeric($value)) {
+        if ($value !== '' && !pl_cup_is_numeric($value)) {
             $errors[] = $prefix . 'kolumna ' . $label . ' nie jest liczbą ("' . $value . '").';
         }
     }
     if (!empty($errors)) {
-        return ['row' => null, 'errors' => $errors];
+        return ['row' => null, 'warnings' => [], 'errors' => $errors];
     }
 
+    $fromFile = $points;
     $place = pl_cup_to_int($place);
-    $points = pl_cup_to_int($points);
     $qual = pl_cup_to_int($qual);
+    $points = pl_cup_points_for_place($classification, $place);
 
     if ($place <= 0 || $place >= 29999) {
         $errors[] = $prefix . 'miejsce poza zakresem (' . $place . ') - runda zapisuje tylko sklasyfikowanych zawodników.';
-    }
-    if ($points < 0) {
-        $errors[] = $prefix . 'ujemna liczba punktów (' . $points . ').';
     }
     if ($qual < 0) {
         $errors[] = $prefix . 'ujemny wynik kwalifikacji (' . $qual . ').';
     }
     if (!empty($errors)) {
-        return ['row' => null, 'errors' => $errors];
+        return ['row' => null, 'warnings' => [], 'errors' => $errors];
+    }
+
+    $warnings = [];
+    if ($fromFile !== '' && pl_cup_to_int($fromFile) !== $points) {
+        $warnings[] = $prefix . 'punkty z pliku (' . pl_cup_to_int($fromFile) . ') różnią się od wyliczonych dla miejsca '
+            . $place . ' (' . $points . ') - zapisano wyliczone; sprawdź miejsce.';
     }
 
     return ['row' => [
@@ -719,7 +744,107 @@ function pl_cup_csv_parse_row(array $cells, $lineNo, array $validCategories)
         'place' => $place,
         'points' => $points,
         'qual' => $qual,
-    ], 'errors' => []];
+    ], 'errors' => [], 'warnings' => $warnings];
+}
+
+/**
+ * The cup's own points for a place — the `pp` bracket table of that
+ * classification (the mixed table has no 17-32 row). `pp` has no cutoff, so the
+ * value depends on nothing but the place.
+ */
+function pl_cup_points_for_place($classification, $place)
+{
+    $key = $classification === 'mix' ? 'mix' : 'ind';
+    $brackets = PL_POINTS_PRESETS[PL_CUP_PRESET_KEY]['classifications'][$key]['brackets'];
+    return pl_points_bracket($brackets, intval($place));
+}
+
+// --- Athlete identity across rounds ----------------------------------------
+
+/**
+ * A name reduced to what a comparison should care about: no case, no diacritics,
+ * no punctuation, no word order ("Kowalski Jan" == "Jan Kowalski").
+ */
+function pl_cup_normalize_name($name)
+{
+    $name = mb_strtolower(trim((string) $name), 'UTF-8');
+    $name = strtr($name, [
+        'ą' => 'a', 'ć' => 'c', 'ę' => 'e', 'ł' => 'l', 'ń' => 'n',
+        'ó' => 'o', 'ś' => 's', 'ź' => 'z', 'ż' => 'z',
+    ]);
+    $name = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $name);
+    $tokens = array_values(array_filter(explode(' ', trim($name))));
+    sort($tokens);
+    return implode(' ', $tokens);
+}
+
+/**
+ * Whether two names are the same person's, tolerating a typo: identical once
+ * normalised, or within a small edit distance of each other (one or two slips
+ * for a short name, proportionally more for a long one).
+ */
+function pl_cup_names_match($a, $b)
+{
+    $a = pl_cup_normalize_name($a);
+    $b = pl_cup_normalize_name($b);
+    if ($a === '' || $b === '' || $a === $b) {
+        return true;
+    }
+    $tolerance = min(3, max(1, intdiv(max(strlen($a), strlen($b)), 8)));
+    return levenshtein($a, $b) <= $tolerance;
+}
+
+/**
+ * Contradictions between an incoming set of rows and what the edition already
+ * holds: one licence carrying two different athletes, or one athlete appearing
+ * under two licences. Both mean a wrong licence number somewhere, and an
+ * imported round cannot be corrected afterwards without knowing which row is
+ * wrong — so the caller rejects the whole file and the operator fixes the CSV.
+ *
+ * Only individual rows are compared: a mixed row is a club, and its pair may be
+ * two different athletes in every round.
+ *
+ * @param array $rows the incoming rows
+ * @param array $storedRows rows already stored for the edition (any round)
+ * @return string[] one message per contradiction
+ */
+function pl_cup_identity_conflicts(array $rows, array $storedRows)
+{
+    $known = [];
+    foreach ($storedRows as $row) {
+        if ($row['classification'] !== 'ind' || trim((string) $row['name']) === '') {
+            continue;
+        }
+        $known[] = [
+            'identity' => $row['identity'],
+            'name' => $row['name'],
+            'where' => 'runda ' . intval($row['round'] ?? 0),
+        ];
+    }
+
+    $conflicts = [];
+    foreach ($rows as $row) {
+        if ($row['classification'] !== 'ind' || trim((string) $row['name']) === '') {
+            continue;
+        }
+        foreach ($known as $seen) {
+            $sameIdentity = $seen['identity'] === $row['identity'];
+            $sameName = pl_cup_names_match($seen['name'], $row['name']);
+
+            if ($sameIdentity && !$sameName) {
+                $conflicts[] = 'Licencja ' . $row['identity'] . ': w pliku "' . $row['name']
+                    . '", a w zapisanych danych "' . $seen['name'] . '" (' . $seen['where'] . ').';
+            } elseif (!$sameIdentity && $sameName) {
+                $conflicts[] = 'Zawodnik "' . $row['name'] . '" ma w pliku licencję ' . $row['identity']
+                    . ', a w zapisanych danych ' . $seen['identity'] . ' (' . $seen['where'] . ').';
+            }
+        }
+        // Compared against the rest of the file too, so a contradiction inside
+        // one import is caught on the same screen.
+        $known[] = ['identity' => $row['identity'], 'name' => $row['name'], 'where' => 'ten sam plik'];
+    }
+
+    return array_values(array_unique($conflicts));
 }
 
 /** Both decimal separators are accepted on reading (D7); an empty cell counts as 0. */

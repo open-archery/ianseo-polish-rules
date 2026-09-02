@@ -543,7 +543,6 @@ Oddział Zielona Góra";
         $cases = [
             'brak miejsca' => [0, 25, 645, 'miejsce poza zakresem'],
             'sentinel DNS' => [29999, 0, 645, 'miejsce poza zakresem'],
-            'ujemne punkty' => [1, -5, 645, 'ujemna liczba punktów'],
             'ujemne kwalifikacje' => [1, 25, -1, 'ujemny wynik kwalifikacji'],
         ];
 
@@ -556,6 +555,17 @@ Oddział Zielona Góra";
         }
     }
 
+    public function testANegativePointsColumnOnlyWarns()
+    {
+        // The column is a cross-check now - the stored value comes from the place.
+        $parsed = pl_cup_csv_parse("ind;RM;PL0001;Jan;Klub;1;-5;645
+", ['ind' => ['RM'], 'mix' => []]);
+
+        $this->assertSame([], $parsed['errors']);
+        $this->assertSame(25, $parsed['rows'][0]['points']);
+        $this->assertNotEmpty($parsed['warnings']);
+    }
+
     public function testCsvAcceptsAPlacedRowWithoutPoints()
     {
         $csv = "ind;RM;PL0001;Jan;Klub;40;0;540
@@ -565,6 +575,157 @@ Oddział Zielona Góra";
 
         $this->assertSame([], $parsed['errors']);
         $this->assertSame(540, $parsed['rows'][0]['qual']);
+    }
+
+    // --- Required values and computed points -------------------------------
+
+    public function testCsvComputesPointsFromThePlace()
+    {
+        $csv = "ind;RM;PL0001;Jan Kowalski;Klub;3;;600\r\n"
+            . "ind;RM;PL0002;Adam Nowak;Klub;12;;590\r\n"
+            . "mix;RMX;KLUB1;;Klub;12;;1100\r\n";
+
+        $parsed = pl_cup_csv_parse($csv, ['ind' => ['RM'], 'mix' => ['RMX']]);
+
+        $this->assertSame([], $parsed['errors']);
+        $this->assertSame([18, 5, 5], array_column($parsed['rows'], 'points'));
+    }
+
+    public function testCsvIgnoresThePointsColumnButWarnsWhenItDisagrees()
+    {
+        $csv = "ind;RM;PL0001;Jan Kowalski;Klub;3;25;600\r\n";
+
+        $parsed = pl_cup_csv_parse($csv, ['ind' => ['RM'], 'mix' => []]);
+
+        $this->assertSame([], $parsed['errors']);
+        $this->assertSame(18, $parsed['rows'][0]['points']);
+        $this->assertStringContainsString('różnią się od wyliczonych', $parsed['warnings'][0]);
+    }
+
+    public function testCsvRequiresTheAthleteName()
+    {
+        $parsed = pl_cup_csv_parse("ind;RM;PL0001;;Klub;3;18;600\r\n", ['ind' => ['RM'], 'mix' => []]);
+
+        $this->assertStringContainsString('brak nazwiska zawodnika', $parsed['errors'][0]);
+    }
+
+    public function testCsvDoesNotRequireANameForAMixedRow()
+    {
+        $parsed = pl_cup_csv_parse("mix;RMX;KLUB1;;Klub;3;18;1100\r\n", ['ind' => [], 'mix' => ['RMX']]);
+
+        $this->assertSame([], $parsed['errors']);
+    }
+
+    public function testCsvRequiresAnExplicitQualificationScore()
+    {
+        $parsed = pl_cup_csv_parse("ind;RM;PL0001;Jan Kowalski;Klub;3;18;\r\n", ['ind' => ['RM'], 'mix' => []]);
+
+        $this->assertStringContainsString('brak wyniku kwalifikacji', $parsed['errors'][0]);
+        $this->assertStringContainsString('wpisz 0', $parsed['errors'][0]);
+    }
+
+    public function testCsvAcceptsAnExplicitZeroQualificationScore()
+    {
+        $parsed = pl_cup_csv_parse("ind;RM;PL0001;Jan Kowalski;Klub;3;18;0\r\n", ['ind' => ['RM'], 'mix' => []]);
+
+        $this->assertSame([], $parsed['errors']);
+        $this->assertSame(0, $parsed['rows'][0]['qual']);
+    }
+
+    public function testCsvRequiresThePlace()
+    {
+        $parsed = pl_cup_csv_parse("ind;RM;PL0001;Jan Kowalski;Klub;;18;600\r\n", ['ind' => ['RM'], 'mix' => []]);
+
+        $this->assertStringContainsString('brak miejsca', $parsed['errors'][0]);
+    }
+
+    // --- Athlete identity across rounds ------------------------------------
+
+    public function testNamesMatchDespiteOrderCaseDiacriticsAndTypos()
+    {
+        $this->assertTrue(pl_cup_names_match('Kowalski Jan', 'Jan Kowalski'));
+        $this->assertTrue(pl_cup_names_match('Wiśniewska Anna', 'Wisniewska  ANNA'));
+        $this->assertTrue(pl_cup_names_match('Szkolnicki Oskar', 'Szkolnicky Oskar'));
+        $this->assertFalse(pl_cup_names_match('Kowalski Jan', 'Nowak Adam'));
+    }
+
+    public function testOneLicenceWithTwoDifferentAthletesIsAConflict()
+    {
+        $stored = [[
+            'round' => 1, 'classification' => 'ind', 'category' => 'RM', 'identity' => 'PL0001',
+            'name' => 'Jan Kowalski', 'club_name' => 'Klub', 'place' => 1, 'points' => 25, 'qual' => 600,
+        ]];
+        $incoming = [[
+            'classification' => 'ind', 'category' => 'RM', 'identity' => 'PL0001',
+            'name' => 'Adam Nowak', 'club_name' => 'Inny Klub', 'place' => 2, 'points' => 21, 'qual' => 590,
+        ]];
+
+        $conflicts = pl_cup_identity_conflicts($incoming, $stored);
+
+        $this->assertCount(1, $conflicts);
+        $this->assertStringContainsString('Licencja PL0001', $conflicts[0]);
+        $this->assertStringContainsString('runda 1', $conflicts[0]);
+    }
+
+    public function testOneAthleteUnderTwoLicencesIsAConflict()
+    {
+        $stored = [[
+            'round' => 1, 'classification' => 'ind', 'category' => 'RM', 'identity' => 'PL0001',
+            'name' => 'Jan Kowalski', 'club_name' => 'Klub', 'place' => 1, 'points' => 25, 'qual' => 600,
+        ]];
+        $incoming = [[
+            'classification' => 'ind', 'category' => 'RM', 'identity' => 'PL9999',
+            'name' => 'Kowalski Jan', 'club_name' => 'Klub', 'place' => 2, 'points' => 21, 'qual' => 590,
+        ]];
+
+        $conflicts = pl_cup_identity_conflicts($incoming, $stored);
+
+        $this->assertCount(1, $conflicts);
+        $this->assertStringContainsString('PL9999', $conflicts[0]);
+        $this->assertStringContainsString('PL0001', $conflicts[0]);
+    }
+
+    public function testADifferentClubNameIsNotAConflict()
+    {
+        $stored = [[
+            'round' => 1, 'classification' => 'ind', 'category' => 'RM', 'identity' => 'PL0001',
+            'name' => 'Jan Kowalski', 'club_name' => 'KS Stella Kielce', 'place' => 1, 'points' => 25, 'qual' => 600,
+        ]];
+        $incoming = [[
+            'classification' => 'ind', 'category' => 'RM', 'identity' => 'PL0001',
+            'name' => 'Jan Kowalski', 'club_name' => 'Stella Kielce', 'place' => 2, 'points' => 21, 'qual' => 590,
+        ]];
+
+        $this->assertSame([], pl_cup_identity_conflicts($incoming, $stored));
+    }
+
+    public function testAContradictionInsideOneFileIsAlsoAConflict()
+    {
+        $incoming = [
+            ['classification' => 'ind', 'category' => 'RM', 'identity' => 'PL0001',
+             'name' => 'Jan Kowalski', 'club_name' => 'Klub', 'place' => 1, 'points' => 25, 'qual' => 600],
+            ['classification' => 'ind', 'category' => 'RW', 'identity' => 'PL0001',
+             'name' => 'Anna Nowak', 'club_name' => 'Klub', 'place' => 1, 'points' => 25, 'qual' => 580],
+        ];
+
+        $conflicts = pl_cup_identity_conflicts($incoming, []);
+
+        $this->assertCount(1, $conflicts);
+        $this->assertStringContainsString('ten sam plik', $conflicts[0]);
+    }
+
+    public function testMixedRowsAreNotComparedByName()
+    {
+        $stored = [[
+            'round' => 1, 'classification' => 'mix', 'category' => 'RMX', 'identity' => 'KLUB1',
+            'name' => '', 'club_name' => 'Klub', 'place' => 1, 'points' => 25, 'qual' => 1100,
+        ]];
+        $incoming = [[
+            'classification' => 'mix', 'category' => 'RMX', 'identity' => 'KLUB2',
+            'name' => '', 'club_name' => 'Inny Klub', 'place' => 2, 'points' => 21, 'qual' => 1090,
+        ]];
+
+        $this->assertSame([], pl_cup_identity_conflicts($incoming, $stored));
     }
 
     public function testCsvRejectsANonNumericPlace()

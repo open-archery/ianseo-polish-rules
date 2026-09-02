@@ -84,6 +84,10 @@ An individual row SHALL be identified by the athlete's licence number and its ca
 ### Requirement: Round import from CSV
 The system SHALL import one round of an edition from a CSV file, since earlier rounds' ianseo databases are not available. One row SHALL carry classification, category, identity, display name, club name, place, points and qualification score.
 
+A row SHALL state its classification, category, identity, place and qualification score, and — for an individual row — the athlete's name, which identifies them against the rounds already stored. A qualification score of 0 SHALL be written explicitly, because an empty cell is far more often a forgotten column than a real zero. The club name is optional and is display data only.
+
+Points SHALL always be computed from the place with this cup's own bracket table, never taken from the file: under the `pp` preset the points are a pure function of the place, so results scored under another annex — or not scored at all — import correctly. A points column that disagrees with the computed value SHALL be reported as a warning and the computed value stored, since such a disagreement usually means the place is wrong.
+
 An import SHALL replace **only the categories the file contains**, leaving the round's other categories untouched: a round is routinely assembled from several sources — the recurve categories from an ianseo competition, the compound and barebow ones from files typed by their own hosts. An import SHALL be atomic: any rejected row aborts the whole import and nothing is written.
 
 Category codes SHALL be validated against the categories of the current tournament, and an unknown code SHALL be reported with its line number.
@@ -91,6 +95,18 @@ Category codes SHALL be validated against the categories of the current tourname
 #### Scenario: Earlier round imported
 - **WHEN** the operator imports a CSV of round 2 for edition 2026
 - **THEN** the round 2 rows are stored and appear in the classification's round 2 column
+
+#### Scenario: Points computed from the place
+- **WHEN** a file states place 3 for an individual row and leaves the points column empty
+- **THEN** the row is stored with the 18 points the individual bracket table gives place 3
+
+#### Scenario: Points column disagrees
+- **WHEN** a file states place 1 and 10 points
+- **THEN** the row is stored with 25 points and the operator is warned that the file's value differs
+
+#### Scenario: Missing required value
+- **WHEN** an individual row has no name, or any row has no place or an empty qualification score
+- **THEN** the import is rejected with a message naming the line and the missing column
 
 #### Scenario: Unknown category rejected
 - **WHEN** an imported row names a category that does not exist in the current tournament
@@ -116,6 +132,39 @@ The system SHALL export the current tournament's round in exactly the format the
 #### Scenario: Exported file names its competition
 - **WHEN** a host exports its round and another host imports that file
 - **THEN** the import records the exporting competition as the rows' source, without anyone typing it
+
+---
+
+### Requirement: Athlete identity consistency across rounds
+Because a cup row is keyed by licence number, a licence that names two different athletes — or an athlete appearing under two licences — corrupts the classification silently. The system SHALL compare an import against the rows already stored for the edition and SHALL reject the whole file, storing nothing, when either contradiction is found, listing each one with the licence, both names and the round the stored row belongs to, so the CSV can be corrected.
+
+Names SHALL be compared leniently: case, diacritics, extra spaces and word order SHALL be ignored, and a small number of character differences SHALL be tolerated as a typo. Contradictions inside one file SHALL be reported the same way.
+
+Club names SHALL NOT be compared: the same club is written differently by different hosts, and an athlete absent from the final round has no single spelling to fall back on — the club shown is the one from that athlete's most recent stored round.
+
+Mixed rows SHALL NOT take part in this check: a mixed row is a club, and its pair may be two different athletes in every round.
+
+A snapshot of the current tournament SHALL report the same contradictions as a warning rather than refusing to store: the snapshot is calculated, so a contradiction there means an imported round holds the wrong licence.
+
+#### Scenario: One licence, two athletes
+- **WHEN** a file gives licence `PL0001` to "Marek Wilk" and round 1 already has "Jan Kowalski" under that licence
+- **THEN** the import is rejected, nothing is stored, and the message names the licence, both names and round 1
+
+#### Scenario: One athlete, two licences
+- **WHEN** a file gives "Jan Kowalsky" the licence `PL9999` and round 1 already has "Jan Kowalski" under `PL0001`
+- **THEN** the import is rejected and the message names both licences
+
+#### Scenario: Different club spelling accepted
+- **WHEN** an athlete's club is written "KS Stella Kielce" in one round and "Stella Kielce" in another
+- **THEN** the import is accepted and the classification shows the spelling from their most recent round
+
+#### Scenario: Name typo tolerated
+- **WHEN** the same licence carries "Szkolnicki Oskar" in one round and "Szkolnicky Oskar" in the file
+- **THEN** the import is accepted
+
+#### Scenario: Contradiction inside one file
+- **WHEN** one file uses the same licence for two different athletes
+- **THEN** the import is rejected before anything is stored
 
 ---
 
