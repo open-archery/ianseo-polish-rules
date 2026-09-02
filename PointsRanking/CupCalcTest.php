@@ -27,7 +27,12 @@ final class CupCalcTest extends PlTestCase
     /** Rank one category's rows straight from stored rows. */
     private function rank(array $rows, $classification, $category, array $barrages = [], $barrageAllowed = true)
     {
-        $built = pl_cup_build_classifications($rows, $barrages, [], $barrageAllowed);
+        $meta = ['ind' => [], 'mix' => []];
+        foreach ($rows as $row) {
+            $meta[$row['classification']][$row['category']] = ['label' => $row['category'], 'order' => [0, 0]];
+        }
+
+        $built = pl_cup_build_classifications($rows, $barrages, $meta, $barrageAllowed);
         foreach ($built[$classification]['sections'] as $section) {
             if ($section['category'] === $category) {
                 return $section['rows'];
@@ -118,6 +123,61 @@ final class CupCalcTest extends PlTestCase
         ], 'ind', 'BM');
 
         $this->assertSame(['A'], array_column($ranked, 'identity'));
+    }
+
+    public function testOnlyCategoriesThisCompetitionRunsAreRendered()
+    {
+        // The stored rounds cover the whole cup; a junior competition prints
+        // junior classifications, not the barebow rows it imported.
+        $built = pl_cup_build_classifications(
+            [$this->row(1, 'RU18M', 'A', 25, 1), $this->row(1, 'BM', 'B', 25, 1)],
+            [],
+            ['ind' => ['RU18M' => ['label' => 'Łuk klasyczny Junior młodszy', 'order' => [0, 7]]], 'mix' => []],
+            true
+        );
+
+        $this->assertSame(['RU18M'], array_column($built['ind']['sections'], 'category'));
+    }
+
+    // --- Section titles ----------------------------------------------------
+
+    public function testSeriesTitles()
+    {
+        $title = fn ($classification, $category) => pl_cup_series_title($classification, $category);
+
+        $this->assertSame('Klasyfikacja generalna Pucharu Polski Seniorów', $title('ind', 'RM'));
+        $this->assertSame('Klasyfikacja generalna Pucharu Polski Seniorek', $title('ind', 'RW'));
+        $this->assertSame('Klasyfikacja generalna Pucharu Polski Juniorów', $title('ind', 'RU21M'));
+        $this->assertSame('Klasyfikacja generalna Pucharu Polski Juniorek młodszych', $title('ind', 'RU18W'));
+        $this->assertSame('Klasyfikacja generalna Pucharu Polski łuków barebow - indywidualna mężczyzn', $title('ind', 'BM'));
+        $this->assertSame('Klasyfikacja generalna Pucharu Polski łuków bloczkowych - indywidualna kobiet', $title('ind', 'CW'));
+        $this->assertSame('Klasyfikacja generalna Pucharu Polski łuków bloczkowych Juniorów', $title('ind', 'CU21M'));
+        $this->assertSame('Klasyfikacja generalna Pucharu Polski Seniorów - miksty', $title('mix', 'RX'));
+        $this->assertSame('Klasyfikacja generalna Pucharu Polski łuków barebow - miksty', $title('mix', 'BX'));
+        $this->assertSame('Klasyfikacja generalna Pucharu Polski Juniorów - miksty', $title('mix', 'RU21X'));
+    }
+
+    public function testSeriesTitleFallsBackToTheTournamentLabel()
+    {
+        $this->assertSame(
+            'Klasyfikacja generalna Pucharu Polski - Łuk klasyczny Dziwna klasa',
+            pl_cup_series_title('ind', 'RXYZ', 'Łuk klasyczny Dziwna klasa')
+        );
+    }
+
+    public function testSectionsCarryTheirCupTitle()
+    {
+        $built = pl_cup_build_classifications(
+            [$this->row(1, 'BM', 'A', 25, 1)],
+            [],
+            ['ind' => ['BM' => ['label' => 'Łuk barebow Seniorzy', 'order' => [2, 1]]], 'mix' => []],
+            true
+        );
+
+        $this->assertSame(
+            'Klasyfikacja generalna Pucharu Polski łuków barebow - indywidualna mężczyzn',
+            $built['ind']['sections'][0]['title']
+        );
     }
 
     // --- Tie-break map -----------------------------------------------------

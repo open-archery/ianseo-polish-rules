@@ -110,7 +110,11 @@ The system SHALL export the current tournament's round in exactly the format the
 ---
 
 ### Requirement: Combined cup classification
-The system SHALL present two cup classifications — individual and mixed — each sectioned per category with the same section order and labels as the round reports. A row SHALL show the identity, the display name, the club, the points scored in each of the four rounds, and their sum. A round in which the row scored nothing SHALL be shown as empty and SHALL not reduce the sum. No minimum number of started rounds is required.
+The system SHALL present two cup classifications — individual and mixed — each sectioned per category in the same order as the round reports. Only the categories the current competition itself runs SHALL be shown: the stored rounds cover the whole cup, but a junior competition classifies juniors, not the barebow or compound categories it merely imported.
+
+Every section SHALL be headed by its cup's own Polish name — "Klasyfikacja generalna Pucharu Polski Juniorek młodszych", "… łuków barebow - indywidualna mężczyzn", "… Seniorów - miksty" — never the raw category code.
+
+An individual row SHALL show the licence number, the athlete, the club, the points scored in each of the four rounds, and their sum. A mixed row SHALL show the club and its code in place of the athlete: the competitor is the club, and its pair may be two different athletes in every round, so no athlete names are stored or displayed. A round in which the row scored nothing SHALL be shown as empty and SHALL not reduce the sum. No minimum number of started rounds is required.
 
 Rounds not yet imported or snapshotted SHALL simply be absent, so the classification is also usable as a standing after two or three rounds. A competitor whose stored rounds add up to zero points SHALL NOT be classified, even though their stored rows still feed the tie-break of the competitors who did score.
 
@@ -125,6 +129,10 @@ Rounds not yet imported or snapshotted SHALL simply be absent, so the classifica
 #### Scenario: Standings after two rounds
 - **WHEN** only rounds 1 and 2 are stored
 - **THEN** the classification renders from those two rounds without an error
+
+#### Scenario: Category outside this competition
+- **WHEN** the stored rounds hold barebow rows and the current competition runs only `RU21` and `RU18` categories
+- **THEN** the barebow sections are absent from the classification, its PDF and its diplomas
 
 #### Scenario: Display data for an absent athlete
 - **WHEN** an athlete is present in earlier rounds but not in the current tournament
@@ -145,7 +153,7 @@ Rows SHALL be ordered by their sum descending. Further tie-break steps SHALL be 
 | Puchar Polski mikstów | every mixed category | none stated |
 | any other category present | — | none stated |
 
-The system SHALL NOT invent a step the regulation does not state. Rows still equal after the steps stated for their series SHALL share a rank and SHALL be marked as a shared place, with the reason distinguished: where the regulation prescribes a baraż, the mark SHALL read "baraż"; where the regulation states no further tie-break, the mark SHALL say the places are shared.
+The system SHALL NOT invent a step the regulation does not state. Rows still equal after the steps stated for their series SHALL share a rank. Where the regulation prescribes a baraż, those rows SHALL be marked "baraż"; where it states no further tie-break, no mark SHALL be printed — the equal rank already says the place is shared.
 
 #### Scenario: Junior series — best place decides
 - **WHEN** two `RU21M` athletes both total 47 points and their best places in any round are 2 and 3
@@ -161,15 +169,15 @@ The system SHALL NOT invent a step the regulation does not state. Rows still equ
 
 #### Scenario: Senior tie stands
 - **WHEN** two `RM` athletes total the same points
-- **THEN** they share a rank and are marked as a shared place, regardless of their places or qualification scores
+- **THEN** they share a rank with no mark, regardless of their places or qualification scores
 
 #### Scenario: Compound tie stands
 - **WHEN** two `CU21W` athletes total the same points
-- **THEN** they share a rank and are marked as a shared place
+- **THEN** they share a rank with no mark
 
 #### Scenario: Mixed tie stands
 - **WHEN** two clubs total the same points in a mixed category
-- **THEN** they share a rank and are marked as a shared place
+- **THEN** they share a rank with no mark
 
 #### Scenario: Baraż due
 - **WHEN** two `RU18W` athletes are equal on sum, best place and highest qualification score
@@ -215,7 +223,7 @@ Rows of a tied group left without a recorded position SHALL keep sharing a rank 
 ---
 
 ### Requirement: Cup PDF report
-The system SHALL generate a single A4 PDF containing the individual and mixed cup classifications, in that order, with the same sectioning as the HTML view, the per-round columns, the sum, the shared-place and baraż marks, and the ranks resulting from any recorded shoot-off. The page header SHALL carry the cup name and the edition.
+The system SHALL generate a single A4 PDF containing the individual and mixed cup classifications, in that order, with the same sectioning as the HTML view, the per-round columns, the sum, the baraż marks and the ranks resulting from any recorded shoot-off. Each section's table SHALL be titled with its cup's Polish name followed by the edition, e.g. "Klasyfikacja generalna Pucharu Polski łuków barebow - indywidualna mężczyzn 2026".
 
 #### Scenario: PDF produced
 - **WHEN** the operator prints the cup classification

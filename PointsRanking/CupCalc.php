@@ -37,8 +37,103 @@ const PL_CUP_TIEBREAK_RULES = [
 /** Every series the table above does not name — including mixed — states no step. */
 const PL_CUP_TIEBREAK_DEFAULT = ['steps' => [], 'terminator' => 'SHARED'];
 
-/** Mark printed next to rows that share a rank. */
-const PL_CUP_MARK_LABELS = ['BARRAGE' => 'baraż', 'SHARED' => 'miejsce dzielone'];
+/**
+ * Mark printed next to rows that share a rank. A shared place carries no mark:
+ * the regulation simply states no further criterion for that series, which the
+ * equal rank already says.
+ */
+const PL_CUP_MARK_LABELS = ['BARRAGE' => 'baraż'];
+
+/**
+ * Series names, in the genitive the cup titles are written in, keyed by the age
+ * part of the class code. Recurve series are named by age alone; the compound
+ * and barebow cups are named by their bow, per PZŁucz's own annex titles.
+ */
+const PL_CUP_AGE_SERIES = [
+    '' => ['M' => 'Seniorów', 'W' => 'Seniorek'],
+    'U24' => ['M' => 'Młodzieżowców', 'W' => 'Młodzieżowczyń'],
+    'U21' => ['M' => 'Juniorów', 'W' => 'Juniorek'],
+    'U18' => ['M' => 'Juniorów młodszych', 'W' => 'Juniorek młodszych'],
+    'U15' => ['M' => 'Młodzików', 'W' => 'Młodziczek'],
+    'U12' => ['M' => 'Dzieci - chłopców', 'W' => 'Dzieci - dziewcząt'],
+    '50' => ['M' => 'Masters - mężczyzn', 'W' => 'Masters - kobiet'],
+];
+
+/** Divisions whose cup is named by the bow rather than by the age series. */
+const PL_CUP_DIVISION_SERIES = ['C' => 'łuków bloczkowych', 'B' => 'łuków barebow'];
+
+/** Gender phrase for the bow-named series, which carry no gendered age noun. */
+const PL_CUP_INDIVIDUAL_GENDER = ['M' => 'indywidualna mężczyzn', 'W' => 'indywidualna kobiet'];
+
+/** Opening of every cup report title. */
+const PL_CUP_TITLE_PREFIX = 'Klasyfikacja generalna Pucharu Polski';
+
+/**
+ * Split a category code into its division, age and gender parts.
+ *
+ * Individual codes are division + class ("RU18W"); mixed event codes are
+ * division + age + "X" ("BX", "RU21X") and have no gender of their own.
+ *
+ * @return array{division:string, age:string, gender:string}|null null when the
+ *   code does not follow the module's own scheme (lib.php)
+ */
+function pl_cup_split_category($classification, $category)
+{
+    $division = substr($category, 0, 1);
+    $rest = substr($category, 1);
+
+    if ($classification === 'mix') {
+        if (substr($rest, -1) !== 'X') {
+            return null;
+        }
+        return ['division' => $division, 'age' => substr($rest, 0, -1), 'gender' => 'M'];
+    }
+
+    $gender = substr($rest, -1);
+    if ($gender !== 'M' && $gender !== 'W') {
+        return null;
+    }
+    return ['division' => $division, 'age' => substr($rest, 0, -1), 'gender' => $gender];
+}
+
+/**
+ * Title of one category's cup report, e.g.
+ *   "Klasyfikacja generalna Pucharu Polski Juniorek młodszych"
+ *   "Klasyfikacja generalna Pucharu Polski łuków barebow - indywidualna mężczyzn"
+ *   "Klasyfikacja generalna Pucharu Polski Seniorów - miksty"
+ *
+ * @param string $fallbackLabel the tournament's own category label, used when the
+ *   code does not follow the module's scheme
+ */
+function pl_cup_series_title($classification, $category, $fallbackLabel = '')
+{
+    $parts = pl_cup_split_category($classification, $category);
+    $series = $parts ? (PL_CUP_AGE_SERIES[$parts['age']] ?? null) : null;
+
+    if ($parts === null || $series === null) {
+        return PL_CUP_TITLE_PREFIX . ' - ' . ($fallbackLabel !== '' ? $fallbackLabel : $category);
+    }
+
+    $isMixed = $classification === 'mix';
+    $bow = PL_CUP_DIVISION_SERIES[$parts['division']] ?? null;
+
+    if ($bow === null) {
+        // Recurve: the age series is the cup's name and already carries the gender.
+        return PL_CUP_TITLE_PREFIX . ' ' . $series[$parts['gender']] . ($isMixed ? ' - miksty' : '');
+    }
+
+    $title = PL_CUP_TITLE_PREFIX . ' ' . $bow;
+    if ($parts['age'] !== '') {
+        // Only the senior cup is named by the bow alone; younger classes still
+        // need their age series to tell the sections apart.
+        $title .= ' ' . $series[$parts['gender']];
+        return $title . ($isMixed ? ' - miksty' : '');
+    }
+    if ($isMixed) {
+        return $title . ' - miksty';
+    }
+    return $title . ' - ' . PL_CUP_INDIVIDUAL_GENDER[$parts['gender']];
+}
 
 /**
  * @param string $classification 'ind' | 'mix'
@@ -265,11 +360,18 @@ function pl_cup_build_classifications(array $roundRows, array $barrages, array $
 
         $sections = [];
         foreach ($byCategory as $category => $rows) {
-            $meta = $categoryMeta[$classification][$category] ?? ['label' => $category, 'order' => [999, 999]];
+            // Only categories this competition actually runs: the stored rounds
+            // cover the whole cup, but a junior competition prints junior
+            // classifications, not the barebow and compound ones it imported.
+            if (!isset($categoryMeta[$classification][$category])) {
+                continue;
+            }
+            $meta = $categoryMeta[$classification][$category];
             $rule = pl_cup_tiebreak_rule($classification, $category);
             $sections[] = [
                 'category' => $category,
                 'label' => $meta['label'],
+                'title' => pl_cup_series_title($classification, $category, $meta['label']),
                 'order' => $meta['order'],
                 'terminator' => $rule['terminator'],
                 'rows' => pl_cup_rank_category($rows, $rule, $barrages, $barrageAllowed),

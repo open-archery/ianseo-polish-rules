@@ -219,7 +219,10 @@ function pl_cup_rows_from_result(array $result, array $qualScores)
                         'classification' => 'mix',
                         'category' => $row['category'],
                         'identity' => (string) $row['club_code'],
-                        'name' => (string) ($row['name'] ?? ''),
+                        // A mixed cup row belongs to the club, and its pair may be
+                        // two different athletes in every round - the names are
+                        // neither imported nor displayed, so they are not stored.
+                        'name' => '',
                         'club_name' => (string) $row['club_name'],
                         'place' => intval($row['place']),
                         'points' => intval($row['points']),
@@ -611,24 +614,34 @@ function pl_cup_valid_categories($tourId)
 }
 
 /**
- * Section labels and order for both classifications, reusing the round reports'
- * own metadata so the cup tables are sectioned identically.
+ * Section labels and order for the categories **this competition runs**.
+ *
+ * The stored rounds cover the whole cup, so a junior competition would otherwise
+ * render (and print diplomas for) the barebow and compound sections it only
+ * imported. Individual categories therefore come from this tournament's entries
+ * and mixed ones from the pairs that actually started here.
  *
  * @return array{ind: array, mix: array} category code => ['label' => string, 'order' => array]
  */
 function pl_cup_category_meta($tourId)
 {
+    $tourId = intval($tourId);
     $categories = pl_points_load_categories($tourId, PL_POINTS_PRESETS[PL_CUP_PRESET_KEY]['scope']);
-    $divLabels = pl_ranking_div_labels($tourId);
 
-    // Categories with no entries in *this* tournament still need a label: an
-    // earlier round's CSV may carry them.
-    $ind = $categories['individual'];
-    foreach ($divLabels as $code => $meta) {
-        if (!isset($ind[$code])) {
-            $ind[$code] = $meta;
+    $mix = [];
+    $Rs = safe_r_sql("
+        SELECT DISTINCT Teams.TeEvent AS Event
+        FROM Teams
+        INNER JOIN Events ON Events.EvCode = Teams.TeEvent
+            AND Events.EvTournament = Teams.TeTournament AND Events.EvTeamEvent = 1 AND Events.EvMixedTeam = 1
+        WHERE Teams.TeTournament = $tourId AND Teams.TeFinEvent = 1
+    ");
+    while ($row = safe_fetch($Rs)) {
+        if (isset($categories['team'][$row->Event])) {
+            $mix[$row->Event] = $categories['team'][$row->Event];
         }
     }
+    safe_free_result($Rs);
 
-    return ['ind' => $ind, 'mix' => $categories['team']];
+    return ['ind' => $categories['individual'], 'mix' => $mix];
 }

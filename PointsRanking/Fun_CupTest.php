@@ -128,7 +128,9 @@ final class Fun_CupTest extends PlTestCase
         $this->assertSame([
             ['classification' => 'ind', 'category' => 'RM', 'identity' => 'PL0001', 'name' => 'Jan Kowalski',
              'club_name' => 'Klub Pierwszy', 'place' => 1, 'points' => 25, 'qual' => 645],
-            ['classification' => 'mix', 'category' => 'RMX', 'identity' => 'KLUB1', 'name' => 'Anna K. / Jan K.',
+            // No pair names: a mixed cup row belongs to the club, and its two
+            // athletes may differ between rounds.
+            ['classification' => 'mix', 'category' => 'RMX', 'identity' => 'KLUB1', 'name' => '',
              'club_name' => 'Klub Pierwszy', 'place' => 2, 'points' => 21, 'qual' => 1290],
         ], $rows);
     }
@@ -426,6 +428,21 @@ Oddział Zielona Góra";
         $parsed = pl_cup_csv_parse($csv, ['ind' => ['RM'], 'mix' => []]);
 
         $this->assertStringContainsString('Brak numeru licencji', $parsed['errors'][0]);
+    }
+
+    public function testCategoryMetaCoversOnlyWhatThisCompetitionRuns()
+    {
+        FakeDb::on('/FROM Divisions/', [['DivId' => 'R', 'DivDescription' => 'Łuk klasyczny']]);
+        FakeDb::on('/FROM Classes/', [['ClId' => 'U18M', 'ClDescription' => 'Junior młodszy', 'ClViewOrder' => 7]]);
+        FakeDb::on('/FROM Entries/', [['EnDivision' => 'R', 'EnClass' => 'U18M']]);
+        FakeDb::on('/FROM EventClass/', [['EvCode' => 'RU18X', 'DivCode' => 'R', 'Class' => 'U18M']]);
+        // Mixed sections come from the pairs that actually started here.
+        FakeDb::on('/FROM Teams/', []);
+
+        $meta = pl_cup_category_meta(1);
+
+        $this->assertSame(['RU18M'], array_keys($meta['ind']));
+        $this->assertSame([], $meta['mix']);
     }
 
     public function testValidCategoriesComeFromConfiguredClassesAndMixedEvents()

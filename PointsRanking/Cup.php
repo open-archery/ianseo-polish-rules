@@ -175,15 +175,13 @@ function pl_cup_render_notice($text, $color, $border)
     echo '<div style="background:' . $color . ';border:1px solid ' . $border . ';padding:10px;margin:10px 0;border-radius:4px;">' . $text . '</div>';
 }
 
+/** A shared place needs no note - the equal rank already says it. */
 function pl_cup_mark_label($row)
 {
     if (!empty($row['barrage_resolved'])) {
         return 'rozstrzygnięte barażem';
     }
-    if ($row['tie_mark'] === '') {
-        return '';
-    }
-    return PL_CUP_MARK_LABELS[$row['tie_mark']] ?? '';
+    return $row['tie_mark'] === '' ? '' : (PL_CUP_MARK_LABELS[$row['tie_mark']] ?? '');
 }
 
 function pl_cup_render_classification(array $classification, $isMixed)
@@ -191,15 +189,20 @@ function pl_cup_render_classification(array $classification, $isMixed)
     if (empty($classification['sections'])) {
         return;
     }
-    $colCount = 4 + PL_CUP_ROUNDS + 2;
+    // A mixed row is a club, not a pair: no athlete column.
+    $colCount = ($isMixed ? 3 : 4) + PL_CUP_ROUNDS + 2;
 
     echo '<table class="Tabella">';
     echo '<tr><th class="Title" colspan="' . $colCount . '">' . htmlspecialchars($classification['label']) . '</th></tr>';
 
     foreach ($classification['sections'] as $section) {
-        echo '<tr><td colspan="' . $colCount . '" style="padding:6px;background:#e9ecef;font-weight:bold;">' . htmlspecialchars($section['label']) . '</td></tr>';
-        echo '<tr><th>Miejsce</th><th>' . ($isMixed ? 'Klub' : 'Zawodnik') . '</th><th>' . ($isMixed ? 'Skład' : 'Klub') . '</th>'
-            . '<th>' . ($isMixed ? 'Kod klubu' : 'Nr licencji') . '</th>';
+        echo '<tr><td colspan="' . $colCount . '" style="padding:6px;background:#e9ecef;font-weight:bold;">' . htmlspecialchars($section['title']) . '</td></tr>';
+        echo '<tr><th>Miejsce</th>';
+        if ($isMixed) {
+            echo '<th>Klub</th><th>Kod klubu</th>';
+        } else {
+            echo '<th>Zawodnik</th><th>Klub</th><th>Nr licencji</th>';
+        }
         for ($round = 1; $round <= PL_CUP_ROUNDS; $round++) {
             echo '<th>R' . $round . '</th>';
         }
@@ -209,7 +212,9 @@ function pl_cup_render_classification(array $classification, $isMixed)
             echo '<tr>';
             echo '<td style="text-align:center;">' . intval($row['rank']) . '</td>';
             echo '<td>' . htmlspecialchars($isMixed ? $row['club_name'] : $row['name']) . '</td>';
-            echo '<td>' . htmlspecialchars($isMixed ? $row['name'] : $row['club_name']) . '</td>';
+            if (!$isMixed) {
+                echo '<td>' . htmlspecialchars($row['club_name']) . '</td>';
+            }
             echo '<td style="text-align:center;">' . htmlspecialchars($row['identity']) . '</td>';
             for ($round = 1; $round <= PL_CUP_ROUNDS; $round++) {
                 $points = $row['rounds'][$round] ?? null;
@@ -236,7 +241,7 @@ function pl_cup_render_barrage_form(array $classifications, array $barrages)
             }
             foreach ($section['rows'] as $row) {
                 if ($row['tie_group'] >= 0) {
-                    $groups[$classKey . '|' . $section['category'] . '|' . $row['tie_group']]['label'] = $section['label'];
+                    $groups[$classKey . '|' . $section['category'] . '|' . $row['tie_group']]['label'] = $section['title'];
                     $groups[$classKey . '|' . $section['category'] . '|' . $row['tie_group']]['rows'][] = $row;
                 }
             }
