@@ -50,8 +50,29 @@ if (isset($_GET['action']) && $_GET['action'] === 'export') {
     $rows = pl_cup_load_rounds($config['Edition'], $exportRound);
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="puchar_polski_' . intval($config['Edition']) . '_runda_' . $exportRound . '.csv"');
-    echo pl_cup_csv_write($rows);
+    echo pl_cup_csv_write($rows, pl_cup_export_source($rows));
     exit;
+}
+
+/** This competition, as it is named in an import's history entry. */
+function pl_cup_current_source()
+{
+    $name = isset($_SESSION['TourName']) ? trim((string) $_SESSION['TourName']) : '';
+    $code = isset($_SESSION['TourCode']) ? trim((string) $_SESSION['TourCode']) : '';
+    if ($name === '') {
+        return $code;
+    }
+    return $code === '' ? $name : $name . ' (' . $code . ')';
+}
+
+/**
+ * The source written into an exported file: the rows' own, when they all came
+ * from one import, and this competition otherwise (a round assembled here).
+ */
+function pl_cup_export_source(array $rows)
+{
+    $sources = array_unique(array_filter(array_column($rows, 'source')));
+    return count($sources) === 1 ? reset($sources) : pl_cup_current_source();
 }
 
 // --- Actions ---------------------------------------------------------------
@@ -77,9 +98,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['snapshot'])) {
         if (!empty($snapshot['errors'])) {
             $errors = array_merge($errors, $snapshot['errors']);
         } else {
-            $storeError = pl_cup_store_round($config['Edition'], $config['Round'], $snapshot['rows']);
+            $storeError = pl_cup_store_import(
+                $config['Edition'],
+                $config['Round'],
+                $snapshot['rows'],
+                pl_cup_current_source(),
+                $tourId
+            );
             if ($storeError !== '') {
                 $errors[] = $storeError;
+            } elseif (empty($snapshot['rows'])) {
+                $errors[] = 'Brak wyników do zapisania - żaden zawodnik nie zdobył punktów.';
             } else {
                 $messages[] = 'Zapisano rundę ' . $config['Round'] . ' (' . count($snapshot['rows']) . ' wierszy).';
             }
@@ -109,11 +138,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
             // Atomic: a single bad line leaves the stored round untouched.
             $errors = array_merge($errors, $parsed['errors']);
         } else {
-            $storeError = pl_cup_store_round($config['Edition'], $importRound, $parsed['rows']);
+            // The file names its own competition when it was exported from this
+            // module; otherwise the file name is the only provenance there is.
+            $source = $parsed['source'] !== ''
+                ? $parsed['source']
+                : basename((string) ($_FILES['CsvFile']['name'] ?? 'CSV'));
+            $storeError = pl_cup_store_import($config['Edition'], $importRound, $parsed['rows'], $source, $tourId);
             if ($storeError !== '') {
                 $errors[] = $storeError;
+            } elseif (empty($parsed['rows'])) {
+                $errors[] = 'Plik nie zawiera żadnych wierszy.';
             } else {
-                $messages[] = 'Zaimportowano rundę ' . $importRound . ' (' . count($parsed['rows']) . ' wierszy).';
+                $categories = count(array_unique(array_column($parsed['rows'], 'category')));
+                $messages[] = 'Zaimportowano rundę ' . $importRound . ' (' . count($parsed['rows'])
+                    . ' wierszy, kategorie: ' . $categories . ', źródło: ' . $source . ').'
+                    . ' Pozostałe kategorie tej rundy pozostały bez zmian.';
             }
         }
     }
@@ -336,6 +375,11 @@ for ($round = 1; $round <= PL_CUP_ROUNDS; $round++) {
 }
 echo '</select> <input type="file" name="CsvFile" accept=".csv,text/csv"> <input type="submit" value="Importuj CSV">';
 echo '</form>';
+echo '<div style="padding-top:6px;color:#555;">Import zastępuje tylko kategorie zawarte w pliku - '
+    . 'rundę można złożyć z kilku źródeł (np. juniorzy z ianseo, bloczkowe i barebow z plików CSV).</div>';
+echo '</td></tr>';
+echo '<tr><td style="padding:8px;" colspan="2">';
+echo '<a href="CupImports.php" style="font-weight:bold;">Historia importu</a> - co składa się na tę edycję i usuwanie importów.';
 echo '</td></tr>';
 echo '</table><br>';
 

@@ -82,7 +82,9 @@ An individual row SHALL be identified by the athlete's licence number and its ca
 ---
 
 ### Requirement: Round import from CSV
-The system SHALL import one round of an edition from a CSV file, since earlier rounds' ianseo databases are not available. One row SHALL carry classification, category, identity, display name, club name, place, points and qualification score. An import SHALL replace the target round's stored rows in full and SHALL be atomic: any rejected row aborts the whole import and nothing is written.
+The system SHALL import one round of an edition from a CSV file, since earlier rounds' ianseo databases are not available. One row SHALL carry classification, category, identity, display name, club name, place, points and qualification score.
+
+An import SHALL replace **only the categories the file contains**, leaving the round's other categories untouched: a round is routinely assembled from several sources — the recurve categories from an ianseo competition, the compound and barebow ones from files typed by their own hosts. An import SHALL be atomic: any rejected row aborts the whole import and nothing is written.
 
 Category codes SHALL be validated against the categories of the current tournament, and an unknown code SHALL be reported with its line number.
 
@@ -95,17 +97,56 @@ Category codes SHALL be validated against the categories of the current tourname
 - **THEN** the import is aborted, nothing is written, and the offending line number and code are reported
 
 #### Scenario: Re-import replaces
-- **WHEN** a corrected CSV for round 2 is imported
-- **THEN** the previous round 2 rows are removed and only the new rows remain
+- **WHEN** a corrected CSV for round 2 is imported covering the same categories
+- **THEN** the previous rows of those categories are removed and only the new rows remain
+
+#### Scenario: Round assembled from several sources
+- **WHEN** round 1 already holds the recurve categories imported from one competition and a CSV covering only the barebow and compound categories of round 1 is imported
+- **THEN** both sets are stored side by side and the recurve rows are untouched
 
 ---
 
 ### Requirement: Round export to CSV
-The system SHALL export the current tournament's round in exactly the format the import accepts, so that a later round's host can import it without retyping.
+The system SHALL export the current tournament's round in exactly the format the import accepts, so that a later round's host can import it without retyping. The file SHALL name the competition its rows come from, as a comment line the import reads back — a file typed by hand simply has none.
 
 #### Scenario: Export then import
 - **WHEN** the round 1 host exports the round and the round 4 host imports that file
 - **THEN** the round is stored unchanged, with the same identities, places, points and qualification scores
+
+#### Scenario: Exported file names its competition
+- **WHEN** a host exports its round and another host imports that file
+- **THEN** the import records the exporting competition as the rows' source, without anyone typing it
+
+---
+
+### Requirement: Import history
+The system SHALL show, on a page of its own reached from the cup page, what the edition is currently assembled from: one entry per import that still feeds the classification, with its round, the categories it owns, the number of rows, where the rows came from, the competition that was open when the import was performed, and when it happened.
+
+The list SHALL be derived from the stored rows themselves, so that an import wholly replaced by a later one disappears and one partly replaced shrinks to the categories it still owns — the page shows what the ranking uses, not a log of everything that ever happened.
+
+Unlike the classification, this page SHALL list every category of the edition, not only those the current competition runs, and SHALL name them in Polish from their category code.
+
+The system SHALL let the operator delete one listed import — exactly its rows — or a whole round of the edition, each after a confirmation naming what will be removed.
+
+#### Scenario: Two sources in one round
+- **WHEN** round 1 holds recurve rows from a competition and barebow rows from a CSV
+- **THEN** the page lists two entries for round 1, each with its own categories, source, competition and timestamp
+
+#### Scenario: Superseded import disappears
+- **WHEN** an import is replaced by a newer one covering the same categories
+- **THEN** only the newer import is listed
+
+#### Scenario: Import from before provenance was recorded
+- **WHEN** rows were stored by an earlier version of the module and carry no source or timestamp
+- **THEN** they are still listed, as one entry per round, and can be deleted
+
+#### Scenario: Deleting one import
+- **WHEN** the operator deletes the barebow import of round 1
+- **THEN** those rows are removed, the round's other categories remain, and the classification is recomputed without them
+
+#### Scenario: Deleting a whole round
+- **WHEN** the operator deletes round 2
+- **THEN** every row of round 2 is removed, whatever it was assembled from
 
 ---
 

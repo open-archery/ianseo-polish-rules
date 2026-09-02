@@ -220,12 +220,17 @@ final class Fun_CupTest extends PlTestCase
 
     // --- Round storage -----------------------------------------------------
 
-    public function testStoreRoundDeletesThenInserts()
+    private function storedRow($category = 'RM', $identity = 'PL0001', $classification = 'ind')
     {
-        $error = pl_cup_store_round(2026, 4, [[
-            'classification' => 'ind', 'category' => 'RM', 'identity' => 'PL0001', 'name' => 'Jan Kowalski',
-            'club_name' => 'Klub Pierwszy', 'place' => 1, 'points' => 25, 'qual' => 645,
-        ]]);
+        return [
+            'classification' => $classification, 'category' => $category, 'identity' => $identity,
+            'name' => 'Jan Kowalski', 'club_name' => 'Klub Pierwszy', 'place' => 1, 'points' => 25, 'qual' => 645,
+        ];
+    }
+
+    public function testStoreImportDeletesThenInserts()
+    {
+        $error = pl_cup_store_import(2026, 4, [$this->storedRow()], 'IV Runda PP (T4RPP)', 131);
 
         $this->assertSame('', $error);
         $this->assertSame(['begin', 'commit'], FakeDb::$tx);
@@ -236,17 +241,96 @@ final class Fun_CupTest extends PlTestCase
         $this->assertStringStartsWith('INSERT INTO PLCupRound', $writes[1]);
     }
 
-    public function testStoreRoundRollsBackOnAFailedWrite()
+    public function testStoreImportReplacesOnlyItsOwnCategories()
+    {
+        // A round is assembled from several sources: the juniors from an ianseo
+        // competition, the barebow and compound rounds from their own files.
+        pl_cup_store_import(2026, 1, [$this->storedRow('BM', 'PL9'), $this->storedRow('BW', 'PL8')], 'CSV', 131);
+
+        $delete = FakeDb::executed('/DELETE FROM PLCupRound/')[0];
+        $this->assertStringContainsString("PlCrCategory = 'BM'", $delete);
+        $this->assertStringContainsString("PlCrCategory = 'BW'", $delete);
+        $this->assertStringNotContainsString('RU21M', $delete);
+        $this->assertMatchesRegularExpression('/PlCrRound = 1\s+AND \(/', $delete);
+    }
+
+    public function testStoreImportRecordsItsProvenance()
+    {
+        pl_cup_store_import(2026, 2, [$this->storedRow()], 'II Runda PP (2RPP)', 77);
+
+        $insert = FakeDb::executed('/INSERT INTO PLCupRound/')[0];
+        $this->assertStringContainsString('PlCrImportedAt, PlCrSource, PlCrImportTournament', $insert);
+        $this->assertStringContainsString("'II Runda PP (2RPP)'", $insert);
+        $this->assertStringContainsString(', 77)', $insert);
+    }
+
+    public function testStoreImportWithoutRowsChangesNothing()
+    {
+        $this->assertSame('', pl_cup_store_import(2026, 1, [], 'CSV', 131));
+
+        $this->assertSame([], FakeDb::executed('/DELETE FROM PLCupRound|INSERT INTO PLCupRound/'));
+    }
+
+    public function testStoreImportRollsBackOnAFailedWrite()
     {
         FakeDb::throwOn('/INSERT INTO PLCupRound/', 'duplicate key');
 
-        $error = pl_cup_store_round(2026, 4, [[
-            'classification' => 'ind', 'category' => 'RM', 'identity' => 'PL0001', 'name' => 'Jan',
-            'club_name' => 'Klub', 'place' => 1, 'points' => 25, 'qual' => 0,
-        ]]);
+        $error = pl_cup_store_import(2026, 4, [$this->storedRow()], 'CSV', 131);
 
         $this->assertStringContainsString('duplicate key', $error);
         $this->assertSame(['begin', 'rollback'], FakeDb::$tx);
+    }
+
+    // --- Import history ----------------------------------------------------
+
+    public function testImportsAreGroupedPerRoundSourceAndTimestamp()
+    {
+        FakeDb::on('/GROUP BY PlCrRound, PlCrSource/', [[
+            'PlCrRound' => 1, 'PlCrSource' => 'I Runda PP (1RPPJJM)', 'PlCrImportTournament' => 124,
+            'PlCrImportedAt' => '2026-09-02 10:00:00', 'RowCnt' => 62,
+            'Categories' => 'ind:RU18M,ind:RU18W,ind:RU21M,ind:RU21W',
+        ], [
+            'PlCrRound' => 1, 'PlCrSource' => 'bloczki_r1.csv', 'PlCrImportTournament' => 131,
+            'PlCrImportedAt' => '2026-09-02 11:30:00', 'RowCnt' => 42, 'Categories' => 'ind:BM,mix:BX',
+        ]]);
+
+        $imports = pl_cup_load_imports(2026);
+
+        $this->assertCount(2, $imports);
+        $this->assertSame(62, $imports[0]['rows']);
+        $this->assertSame(['RU18M', 'RU18W', 'RU21M', 'RU21W'], array_column($imports[0]['categories'], 'category'));
+        $this->assertSame('bloczki_r1.csv', $imports[1]['source']);
+        $this->assertSame(
+            [['classification' => 'ind', 'category' => 'BM'], ['classification' => 'mix', 'category' => 'BX']],
+            $imports[1]['categories']
+        );
+    }
+
+    public function testDeleteImportTargetsOneSourceAndTimestamp()
+    {
+        pl_cup_delete_import(2026, 1, 'bloczki_r1.csv', '2026-09-02 11:30:00');
+
+        $delete = FakeDb::executed('/DELETE FROM PLCupRound/')[0];
+        $this->assertStringContainsString('PlCrRound = 1', $delete);
+        $this->assertStringContainsString("PlCrSource = 'bloczki_r1.csv'", $delete);
+        $this->assertStringContainsString("PlCrImportedAt = '2026-09-02 11:30:00'", $delete);
+    }
+
+    public function testDeleteImportHandlesRowsStoredBeforeProvenanceExisted()
+    {
+        pl_cup_delete_import(2026, 1, '', '');
+
+        $this->assertStringContainsString('PlCrImportedAt IS NULL', FakeDb::executed('/DELETE FROM PLCupRound/')[0]);
+    }
+
+    public function testDeleteRoundRemovesEverythingOfThatRound()
+    {
+        pl_cup_delete_round(2026, 3);
+
+        $delete = FakeDb::executed('/DELETE FROM PLCupRound/')[0];
+        $this->assertStringContainsString('PlCrEdition = 2026', $delete);
+        $this->assertStringContainsString('PlCrRound = 3', $delete);
+        $this->assertStringNotContainsString('PlCrSource', $delete);
     }
 
     public function testLoadRoundsReadsStoredRows()
@@ -308,6 +392,35 @@ final class Fun_CupTest extends PlTestCase
 
         $this->assertStringStartsWith("\xEF\xBB\xBF" . 'Klasyfikacja;Kategoria;Identyfikator;Nazwa;Klub;Miejsce;Punkty;Kwalifikacje', $csv);
         $this->assertStringContainsString('ind;RM;PL0001;Jan Kowalski;Klub Pierwszy;1;25;645', $csv);
+    }
+
+    public function testCsvCarriesTheSourceCompetition()
+    {
+        $csv = pl_cup_csv_write($this->csvRows(), 'I Runda PP (1RPPJJM)');
+
+        $this->assertStringContainsString('#Zawody: I Runda PP (1RPPJJM)', $csv);
+
+        $parsed = pl_cup_csv_parse($csv, ['ind' => ['RM'], 'mix' => []]);
+        $this->assertSame('I Runda PP (1RPPJJM)', $parsed['source']);
+        $this->assertSame($this->csvRows(), $parsed['rows']);
+    }
+
+    public function testCsvWithoutASourceLineParsesAsBefore()
+    {
+        $parsed = pl_cup_csv_parse(pl_cup_csv_write($this->csvRows()), ['ind' => ['RM'], 'mix' => []]);
+
+        $this->assertSame('', $parsed['source']);
+        $this->assertSame([], $parsed['errors']);
+    }
+
+    public function testCsvIgnoresOtherCommentLines()
+    {
+        $csv = "# wyeksportowane ręcznie\r\nind;RM;PL0001;Jan;Klub;1;25;645\r\n";
+
+        $parsed = pl_cup_csv_parse($csv, ['ind' => ['RM'], 'mix' => []]);
+
+        $this->assertSame([], $parsed['errors']);
+        $this->assertCount(1, $parsed['rows']);
     }
 
     public function testCsvRoundTripKeepsTheRowsIdentical()

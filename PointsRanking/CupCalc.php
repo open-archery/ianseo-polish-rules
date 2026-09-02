@@ -136,6 +136,21 @@ function pl_cup_series_title($classification, $category, $fallbackLabel = '')
 }
 
 /**
+ * The series alone, without the report-title opening: "Juniorek młodszych",
+ * "łuków barebow - indywidualna mężczyzn", "Seniorów - miksty". Derived from the
+ * category code, so it also names categories this competition does not run.
+ */
+function pl_cup_series_label($classification, $category, $fallbackLabel = '')
+{
+    $title = pl_cup_series_title($classification, $category, $fallbackLabel);
+    $prefix = PL_CUP_TITLE_PREFIX . ' ';
+    if (strpos($title, $prefix) === 0) {
+        return substr($title, strlen($prefix));
+    }
+    return substr($title, strlen(PL_CUP_TITLE_PREFIX . ' - '));
+}
+
+/**
  * @param string $classification 'ind' | 'mix'
  * @param string $category individual division+class (e.g. "RU21M") or a mixed EvCode
  * @return array{steps: string[], terminator: string}

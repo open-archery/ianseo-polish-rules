@@ -28,6 +28,9 @@ const PL_CUP_PRESET_KEY = 'pp';
 /** CSV header, in column order (design D7). */
 const PL_CUP_CSV_COLUMNS = ['Klasyfikacja', 'Kategoria', 'Identyfikator', 'Nazwa', 'Klub', 'Miejsce', 'Punkty', 'Kwalifikacje'];
 
+/** Comment line naming the competition a CSV was exported from. */
+const PL_CUP_CSV_SOURCE_TAG = 'Zawody';
+
 // --- Auto-install ---------------------------------------------------------
 
 function pl_cup_ensure_tables()
@@ -59,10 +62,28 @@ function pl_cup_ensure_tables()
             PlCrPlace INT NOT NULL DEFAULT 0,
             PlCrPoints INT NOT NULL DEFAULT 0,
             PlCrQualScore INT NOT NULL DEFAULT 0,
+            PlCrImportedAt DATETIME NULL DEFAULT NULL,
+            PlCrSource VARCHAR(255) NOT NULL DEFAULT '',
+            PlCrImportTournament INT NOT NULL DEFAULT 0,
             PRIMARY KEY (PlCrEdition, PlCrRound, PlCrClassification, PlCrCategory, PlCrIdentity)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     }
     safe_free_result($Rs);
+
+    // Provenance of every row: which import put it there, from where, and in
+    // which competition it was performed. Added separately so an installation
+    // that already stores rounds picks them up on the next visit.
+    foreach ([
+        'PlCrImportedAt' => 'DATETIME NULL DEFAULT NULL',
+        'PlCrSource' => "VARCHAR(255) NOT NULL DEFAULT ''",
+        'PlCrImportTournament' => 'INT NOT NULL DEFAULT 0',
+    ] as $column => $definition) {
+        $Rs = safe_r_sql("SHOW COLUMNS FROM PLCupRound LIKE " . StrSafe_DB($column));
+        if (safe_num_rows($Rs) == 0) {
+            safe_w_sql("ALTER TABLE PLCupRound ADD COLUMN $column $definition");
+        }
+        safe_free_result($Rs);
+    }
 
     // Keyed by identity, not by "tied group": a group has no stable id, and the
     // outcome must survive a re-import of any round (D6a).
@@ -303,22 +324,49 @@ function pl_cup_validate_rows(array $rows)
 // --- Stored rounds ----------------------------------------------------------
 
 /**
- * Replace one round's rows in full. Atomic: a failed write leaves the previously
- * stored round untouched rather than a half-replaced one.
+ * Store one import: the rows replace **the categories they contain** in that
+ * round, and nothing else.
  *
+ * A round is routinely assembled from several sources — the juniors from an
+ * ianseo competition, the barebow and compound rounds from CSV files typed by
+ * their own hosts — so an import owns its categories, not the whole round.
+ * Atomic: a failed write leaves everything as it was.
+ *
+ * @param string $source where the rows came from (a competition, or a file)
+ * @param int $importTournament the competition open while importing, for context
  * @return string '' on success, an error message otherwise
  */
-function pl_cup_store_round($edition, $round, array $rows)
+function pl_cup_store_import($edition, $round, array $rows, $source, $importTournament)
 {
     $edition = intval($edition);
     $round = intval($round);
+    $importTournament = intval($importTournament);
+    // One timestamp for the whole batch: it is what groups these rows into a
+    // single entry in the import history.
+    $importedAt = date('Y-m-d H:i:s');
+
+    $categories = [];
+    foreach ($rows as $row) {
+        $categories[$row['classification'] . '|' . $row['category']] = [$row['classification'], $row['category']];
+    }
+    if (empty($categories)) {
+        return '';
+    }
+
+    $scope = [];
+    foreach ($categories as [$classification, $category]) {
+        $scope[] = '(PlCrClassification = ' . StrSafe_DB($classification)
+            . ' AND PlCrCategory = ' . StrSafe_DB($category) . ')';
+    }
 
     safe_w_BeginTransaction();
     try {
-        safe_w_sql("DELETE FROM PLCupRound WHERE PlCrEdition = $edition AND PlCrRound = $round");
+        safe_w_sql("DELETE FROM PLCupRound WHERE PlCrEdition = $edition AND PlCrRound = $round
+            AND (" . implode(' OR ', $scope) . ')');
         foreach ($rows as $row) {
             safe_w_sql("INSERT INTO PLCupRound (PlCrEdition, PlCrRound, PlCrClassification, PlCrCategory,
-                PlCrIdentity, PlCrName, PlCrClubName, PlCrPlace, PlCrPoints, PlCrQualScore) VALUES ("
+                PlCrIdentity, PlCrName, PlCrClubName, PlCrPlace, PlCrPoints, PlCrQualScore,
+                PlCrImportedAt, PlCrSource, PlCrImportTournament) VALUES ("
                 . $edition . ', '
                 . $round . ', '
                 . StrSafe_DB($row['classification']) . ', '
@@ -328,7 +376,10 @@ function pl_cup_store_round($edition, $round, array $rows)
                 . StrSafe_DB($row['club_name']) . ', '
                 . intval($row['place']) . ', '
                 . intval($row['points']) . ', '
-                . intval($row['qual']) . ')');
+                . intval($row['qual']) . ', '
+                . StrSafe_DB($importedAt) . ', '
+                . StrSafe_DB($source) . ', '
+                . $importTournament . ')');
         }
         safe_w_Commit();
     } catch (\Exception $e) {
@@ -340,13 +391,77 @@ function pl_cup_store_round($edition, $round, array $rows)
 }
 
 /**
+ * The imports currently feeding the classification, newest first per round.
+ *
+ * Grouped out of the stored rows themselves rather than kept as a log, so an
+ * import that has been wholly replaced simply stops being listed, and one that
+ * was partly replaced shrinks to the categories it still owns.
+ *
+ * @return array list of ['round','source','import_tournament','imported_at',
+ *   'categories' => [['classification','category'], ...], 'rows' => int]
+ */
+function pl_cup_load_imports($edition)
+{
+    $Rs = safe_r_sql("
+        SELECT PlCrRound, PlCrSource, PlCrImportTournament, PlCrImportedAt,
+               COUNT(*) AS RowCnt,
+               GROUP_CONCAT(DISTINCT CONCAT(PlCrClassification, ':', PlCrCategory) ORDER BY PlCrCategory SEPARATOR ',') AS Categories
+        FROM PLCupRound
+        WHERE PlCrEdition = " . intval($edition) . "
+        GROUP BY PlCrRound, PlCrSource, PlCrImportTournament, PlCrImportedAt
+        ORDER BY PlCrRound, PlCrImportedAt DESC
+    ");
+    $imports = [];
+    while ($row = safe_fetch($Rs)) {
+        $categories = [];
+        foreach (explode(',', (string) $row->Categories) as $pair) {
+            if ($pair === '') {
+                continue;
+            }
+            [$classification, $category] = array_pad(explode(':', $pair, 2), 2, '');
+            $categories[] = ['classification' => $classification, 'category' => $category];
+        }
+        $imports[] = [
+            'round' => intval($row->PlCrRound),
+            'source' => (string) $row->PlCrSource,
+            'import_tournament' => intval($row->PlCrImportTournament),
+            'imported_at' => (string) $row->PlCrImportedAt,
+            'categories' => $categories,
+            'rows' => intval($row->RowCnt),
+        ];
+    }
+    safe_free_result($Rs);
+    return $imports;
+}
+
+/** Remove exactly one import: its round, its source and its own timestamp. */
+function pl_cup_delete_import($edition, $round, $source, $importedAt)
+{
+    $where = 'PlCrEdition = ' . intval($edition) . ' AND PlCrRound = ' . intval($round)
+        . ' AND PlCrSource = ' . StrSafe_DB($source);
+    // A round stored before the provenance columns existed has no timestamp.
+    $where .= $importedAt === ''
+        ? ' AND (PlCrImportedAt IS NULL OR PlCrImportedAt = \'\')'
+        : ' AND PlCrImportedAt = ' . StrSafe_DB($importedAt);
+
+    safe_w_sql("DELETE FROM PLCupRound WHERE $where");
+}
+
+/** Remove a whole round of an edition, whatever it was assembled from. */
+function pl_cup_delete_round($edition, $round)
+{
+    safe_w_sql('DELETE FROM PLCupRound WHERE PlCrEdition = ' . intval($edition)
+        . ' AND PlCrRound = ' . intval($round));
+}
+
+/**
  * @param int|null $round null = every stored round of the edition
  * @return array round rows, each with an extra 'round' key
  */
 function pl_cup_load_rounds($edition, $round = null)
 {
     $sql = "SELECT PlCrRound, PlCrClassification, PlCrCategory, PlCrIdentity, PlCrName,
-                   PlCrClubName, PlCrPlace, PlCrPoints, PlCrQualScore
+                   PlCrClubName, PlCrPlace, PlCrPoints, PlCrQualScore, PlCrSource
             FROM PLCupRound WHERE PlCrEdition = " . intval($edition);
     if ($round !== null) {
         $sql .= ' AND PlCrRound = ' . intval($round);
@@ -365,6 +480,7 @@ function pl_cup_load_rounds($edition, $round = null)
             'place' => intval($row->PlCrPlace),
             'points' => intval($row->PlCrPoints),
             'qual' => intval($row->PlCrQualScore),
+            'source' => isset($row->PlCrSource) ? (string) $row->PlCrSource : '',
         ];
     }
     safe_free_result($Rs);
@@ -423,10 +539,20 @@ function pl_cup_set_barrage($edition, $classification, $category, $identity, $or
 
 // --- CSV transport (design D7) ---------------------------------------------
 
-/** Semicolon-separated, UTF-8 with BOM — what Polish Excel opens without a wizard. */
-function pl_cup_csv_write(array $rows)
+/**
+ * Semicolon-separated, UTF-8 with BOM — what Polish Excel opens without a wizard.
+ *
+ * A "#Zawody:" line names the competition the results come from, so the host who
+ * imports the file sees where it came from without being told. It is a comment
+ * line: a file typed by hand simply has none.
+ */
+function pl_cup_csv_write(array $rows, $source = '')
 {
-    $out = "\xEF\xBB\xBF" . implode(';', PL_CUP_CSV_COLUMNS) . "\r\n";
+    $out = "\xEF\xBB\xBF";
+    if (trim((string) $source) !== '') {
+        $out .= '#' . PL_CUP_CSV_SOURCE_TAG . ': ' . str_replace(["\r", "\n"], ' ', trim($source)) . "\r\n";
+    }
+    $out .= implode(';', PL_CUP_CSV_COLUMNS) . "\r\n";
     foreach ($rows as $row) {
         $out .= implode(';', array_map('pl_cup_csv_escape', [
             $row['classification'],
@@ -473,12 +599,22 @@ function pl_cup_csv_parse($content, array $validCategories)
 
     $rows = [];
     $errors = [];
+    $source = '';
     $lineNo = 0;
     $headerSeen = false;
 
     while (($cells = fgetcsv($handle, 0, ';', '"', '\\')) !== false) {
         $lineNo++;
         if ($cells === [null] || (count($cells) === 1 && trim((string) $cells[0]) === '')) {
+            continue;
+        }
+
+        $first = trim((string) $cells[0]);
+        if (substr($first, 0, 1) === '#') {
+            // Comment line; "#Zawody: ..." names the exporting competition.
+            if (preg_match('/^#\s*' . PL_CUP_CSV_SOURCE_TAG . '\s*:\s*(.+)$/ui', $first, $m)) {
+                $source = trim($m[1]);
+            }
             continue;
         }
 
@@ -503,7 +639,7 @@ function pl_cup_csv_parse($content, array $validCategories)
         $errors = pl_cup_validate_rows($rows);
     }
 
-    return ['rows' => $rows, 'errors' => $errors];
+    return ['rows' => $rows, 'errors' => $errors, 'source' => $source];
 }
 
 /**
