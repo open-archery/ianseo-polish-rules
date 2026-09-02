@@ -449,9 +449,11 @@ function pl_cup_delete_import($edition, $round, $source, $importedAt)
 {
     $where = 'PlCrEdition = ' . intval($edition) . ' AND PlCrRound = ' . intval($round)
         . ' AND PlCrSource = ' . StrSafe_DB($source);
-    // A round stored before the provenance columns existed has no timestamp.
+    // A round stored before the provenance columns existed has no timestamp -
+    // and the column is NULL there, never an empty string: comparing a DATETIME
+    // to '' is rejected outright by a strict MySQL (error 1525).
     $where .= $importedAt === ''
-        ? ' AND (PlCrImportedAt IS NULL OR PlCrImportedAt = \'\')'
+        ? ' AND PlCrImportedAt IS NULL'
         : ' AND PlCrImportedAt = ' . StrSafe_DB($importedAt);
 
     safe_w_sql("DELETE FROM PLCupRound WHERE $where");

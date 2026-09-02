@@ -162,3 +162,10 @@ commit as the fix. Terse is fine; the goal is "don't step on this rake again," n
   `QuTournament` column, so join through `Entries` to scope it to a tournament. Team totals
   *are* in `Teams.TeScore`. Clamp negatives to 0 rather than trusting any of these columns
   to be populated.
+
+- **Comparing a `DATETIME` column to `''` is a hard error, not a false match.** MySQL in
+  strict mode answers `Error 1525: Incorrect DATETIME value: ''`, which ianseo turns into
+  its "For technical reasons it is not possible to serve the page requested" page — so a
+  `WHERE Col = ''` written as a defensive "empty or null" branch takes the whole page down
+  instead of matching nothing. A nullable `DATETIME` added by `ALTER TABLE ... NULL DEFAULT
+  NULL` is `NULL` in the pre-existing rows, never `''`; test for `IS NULL` alone.

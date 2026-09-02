@@ -337,7 +337,10 @@ final class Fun_CupTest extends PlTestCase
     {
         pl_cup_delete_import(2026, 1, '', '');
 
-        $this->assertStringContainsString('PlCrImportedAt IS NULL', FakeDb::executed('/DELETE FROM PLCupRound/')[0]);
+        $delete = FakeDb::executed('/DELETE FROM PLCupRound/')[0];
+        $this->assertStringContainsString('PlCrImportedAt IS NULL', $delete);
+        // Comparing a DATETIME column to '' is rejected by a strict MySQL (1525).
+        $this->assertStringNotContainsString("PlCrImportedAt = ''", $delete);
     }
 
     public function testDeleteRoundRemovesEverythingOfThatRound()
