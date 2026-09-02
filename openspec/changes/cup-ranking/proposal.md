@@ -26,7 +26,7 @@ Puchar Polski is shot as 4 rounds hosted by 4 different organisers, each scored 
 
 ### Modified Capabilities
 
-_None — `points-ranking` requirements are unchanged; the cup layer consumes its output._
+- `points-ranking`: the round tables list only subjects whose place matched a bracket. A no-result, a DSQ/DNS/DNF or a place beyond the last bracket is omitted (as the requirement already said), while a cutoff-zeroed row stays listed with 0 — and every row remains in the calculation, which the cup layer reads for its tie-breaks.
 
 ## Impact
 
