@@ -101,13 +101,34 @@ final class Fun_CupTest extends PlTestCase
 
     public function testLoadQualScoresBuildsBothMaps()
     {
-        FakeDb::on('/FROM Individuals/', [['EnId' => 10, 'QualScore' => 645], ['EnId' => 11, 'QualScore' => 638]]);
+        FakeDb::on('/FROM Qualifications/', [['EnId' => 10, 'QualScore' => 645], ['EnId' => 11, 'QualScore' => 638]]);
         FakeDb::on('/FROM Teams/', [['ClubId' => 5, 'Event' => 'RMX', 'QualScore' => 1290]]);
 
         $scores = pl_cup_load_qual_scores(1);
 
         $this->assertSame([10 => 645, 11 => 638], $scores['ind']);
         $this->assertSame(['5_RMX' => 1290], $scores['mix']);
+    }
+
+    public function testLoadQualScoresReadsQualificationsNotIndividuals()
+    {
+        // Individuals.IndScore is left at its -1 sentinel by this ruleset's
+        // competitions; the round total lives in Qualifications.QuScore.
+        pl_cup_load_qual_scores(1);
+
+        $this->assertCount(1, FakeDb::executed('/FROM Qualifications\s+INNER JOIN Entries/s'));
+        $this->assertSame([], FakeDb::executed('/FROM Individuals/'));
+    }
+
+    public function testLoadQualScoresTreatsASentinelAsNoScore()
+    {
+        FakeDb::on('/FROM Qualifications/', [['EnId' => 10, 'QualScore' => -1]]);
+        FakeDb::on('/FROM Teams/', [['ClubId' => 5, 'Event' => 'RMX', 'QualScore' => -1]]);
+
+        $scores = pl_cup_load_qual_scores(1);
+
+        $this->assertSame([10 => 0], $scores['ind']);
+        $this->assertSame(['5_RMX' => 0], $scores['mix']);
     }
 
     // --- Snapshot ----------------------------------------------------------
@@ -331,6 +352,27 @@ final class Fun_CupTest extends PlTestCase
         $this->assertStringContainsString('PlCrEdition = 2026', $delete);
         $this->assertStringContainsString('PlCrRound = 3', $delete);
         $this->assertStringNotContainsString('PlCrSource', $delete);
+    }
+
+    public function testLoadRoundsAreOrderedByCategoryThenPlace()
+    {
+        pl_cup_load_rounds(2026);
+
+        $this->assertMatchesRegularExpression(
+            '/ORDER BY PlCrRound, PlCrClassification, PlCrCategory, PlCrPlace/',
+            FakeDb::executed('/FROM PLCupRound/')[0]
+        );
+    }
+
+    public function testCsvWriteClampsALegacySentinelScore()
+    {
+        $rows = $this->csvRows();
+        $rows[0]['qual'] = -1;
+
+        $csv = pl_cup_csv_write($rows);
+
+        $this->assertStringContainsString('Klub Pierwszy;1;25;0', $csv);
+        $this->assertSame([], pl_cup_csv_parse($csv, ['ind' => ['RM'], 'mix' => []])['errors']);
     }
 
     public function testLoadRoundsReadsStoredRows()

@@ -57,7 +57,9 @@ Alternative for individuals: name + birth year. Rejected — the licence is auth
 
 ### D4 — Qualification score loaded by the cup layer, not by the engine
 
-A new `pl_cup_load_qual_scores($tourId)` reads `Individuals.IndScore` keyed by `EnId`, and `Teams.TeScore` keyed by club + event, and the snapshot builder joins it onto the report rows. The points-ranking loaders stay untouched, so `points-ranking`'s spec and its tests are unaffected.
+A new `pl_cup_load_qual_scores($tourId)` reads `Qualifications.QuScore` keyed by `EnId` (joined through `Entries` for the tournament), and `Teams.TeScore` keyed by club + event, and the snapshot builder joins it onto the report rows. The points-ranking loaders stay untouched, so `points-ranking`'s spec and its tests are unaffected.
+
+Not `Individuals.IndScore`: that column stays at its `-1` sentinel in this ruleset's competitions (every athlete of every tournament on the test installation), so reading it exported `-1` as everyone's qualification score. `QuScore` is the total ianseo maintains per entry over the whole qualification round, and it is what ianseo's own team ranking reads. Negative values are clamped to 0 on the way in, so a sentinel can never look like a score.
 
 Mixed rows lose `TeSubTeam` inside `pl_points_calculate()`, so the team score lookup is keyed by club + event only — safe exactly because D3 rejects two pairs of one club.
 

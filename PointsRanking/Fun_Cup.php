@@ -160,6 +160,14 @@ function pl_cup_set_config($tourId, $edition, $round, $diplomaName)
 // --- Qualification scores (not read by the points engine, D4) --------------
 
 /**
+ * The qualification score the tie-break reads: an athlete's total over the whole
+ * qualification round (2x70 m, 2x60 m, 2x50 m …).
+ *
+ * It comes from `Qualifications.QuScore`, the sum ianseo maintains per entry —
+ * **not** from `Individuals.IndScore`, which this ruleset's competitions leave
+ * at its -1 sentinel. Team totals do come from `Teams.TeScore`, which ianseo
+ * does fill in.
+ *
  * @return array{ind: array<int,int>, mix: array<string,int>} individual scores by
  *   EnId; mixed scores by "clubId_EvCode" — the pair's own sub-team is dropped
  *   inside pl_points_calculate(), which is safe because one club may enter only
@@ -171,15 +179,13 @@ function pl_cup_load_qual_scores($tourId)
     $scores = ['ind' => [], 'mix' => []];
 
     $Rs = safe_r_sql("
-        SELECT Individuals.IndId AS EnId, MAX(Individuals.IndScore) AS QualScore
-        FROM Individuals
-        INNER JOIN Events ON Events.EvCode = Individuals.IndEvent
-            AND Events.EvTournament = Individuals.IndTournament AND Events.EvTeamEvent = 0
-        WHERE Individuals.IndTournament = $tourId
-        GROUP BY Individuals.IndId
+        SELECT Qualifications.QuId AS EnId, Qualifications.QuScore AS QualScore
+        FROM Qualifications
+        INNER JOIN Entries ON Entries.EnId = Qualifications.QuId AND Entries.EnTournament = $tourId
     ");
     while ($row = safe_fetch($Rs)) {
-        $scores['ind'][intval($row->EnId)] = intval($row->QualScore);
+        // A missing or sentinel score counts as none, never as a negative one.
+        $scores['ind'][intval($row->EnId)] = max(0, intval($row->QualScore));
     }
     safe_free_result($Rs);
 
@@ -192,7 +198,7 @@ function pl_cup_load_qual_scores($tourId)
         GROUP BY Teams.TeCoId, Teams.TeEvent
     ");
     while ($row = safe_fetch($Rs)) {
-        $scores['mix'][$row->ClubId . '_' . $row->Event] = intval($row->QualScore);
+        $scores['mix'][$row->ClubId . '_' . $row->Event] = max(0, intval($row->QualScore));
     }
     safe_free_result($Rs);
 
@@ -466,6 +472,9 @@ function pl_cup_load_rounds($edition, $round = null)
     if ($round !== null) {
         $sql .= ' AND PlCrRound = ' . intval($round);
     }
+    // Category by category, best place first: the order a result list is read
+    // in, and the order an exported file is checked against its source PDF.
+    $sql .= ' ORDER BY PlCrRound, PlCrClassification, PlCrCategory, PlCrPlace, PlCrIdentity';
 
     $Rs = safe_r_sql($sql);
     $rows = [];
@@ -562,7 +571,9 @@ function pl_cup_csv_write(array $rows, $source = '')
             $row['club_name'],
             intval($row['place']),
             intval($row['points']),
-            intval($row['qual']),
+            // A row stored before the qualification-score fix carries -1; it
+            // must not leave the file as a value the import then rejects.
+            max(0, intval($row['qual'])),
         ])) . "\r\n";
     }
     return $out;

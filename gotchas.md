@@ -151,3 +151,14 @@ commit as the fix. Terse is fine; the goal is "don't step on this rake again," n
 - **`docker cp`/`docker exec` with an absolute container path mangles under Git Bash**
   (MSYS path conversion turns `/tmp/x.php` into `C:/...`). Prefix the command with
   `MSYS_NO_PATHCONV=1`, or write the path as `//tmp/x.php`.
+
+## ianseo scores
+
+- **`Individuals.IndScore` is not the qualification total.** In this ruleset's competitions
+  it sits at `-1` for every athlete of every tournament, so anything reading it silently
+  exports `-1` as a score (and, if the consumer validates, rejects its own export on
+  re-import). The qualification round total ianseo maintains per entry is
+  `Qualifications.QuScore` — one row per entry, keyed by `QuId = Entries.EnId`, with no
+  `QuTournament` column, so join through `Entries` to scope it to a tournament. Team totals
+  *are* in `Teams.TeScore`. Clamp negatives to 0 rather than trusting any of these columns
+  to be populated.
