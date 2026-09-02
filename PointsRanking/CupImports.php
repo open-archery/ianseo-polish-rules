@@ -122,8 +122,18 @@ foreach ($byRound as $round => $roundImports) {
     $roundRows = array_sum(array_column($roundImports, 'rows'));
 
     echo '<table class="Tabella">';
-    echo '<tr><th class="Title" colspan="5">Runda ' . intval($round) . ' - ' . intval($roundRows) . ' wierszy</th></tr>';
-    echo '<tr><th>Kategorie</th><th>Wierszy</th><th>Źródło</th><th>Zaimportowano w</th><th>Data</th></tr>';
+    // The whole-round button rides in the title bar and each import's button in
+    // its own row: a delete belongs beside the data it removes, not under it.
+    echo '<tr><th class="Title" colspan="5">Runda ' . intval($round) . ' - ' . intval($roundRows) . ' wierszy</th>';
+    echo '<th class="Title" style="text-align:right;white-space:nowrap;">';
+    echo '<form method="post" action="" style="display:inline;" onsubmit="return confirm(\'Usunąć całą rundę '
+        . intval($round) . ' (' . intval($roundRows) . ' wierszy)?\');">';
+    echo '<input type="hidden" name="deleteRound" value="1">';
+    echo '<input type="hidden" name="Round" value="' . intval($round) . '">';
+    echo '<input type="submit" value="Usuń całą rundę">';
+    echo '</form>';
+    echo '</th></tr>';
+    echo '<tr><th>Kategorie</th><th>Wierszy</th><th>Źródło</th><th>Zaimportowano w</th><th>Data</th><th></th></tr>';
 
     foreach ($roundImports as $import) {
         $labels = array_map(fn ($category) => pl_cup_category_label($category, $divLabels), $import['categories']);
@@ -137,28 +147,19 @@ foreach ($byRound as $round => $roundImports) {
         echo '<td>' . htmlspecialchars($where) . '</td>';
         echo '<td style="text-align:center;white-space:nowrap;">'
             . htmlspecialchars($import['imported_at'] !== '' ? $import['imported_at'] : '-') . '</td>';
-        echo '</tr>';
-
-        echo '<tr><td colspan="5" style="text-align:right;padding-bottom:8px;">';
+        echo '<td style="text-align:right;white-space:nowrap;">';
         echo '<form method="post" action="" style="display:inline;" onsubmit="return confirm(\'Usunąć ten import ('
             . htmlspecialchars(addslashes($import['source']), ENT_QUOTES) . ', ' . intval($import['rows']) . ' wierszy)?\');">';
         echo '<input type="hidden" name="deleteImport" value="1">';
         echo '<input type="hidden" name="Round" value="' . intval($import['round']) . '">';
         echo '<input type="hidden" name="Source" value="' . htmlspecialchars($import['source'], ENT_QUOTES) . '">';
         echo '<input type="hidden" name="ImportedAt" value="' . htmlspecialchars($import['imported_at'], ENT_QUOTES) . '">';
-        echo '<input type="submit" value="Usuń ten import">';
+        echo '<input type="submit" value="Usuń import">';
         echo '</form>';
-        echo '</td></tr>';
+        echo '</td>';
+        echo '</tr>';
     }
 
-    echo '<tr><td colspan="5" style="text-align:right;padding:8px;">';
-    echo '<form method="post" action="" style="display:inline;" onsubmit="return confirm(\'Usunąć całą rundę '
-        . intval($round) . ' (' . intval($roundRows) . ' wierszy)?\');">';
-    echo '<input type="hidden" name="deleteRound" value="1">';
-    echo '<input type="hidden" name="Round" value="' . intval($round) . '">';
-    echo '<input type="submit" value="Usuń całą rundę ' . intval($round) . '">';
-    echo '</form>';
-    echo '</td></tr>';
     echo '</table><br>';
 }
 
