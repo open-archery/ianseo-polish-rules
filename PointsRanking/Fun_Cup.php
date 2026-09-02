@@ -31,6 +31,14 @@ const PL_CUP_CSV_COLUMNS = ['Klasyfikacja', 'Kategoria', 'Identyfikator', 'Nazwa
 /** Comment line naming the competition a CSV was exported from. */
 const PL_CUP_CSV_SOURCE_TAG = 'Zawody';
 
+/**
+ * Markers a result list uses for "no result" in the place column. Such a row is
+ * skipped, not rejected: a file exported from someone else's software lists
+ * everyone who entered, and an archer who did not finish simply has nothing to
+ * contribute to the cup.
+ */
+const PL_CUP_NO_RESULT_MARKERS = ['DNF', 'DNS', 'DSQ', 'DQ', 'ABS', 'RET', 'WD', 'NS', 'IRM', 'BRAK', 'WYC', '-', '--'];
+
 // --- Auto-install ---------------------------------------------------------
 
 function pl_cup_ensure_tables()
@@ -611,6 +619,7 @@ function pl_cup_csv_parse($content, array $validCategories)
     $rows = [];
     $errors = [];
     $warnings = [];
+    $skipped = 0;
     $source = '';
     $lineNo = 0;
     $headerSeen = false;
@@ -640,6 +649,10 @@ function pl_cup_csv_parse($content, array $validCategories)
 
         $parsed = pl_cup_csv_parse_row($cells, $lineNo, $validCategories);
         $warnings = array_merge($warnings, $parsed['warnings']);
+        if (!empty($parsed['skipped'])) {
+            $skipped++;
+            continue;
+        }
         if (!empty($parsed['errors'])) {
             $errors = array_merge($errors, $parsed['errors']);
             continue;
@@ -651,8 +664,11 @@ function pl_cup_csv_parse($content, array $validCategories)
     if (empty($errors)) {
         $errors = pl_cup_validate_rows($rows);
     }
+    if ($skipped > 0) {
+        $warnings[] = 'Pominięto ' . $skipped . ' wierszy bez wyniku (DNF, DNS, DSQ i podobne).';
+    }
 
-    return ['rows' => $rows, 'errors' => $errors, 'warnings' => $warnings, 'source' => $source];
+    return ['rows' => $rows, 'errors' => $errors, 'warnings' => $warnings, 'skipped' => $skipped, 'source' => $source];
 }
 
 /**
@@ -676,7 +692,7 @@ function pl_cup_csv_parse_row(array $cells, $lineNo, array $validCategories)
     $prefix = 'Wiersz ' . $lineNo . ': ';
 
     if (count($cells) !== count(PL_CUP_CSV_COLUMNS)) {
-        return ['row' => null, 'warnings' => [], 'errors' => [$prefix . 'oczekiwano ' . count(PL_CUP_CSV_COLUMNS) . ' kolumn, znaleziono ' . count($cells) . '.']];
+        return ['row' => null, 'warnings' => [], 'skipped' => false, 'errors' => [$prefix . 'oczekiwano ' . count(PL_CUP_CSV_COLUMNS) . ' kolumn, znaleziono ' . count($cells) . '.']];
     }
 
     [$classification, $category, $identity, $name, $clubName, $place, $points, $qual] = array_map(
@@ -685,10 +701,16 @@ function pl_cup_csv_parse_row(array $cells, $lineNo, array $validCategories)
     );
 
     if (!in_array($classification, ['ind', 'mix'], true)) {
-        return ['row' => null, 'warnings' => [], 'errors' => [$prefix . 'nieznana klasyfikacja "' . $classification . '" (dozwolone: ind, mix).']];
+        return ['row' => null, 'warnings' => [], 'skipped' => false, 'errors' => [$prefix . 'nieznana klasyfikacja "' . $classification . '" (dozwolone: ind, mix).']];
     }
     if (!in_array($category, $validCategories[$classification] ?? [], true)) {
-        return ['row' => null, 'warnings' => [], 'errors' => [$prefix . 'nieznana kategoria "' . $category . '".']];
+        return ['row' => null, 'warnings' => [], 'skipped' => false, 'errors' => [$prefix . 'nieznana kategoria "' . $category . '".']];
+    }
+
+    if (pl_cup_is_no_result($place)) {
+        // Checked before the other columns: a DNF row's name or qualification
+        // score being blank says nothing, since the row is not stored anyway.
+        return ['row' => null, 'errors' => [], 'warnings' => [], 'skipped' => true];
     }
 
     $errors = [];
@@ -711,7 +733,7 @@ function pl_cup_csv_parse_row(array $cells, $lineNo, array $validCategories)
         }
     }
     if (!empty($errors)) {
-        return ['row' => null, 'warnings' => [], 'errors' => $errors];
+        return ['row' => null, 'warnings' => [], 'skipped' => false, 'errors' => $errors];
     }
 
     $fromFile = $points;
@@ -726,7 +748,7 @@ function pl_cup_csv_parse_row(array $cells, $lineNo, array $validCategories)
         $errors[] = $prefix . 'ujemny wynik kwalifikacji (' . $qual . ').';
     }
     if (!empty($errors)) {
-        return ['row' => null, 'warnings' => [], 'errors' => $errors];
+        return ['row' => null, 'warnings' => [], 'skipped' => false, 'errors' => $errors];
     }
 
     $warnings = [];
@@ -744,7 +766,31 @@ function pl_cup_csv_parse_row(array $cells, $lineNo, array $validCategories)
         'place' => $place,
         'points' => $points,
         'qual' => $qual,
-    ], 'errors' => [], 'warnings' => $warnings];
+    ], 'errors' => [], 'warnings' => $warnings, 'skipped' => false];
+}
+
+/**
+ * Whether a place column says "this archer has no result": one of the markers a
+ * result list uses, or a numeric value outside the classified range (0 or one of
+ * ianseo's DSQ/DNS/DNF sentinels).
+ *
+ * Anything else that is not a number stays an error — a marker is recognised,
+ * a typo is reported.
+ */
+function pl_cup_is_no_result($place)
+{
+    $place = trim((string) $place);
+    if ($place === '') {
+        return false;
+    }
+    if (in_array(mb_strtoupper($place, 'UTF-8'), PL_CUP_NO_RESULT_MARKERS, true)) {
+        return true;
+    }
+    if (!pl_cup_is_numeric($place)) {
+        return false;
+    }
+    $value = pl_cup_to_int($place);
+    return $value <= 0 || $value >= 29999;
 }
 
 /**

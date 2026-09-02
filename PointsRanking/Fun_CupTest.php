@@ -538,21 +538,47 @@ Oddział Zielona Góra";
         $this->assertSame($rows, $parsed['rows']);
     }
 
-    public function testCsvRejectsValuesAStoredRoundCannotHold()
+    public function testCsvSkipsRowsWithoutAResult()
     {
-        $cases = [
-            'brak miejsca' => [0, 25, 645, 'miejsce poza zakresem'],
-            'sentinel DNS' => [29999, 0, 645, 'miejsce poza zakresem'],
-            'ujemne kwalifikacje' => [1, 25, -1, 'ujemny wynik kwalifikacji'],
-        ];
+        // A result list from another host names everyone who entered; an archer
+        // who did not finish has nothing to contribute and is not an error.
+        foreach (['DNF', 'dns', 'DSQ', 'ABS', '-', '0', '29999'] as $place) {
+            $parsed = pl_cup_csv_parse("ind;RM;PL0001;Jan;Klub;$place;;\r\n", ['ind' => ['RM'], 'mix' => []]);
 
-        foreach ($cases as $label => [$place, $points, $qual, $needle]) {
-            $parsed = pl_cup_csv_parse("ind;RM;PL0001;Jan;Klub;$place;$points;$qual
-", ['ind' => ['RM'], 'mix' => []]);
-
-            $this->assertSame([], $parsed['rows'], $label);
-            $this->assertStringContainsString($needle, $parsed['errors'][0], $label);
+            $this->assertSame([], $parsed['errors'], $place);
+            $this->assertSame([], $parsed['rows'], $place);
+            $this->assertSame(1, $parsed['skipped'], $place);
         }
+    }
+
+    public function testSkippedRowsAreReportedOnce()
+    {
+        $csv = "ind;RM;PL0001;Jan Kowalski;Klub;1;;600\r\n"
+            . "ind;RM;PL0002;Adam Nowak;Klub;DNS;;\r\n"
+            . "ind;RM;PL0003;Piotr Wilk;Klub;DNF;;\r\n";
+
+        $parsed = pl_cup_csv_parse($csv, ['ind' => ['RM'], 'mix' => []]);
+
+        $this->assertCount(1, $parsed['rows']);
+        $this->assertSame(2, $parsed['skipped']);
+        $this->assertStringContainsString('Pominięto 2 wierszy bez wyniku', $parsed['warnings'][0]);
+    }
+
+    public function testAMistypedPlaceIsStillAnError()
+    {
+        // "1O" is a typo, not a marker - it must not be silently dropped.
+        $parsed = pl_cup_csv_parse("ind;RM;PL0001;Jan;Klub;1O;;600\r\n", ['ind' => ['RM'], 'mix' => []]);
+
+        $this->assertSame(0, $parsed['skipped']);
+        $this->assertStringContainsString('kolumna Miejsce nie jest liczbą', $parsed['errors'][0]);
+    }
+
+    public function testCsvRejectsANegativeQualificationScore()
+    {
+        $parsed = pl_cup_csv_parse("ind;RM;PL0001;Jan;Klub;1;25;-1\r\n", ['ind' => ['RM'], 'mix' => []]);
+
+        $this->assertSame([], $parsed['rows']);
+        $this->assertStringContainsString('ujemny wynik kwalifikacji', $parsed['errors'][0]);
     }
 
     public function testANegativePointsColumnOnlyWarns()

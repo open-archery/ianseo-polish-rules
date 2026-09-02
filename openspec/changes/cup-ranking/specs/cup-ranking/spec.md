@@ -84,7 +84,9 @@ An individual row SHALL be identified by the athlete's licence number and its ca
 ### Requirement: Round import from CSV
 The system SHALL import one round of an edition from a CSV file, since earlier rounds' ianseo databases are not available. One row SHALL carry classification, category, identity, display name, club name, place, points and qualification score.
 
-A row SHALL state its classification, category, identity, place and qualification score, and — for an individual row — the athlete's name, which identifies them against the rounds already stored. A qualification score of 0 SHALL be written explicitly, because an empty cell is far more often a forgotten column than a real zero. The club name is optional and is display data only.
+A row whose place says the archer has no result — a marker such as `DNF`, `DNS`, `DSQ`, `ABS` or `-`, or a value outside the classified range — SHALL be skipped rather than rejected: a result list exported by another host names everyone who entered, and such a row has nothing to contribute to the cup. The number of skipped rows SHALL be reported after the import. A place that is neither a number nor a known marker SHALL remain an error, so a typo is not silently dropped.
+
+Every other row SHALL state its classification, category, identity, place and qualification score, and — for an individual row — the athlete's name, which identifies them against the rounds already stored. A qualification score of 0 SHALL be written explicitly, because an empty cell is far more often a forgotten column than a real zero. The club name is optional and is display data only.
 
 Points SHALL always be computed from the place with this cup's own bracket table, never taken from the file: under the `pp` preset the points are a pure function of the place, so results scored under another annex — or not scored at all — import correctly. A points column that disagrees with the computed value SHALL be reported as a warning and the computed value stored, since such a disagreement usually means the place is wrong.
 
@@ -103,6 +105,14 @@ Category codes SHALL be validated against the categories of the current tourname
 #### Scenario: Points column disagrees
 - **WHEN** a file states place 1 and 10 points
 - **THEN** the row is stored with 25 points and the operator is warned that the file's value differs
+
+#### Scenario: Archer without a result in the file
+- **WHEN** a file holds rows with `DNF`, `DNS` or `-` in the place column
+- **THEN** those rows are skipped, the rest of the file imports, and the operator is told how many rows were skipped
+
+#### Scenario: Mistyped place
+- **WHEN** a place reads `1O` (a letter instead of a zero)
+- **THEN** the import is rejected with that line named, rather than the row being skipped
 
 #### Scenario: Missing required value
 - **WHEN** an individual row has no name, or any row has no place or an empty qualification score
