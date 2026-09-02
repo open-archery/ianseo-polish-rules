@@ -556,4 +556,33 @@ final class PointsRankingCalcTest extends \PHPUnit\Framework\TestCase
         $this->assertContains('Cutoff Zeroed', $names);
         $this->assertNotContains('Never Scored', $names);
     }
+
+    // --- Rows shown in a SEPARATE table ------------------------------------
+
+    public function testScoredRowsDropSubjectsThatNeverMatchedABracket()
+    {
+        $rows = [
+            ['name' => 'Placed', 'place' => 1, 'points' => 25, 'raw_points' => 25],
+            ['name' => 'No result', 'place' => 0, 'points' => 0, 'raw_points' => 0],
+            ['name' => 'DSQ', 'place' => 29999, 'points' => 0, 'raw_points' => 0],
+            ['name' => 'Outside brackets', 'place' => 70, 'points' => 0, 'raw_points' => 0],
+        ];
+
+        $this->assertSame(['Placed'], array_column(pl_points_scored_rows($rows), 'name'));
+    }
+
+    public function testScoredRowsKeepACutoffZeroedSubject()
+    {
+        // Its zero is a result, unlike a row that never scored at all.
+        $rows = [['name' => 'Last, zeroed by the cutoff', 'place' => 12, 'points' => 0, 'raw_points' => 1]];
+
+        $this->assertCount(1, pl_points_scored_rows($rows));
+    }
+
+    public function testScoredRowsFallBackToPointsWhenNoRawValueIsPresent()
+    {
+        $rows = [['name' => 'A', 'place' => 1, 'points' => 25], ['name' => 'B', 'place' => 0, 'points' => 0]];
+
+        $this->assertSame(['A'], array_column(pl_points_scored_rows($rows), 'name'));
+    }
 }

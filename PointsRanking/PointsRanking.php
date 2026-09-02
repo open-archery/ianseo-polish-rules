@@ -64,6 +64,9 @@ function pl_points_render_separate_report(array $report)
     echo '<table class="Tabella">';
     echo '<tr><th class="Title" colspan="' . $colCount . '">' . htmlspecialchars($report['label']) . '</th></tr>';
     foreach ($report['sections'] as $section) {
+        if (empty(pl_points_scored_rows($section['rows']))) {
+            continue;
+        }
         echo '<tr><td colspan="' . $colCount . '" style="padding:6px;background:#e9ecef;font-weight:bold;">' . htmlspecialchars($section['label']) . '</td></tr>';
         if ($isMixed) {
             // No license number (a pair has two, not one); club identifies the
@@ -72,7 +75,7 @@ function pl_points_render_separate_report(array $report)
         } else {
             echo '<tr><th>Miejsce</th><th>' . ($isTeam ? 'Zespół' : 'Zawodnik') . '</th><th>Klub</th><th>Nr licencji</th><th>Miejsce w zawodach</th><th>Punkty</th></tr>';
         }
-        pl_points_render_section_rows($section['rows'], $isTeam, $isMixed);
+        pl_points_render_section_rows(pl_points_scored_rows($section['rows']), $isTeam, $isMixed);
     }
     echo '</table><br>';
 }
