@@ -779,9 +779,13 @@ function pl_cup_normalize_name($name)
 }
 
 /**
- * Whether two names are the same person's, tolerating a typo: identical once
- * normalised, or within a small edit distance of each other (one or two slips
- * for a short name, proportionally more for a long one).
+ * Whether two spellings under **the same licence** are the same person's:
+ * identical once normalised, or within a small edit distance of each other, so
+ * that "Szkolnicki" and "Szkolnicky" do not raise a false alarm.
+ *
+ * The tolerance is only safe in this direction. The licence already asserts that
+ * the two rows are one person, so the comparison is looking for a spelling slip,
+ * not deciding identity.
  */
 function pl_cup_names_match($a, $b)
 {
@@ -792,6 +796,21 @@ function pl_cup_names_match($a, $b)
     }
     $tolerance = min(3, max(1, intdiv(max(strlen($a), strlen($b)), 8)));
     return levenshtein($a, $b) <= $tolerance;
+}
+
+/**
+ * Whether two names under **different licences** are one and the same person.
+ *
+ * Exact, once case, diacritics, spacing and word order are normalised away — no
+ * typo tolerance here, because two different athletes routinely differ by a
+ * single letter ("Zapała Daria" and "Zapała Maria" are sisters, not a typo),
+ * and this is the direction that would otherwise reject a correct file.
+ */
+function pl_cup_same_person($a, $b)
+{
+    $a = pl_cup_normalize_name($a);
+    $b = pl_cup_normalize_name($b);
+    return $a !== '' && $a === $b;
 }
 
 /**
@@ -829,12 +848,11 @@ function pl_cup_identity_conflicts(array $rows, array $storedRows)
         }
         foreach ($known as $seen) {
             $sameIdentity = $seen['identity'] === $row['identity'];
-            $sameName = pl_cup_names_match($seen['name'], $row['name']);
 
-            if ($sameIdentity && !$sameName) {
+            if ($sameIdentity && !pl_cup_names_match($seen['name'], $row['name'])) {
                 $conflicts[] = 'Licencja ' . $row['identity'] . ': w pliku "' . $row['name']
                     . '", a w zapisanych danych "' . $seen['name'] . '" (' . $seen['where'] . ').';
-            } elseif (!$sameIdentity && $sameName) {
+            } elseif (!$sameIdentity && pl_cup_same_person($seen['name'], $row['name'])) {
                 $conflicts[] = 'Zawodnik "' . $row['name'] . '" ma w pliku licencję ' . $row['identity']
                     . ', a w zapisanych danych ' . $seen['identity'] . ' (' . $seen['where'] . ').';
             }

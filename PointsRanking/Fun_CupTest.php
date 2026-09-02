@@ -649,6 +649,30 @@ Oddział Zielona Góra";
         $this->assertFalse(pl_cup_names_match('Kowalski Jan', 'Nowak Adam'));
     }
 
+    public function testTwoLicencesAreOnlyOnePersonWhenTheNamesMatchExactly()
+    {
+        // Sisters, not a typo - one letter apart but two different athletes.
+        $this->assertFalse(pl_cup_same_person('Zapała Daria', 'Zapała Maria'));
+        $this->assertFalse(pl_cup_same_person('Szkolnicki Oskar', 'Szkolnicky Oskar'));
+
+        $this->assertTrue(pl_cup_same_person('Kowalski Jan', 'Jan Kowalski'));
+        $this->assertTrue(pl_cup_same_person('Wiśniewska Anna', 'wisniewska  ANNA'));
+    }
+
+    public function testTwoAthletesSharingASurnameAreNotAConflict()
+    {
+        $stored = [[
+            'round' => 1, 'classification' => 'ind', 'category' => 'RU18W', 'identity' => '5584',
+            'name' => 'Zapała Daria', 'club_name' => 'Klub', 'place' => 1, 'points' => 25, 'qual' => 600,
+        ]];
+        $incoming = [[
+            'classification' => 'ind', 'category' => 'RU18W', 'identity' => '6132',
+            'name' => 'Zapała Maria', 'club_name' => 'Klub', 'place' => 2, 'points' => 21, 'qual' => 590,
+        ]];
+
+        $this->assertSame([], pl_cup_identity_conflicts($incoming, $stored));
+    }
+
     public function testOneLicenceWithTwoDifferentAthletesIsAConflict()
     {
         $stored = [[
@@ -675,7 +699,7 @@ Oddział Zielona Góra";
         ]];
         $incoming = [[
             'classification' => 'ind', 'category' => 'RM', 'identity' => 'PL9999',
-            'name' => 'Kowalski Jan', 'club_name' => 'Klub', 'place' => 2, 'points' => 21, 'qual' => 590,
+            'name' => 'KOWALSKI  jan', 'club_name' => 'Klub', 'place' => 2, 'points' => 21, 'qual' => 590,
         ]];
 
         $conflicts = pl_cup_identity_conflicts($incoming, $stored);

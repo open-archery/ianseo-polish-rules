@@ -138,7 +138,12 @@ The system SHALL export the current tournament's round in exactly the format the
 ### Requirement: Athlete identity consistency across rounds
 Because a cup row is keyed by licence number, a licence that names two different athletes — or an athlete appearing under two licences — corrupts the classification silently. The system SHALL compare an import against the rows already stored for the edition and SHALL reject the whole file, storing nothing, when either contradiction is found, listing each one with the licence, both names and the round the stored row belongs to, so the CSV can be corrected.
 
-Names SHALL be compared leniently: case, diacritics, extra spaces and word order SHALL be ignored, and a small number of character differences SHALL be tolerated as a typo. Contradictions inside one file SHALL be reported the same way.
+Case, diacritics, extra spaces and word order SHALL be ignored on both checks. The two checks SHALL differ in how tolerant they are, because they ask different questions:
+
+- **One licence, two names** — the licence already asserts the rows are one athlete, so the check looks for a spelling slip: a small number of character differences SHALL be tolerated ("Szkolnicki" / "Szkolnicky").
+- **One name, two licences** — here the name decides identity, so the match SHALL be exact. Two athletes routinely differ by a single letter ("Zapała Daria" and "Zapała Maria" are two competitors, not a typo), and a tolerant comparison here would reject correct files.
+
+Contradictions inside one file SHALL be reported the same way.
 
 Club names SHALL NOT be compared: the same club is written differently by different hosts, and an athlete absent from the final round has no single spelling to fall back on — the club shown is the one from that athlete's most recent stored round.
 
@@ -161,6 +166,10 @@ A snapshot of the current tournament SHALL report the same contradictions as a w
 #### Scenario: Name typo tolerated
 - **WHEN** the same licence carries "Szkolnicki Oskar" in one round and "Szkolnicky Oskar" in the file
 - **THEN** the import is accepted
+
+#### Scenario: Two athletes one letter apart
+- **WHEN** "Zapała Daria" and "Zapała Maria" appear under their own licences
+- **THEN** the import is accepted and they are classified as two athletes
 
 #### Scenario: Contradiction inside one file
 - **WHEN** one file uses the same licence for two different athletes
