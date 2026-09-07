@@ -1010,6 +1010,35 @@ function pl_cup_valid_categories($tourId)
 }
 
 /**
+ * The categories a printout was asked for, as the page's picker submits them:
+ * "ind:RU18M", "mix:BX". Nothing selected — or the "all" entry — means every
+ * category, which is what an operator wants nine times out of ten.
+ *
+ * @return array{ind: string[], mix: string[]}
+ */
+function pl_cup_requested_categories()
+{
+    $selection = ['ind' => [], 'mix' => []];
+    $requested = $_GET['Cat'] ?? [];
+    if (!is_array($requested)) {
+        return $selection;
+    }
+
+    foreach ($requested as $value) {
+        if (!is_scalar($value)) {
+            continue;
+        }
+        $parts = explode(':', (string) $value, 2);
+        if (count($parts) !== 2 || !isset($selection[$parts[0]]) || $parts[1] === '') {
+            continue;
+        }
+        $selection[$parts[0]][] = $parts[1];
+    }
+
+    return $selection;
+}
+
+/**
  * Names and clubs as **this competition** holds them, keyed by the cup's own
  * identity: the licence for athletes, the club code for mixed rows.
  *

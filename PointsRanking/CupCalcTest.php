@@ -184,6 +184,52 @@ final class CupCalcTest extends PlTestCase
         $this->assertSame(['RU18M'], array_column($built['ind']['sections'], 'category'));
     }
 
+    // --- Printing a selection of categories --------------------------------
+
+    private function twoClassifications()
+    {
+        return pl_cup_build_classifications(
+            [
+                $this->row(1, 'BM', 'A', 25, 1),
+                $this->row(1, 'CM', 'B', 25, 1),
+                $this->row(1, 'BX', 'KLUB1', 25, 1, 0, 'mix'),
+            ],
+            [],
+            [
+                'ind' => [
+                    'BM' => ['label' => 'Łuk barebow Seniorzy', 'order' => [2, 1]],
+                    'CM' => ['label' => 'Łuk bloczkowy Seniorzy', 'order' => [1, 1]],
+                ],
+                'mix' => ['BX' => ['label' => 'Łuk barebow Seniorzy', 'order' => [2, 9]]],
+            ],
+            true
+        );
+    }
+
+    public function testAnEmptySelectionPrintsEverything()
+    {
+        $filtered = pl_cup_filter_classifications($this->twoClassifications(), ['ind' => [], 'mix' => []]);
+
+        $this->assertCount(2, $filtered['ind']['sections']);
+        $this->assertCount(1, $filtered['mix']['sections']);
+    }
+
+    public function testOnlyTheSelectedCategoriesAreKept()
+    {
+        $filtered = pl_cup_filter_classifications($this->twoClassifications(), ['ind' => ['BM'], 'mix' => []]);
+
+        $this->assertSame(['BM'], array_column($filtered['ind']['sections'], 'category'));
+        $this->assertSame([], $filtered['mix']['sections']);
+    }
+
+    public function testASelectionCanSpanBothClassifications()
+    {
+        $filtered = pl_cup_filter_classifications($this->twoClassifications(), ['ind' => ['CM'], 'mix' => ['BX']]);
+
+        $this->assertSame(['CM'], array_column($filtered['ind']['sections'], 'category'));
+        $this->assertSame(['BX'], array_column($filtered['mix']['sections'], 'category'));
+    }
+
     // --- Section titles ----------------------------------------------------
 
     public function testSeriesTitles()

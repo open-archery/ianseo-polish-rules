@@ -299,6 +299,35 @@ final class Fun_CupTest extends PlTestCase
         $this->assertSame(['begin', 'rollback'], FakeDb::$tx);
     }
 
+    // --- Categories asked for by a printout --------------------------------
+
+    public function testRequestedCategoriesAreSplitPerClassification()
+    {
+        $_GET['Cat'] = ['ind:RU18M', 'mix:BX', 'ind:RU21W'];
+
+        $this->assertSame(
+            ['ind' => ['RU18M', 'RU21W'], 'mix' => ['BX']],
+            pl_cup_requested_categories()
+        );
+    }
+
+    public function testNoSelectionMeansEveryCategory()
+    {
+        $_GET = [];
+        $this->assertSame(['ind' => [], 'mix' => []], pl_cup_requested_categories());
+
+        // The "-- Wszystkie --" entry submits an empty value.
+        $_GET['Cat'] = [''];
+        $this->assertSame(['ind' => [], 'mix' => []], pl_cup_requested_categories());
+    }
+
+    public function testMalformedSelectionEntriesAreIgnored()
+    {
+        $_GET['Cat'] = ['RU18M', 'tea:RM', 'ind:', ['ind:RM'], 'ind:RM'];
+
+        $this->assertSame(['ind' => ['RM'], 'mix' => []], pl_cup_requested_categories());
+    }
+
     // --- Import history ----------------------------------------------------
 
     public function testImportsAreGroupedPerRoundSourceAndTimestamp()

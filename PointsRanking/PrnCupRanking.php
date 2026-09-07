@@ -35,6 +35,12 @@ $classifications = pl_cup_build_classifications(
     in_array(PL_CUP_ROUNDS, $storedRounds, true),
     pl_cup_current_directory($tourId)
 );
+// Printing one category at a time is routine - the page's picker says which.
+$classifications = pl_cup_filter_classifications($classifications, pl_cup_requested_categories());
+
+if (empty($classifications['ind']['sections']) && empty($classifications['mix']['sections'])) {
+    die('Brak wybranych kategorii do wydrukowania.');
+}
 
 const PL_CUP_PDF_WIDTH = 190; // A4 portrait, IanseoPdf's 10mm side margins
 

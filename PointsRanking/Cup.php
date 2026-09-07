@@ -374,14 +374,16 @@ foreach ($messages as $message) {
     pl_cup_render_notice(htmlspecialchars($message), '#d4edda', '#28a745');
 }
 
-// Settings
+// One panel for everything about this edition: what it is, what it holds, and
+// how rows get into it.
 $editions = array_unique(array_merge([pl_cup_default_edition(), $config['Edition']], range(pl_cup_default_edition() - 2, pl_cup_default_edition() + 1)));
 sort($editions);
 
 echo '<table class="Tabella">';
-echo '<tr><th class="Title" colspan="2">Puchar Polski - ustawienia</th></tr>';
-echo '<tr><td colspan="2" style="padding:8px;">';
-echo '<form method="post" action="">';
+echo '<tr><th class="Title">Puchar Polski ' . intval($config['Edition']) . '</th></tr>';
+
+echo '<tr><td style="padding:8px;">';
+echo '<form method="post" action="" style="display:inline;">';
 echo '<input type="hidden" name="saveConfig" value="1">';
 echo 'Edycja (rok): <select name="Edition">';
 foreach ($editions as $edition) {
@@ -392,20 +394,12 @@ echo '<option value="0"' . ($config['Round'] === 0 ? ' selected' : '') . '>-- ni
 for ($round = 1; $round <= PL_CUP_ROUNDS; $round++) {
     echo '<option value="' . $round . '"' . ($config['Round'] === $round ? ' selected' : '') . '>' . $round . '</option>';
 }
-echo ' <input type="submit" value="Zapisz">';
+echo '</select> <input type="submit" value="Zapisz">';
 echo '</form>';
-echo '<div style="padding-top:6px;color:#555;">Nazwa zawodów na dyplomach wynika z kategorii i edycji '
-    . '(np. "w Pucharze Polski Juniorek Młodszych ' . intval($config['Edition']) . '") - nie trzeba jej wpisywać.</div>';
 echo '</td></tr>';
-echo '</table><br>';
 
-// Rounds
-echo '<table class="Tabella">';
-echo '<tr><th class="Title" colspan="2">Rundy edycji ' . intval($config['Edition']) . '</th></tr>';
-echo '<tr><td style="padding:8px;" colspan="2">';
-echo 'Zapisane rundy: ' . (empty($storedRounds) ? 'brak' : htmlspecialchars(implode(', ', $storedRounds)));
-echo '</td></tr>';
-echo '<tr><td style="padding:8px;" colspan="2">';
+echo '<tr><td style="padding:8px;">';
+echo '<strong>Zapisane rundy:</strong> ' . (empty($storedRounds) ? 'brak' : htmlspecialchars(implode(', ', $storedRounds))) . ' &nbsp; ';
 echo '<form method="post" action="" style="display:inline;">';
 echo '<input type="hidden" name="snapshot" value="1">';
 echo '<input type="submit" value="Zapisz bieżącą rundę"' . ($config['Round'] < 1 ? ' disabled' : '') . '>';
@@ -413,24 +407,28 @@ echo '</form>';
 if ($config['Round'] >= 1 && in_array($config['Round'], $storedRounds, true)) {
     echo ' &nbsp; <a href="Cup.php?action=export&amp;Round=' . intval($config['Round']) . '">Eksportuj rundę ' . intval($config['Round']) . ' (CSV)</a>';
 }
+echo ' &nbsp; <a href="CupImports.php">Historia importu</a>';
 echo '</td></tr>';
-echo '<tr><td style="padding:8px;" colspan="2">';
-echo '<form method="post" action="" enctype="multipart/form-data">';
+
+echo '<tr><td style="padding:8px;">';
+echo '<form method="post" action="" enctype="multipart/form-data" style="display:inline;">';
 echo '<input type="hidden" name="import" value="1">';
-echo 'Import rundy: <select name="ImportRound">';
+echo '<strong>Import rundy:</strong> <select name="ImportRound">';
 for ($round = 1; $round <= PL_CUP_ROUNDS; $round++) {
     echo '<option value="' . $round . '">' . $round . '</option>';
 }
 echo '</select> <input type="file" name="CsvFile" accept=".csv,text/csv"> <input type="submit" value="Importuj CSV">';
 echo '</form>';
-echo '<div style="padding-top:6px;color:#555;">Import zastępuje tylko kategorie zawarte w pliku - '
-    . 'rundę można złożyć z kilku źródeł (np. juniorzy z ianseo, bloczkowe i barebow z plików CSV).<br>'
-    . 'Wymagane kolumny: Klasyfikacja, Kategoria, Identyfikator (numer licencji, a dla mikstów kod klubu, np. ZRYDOB), '
-    . 'Nazwa (zawodnicy), Miejsce, Kwalifikacje (0 gdy brak). '
-    . 'Punkty są zawsze wyliczane z miejsca według tabeli Pucharu Polski - kolumna Punkty w pliku służy tylko do kontroli.</div>';
-echo '</td></tr>';
-echo '<tr><td style="padding:8px;" colspan="2">';
-echo '<a href="CupImports.php" style="font-weight:bold;">Historia importu</a> - co składa się na tę edycję i usuwanie importów.';
+echo ' <a href="#" onclick="var h=document.getElementById(\'cupImportHelp\');h.style.display=h.style.display==\'none\'?\'block\':\'none\';return false;">(format pliku)</a>';
+echo '<div id="cupImportHelp" style="display:none;padding-top:6px;color:#555;">';
+echo 'Kolumny: Klasyfikacja (ind/mix), Kategoria, Identyfikator (numer licencji, a dla mikstów kod klubu, np. ZRYDOB), '
+    . 'Nazwa (zawodnicy), Klub, Miejsce, Punkty, Kwalifikacje.<br>'
+    . 'Wymagane: Klasyfikacja, Kategoria, Identyfikator, Nazwa (zawodnicy), Miejsce, Kwalifikacje (0 gdy brak wyniku). '
+    . 'Punkty wyliczane są z miejsca według tabeli Pucharu Polski - kolumna Punkty służy tylko do kontroli. '
+    . 'Wiersze bez wyniku (DNF, DNS, DSQ, "-") są pomijane.<br>'
+    . 'Import zastępuje tylko kategorie zawarte w pliku, więc rundę można złożyć z kilku źródeł. '
+    . 'Nazwa zawodów na dyplomach wynika z kategorii i edycji - nie trzeba jej wpisywać.';
+echo '</div>';
 echo '</td></tr>';
 echo '</table><br>';
 
@@ -449,11 +447,43 @@ if (empty($roundRows)) {
     exit;
 }
 
-echo '<div style="padding:8px 0;">';
-echo '<a href="PrnCupRanking.php" target="_blank" style="font-weight:bold;">Generuj PDF klasyfikacji</a>';
-echo ' &nbsp; <a href="PrnCupDipl.php?Class=ind" target="_blank">Dyplomy - indywidualne</a>';
-echo ' &nbsp; <a href="PrnCupDipl.php?Class=mix" target="_blank">Dyplomy - miksty</a>';
+// Printouts: the same category picker the Diplomas module uses, so one run can
+// cover a single category as easily as the whole cup.
+$pickerGroups = [
+    'ind' => ['label' => 'Indywidualnie', 'sections' => $classifications['ind']['sections']],
+    'mix' => ['label' => 'Mikst', 'sections' => $classifications['mix']['sections']],
+];
+$pickerCount = count($pickerGroups['ind']['sections']) + count($pickerGroups['mix']['sections']);
+
+echo '<table class="Tabella">';
+echo '<tr><th class="Title">Wydruki</th></tr>';
+echo '<tr><td style="padding:8px;">';
+echo '<form method="get" action="PrnCupRanking.php" target="_blank">';
+echo 'Wybierz kategorie (bez wyboru - wszystkie):<br>';
+echo '<select name="Cat[]" multiple="multiple" size="' . min(14, $pickerCount + 3) . '" style="min-width:420px;">';
+echo '<option value="">-- Wszystkie --</option>';
+foreach ($pickerGroups as $classification => $group) {
+    if (empty($group['sections'])) {
+        continue;
+    }
+    echo '<optgroup label="' . htmlspecialchars($group['label']) . '">';
+    foreach ($group['sections'] as $section) {
+        // The mixed events reuse their division's label, so say which they are.
+        $entry = $section['category'] . ' - ' . $section['label'] . ($classification === 'mix' ? ' - miksty' : '');
+        echo '<option value="' . htmlspecialchars($classification . ':' . $section['category']) . '">'
+            . htmlspecialchars($entry) . '</option>';
+    }
+    echo '</optgroup>';
+}
+echo '</select><br>';
+echo '<div style="padding-top:8px;">';
+echo '<input type="submit" value="Generuj PDF klasyfikacji">';
+echo ' <button type="submit" formaction="PrnCupDipl.php" name="Class" value="ind">Dyplomy - indywidualne</button>';
+echo ' <button type="submit" formaction="PrnCupDipl.php" name="Class" value="mix">Dyplomy - miksty</button>';
 echo '</div>';
+echo '</form>';
+echo '</td></tr>';
+echo '</table><br>';
 
 pl_cup_render_classification($classifications['ind'], false);
 pl_cup_render_classification($classifications['mix'], true);

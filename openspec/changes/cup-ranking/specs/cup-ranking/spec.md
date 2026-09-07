@@ -356,7 +356,13 @@ Rows of a tied group left without a recorded position SHALL keep sharing a rank 
 ---
 
 ### Requirement: Cup PDF report
+The operator SHALL be able to choose which categories a printout covers, from a picker listing the classification's own sections grouped as individual and mixed, with no choice meaning every category. The chosen categories SHALL apply to the classification PDF and to both diploma sets alike.
+
 The system SHALL generate a single A4 PDF containing the individual and mixed cup classifications, in that order, with the same sectioning as the HTML view, the per-round columns, the sum, the baraż marks and the ranks resulting from any recorded shoot-off. Each section's table SHALL be titled with its cup's Polish name followed by the edition, e.g. "Klasyfikacja generalna Pucharu Polski łuków barebow - indywidualna mężczyzn 2026".
+
+#### Scenario: One category printed
+- **WHEN** the operator selects only `BM` and prints the classification
+- **THEN** the PDF holds that section alone
 
 #### Scenario: PDF produced
 - **WHEN** the operator prints the cup classification
@@ -378,6 +384,10 @@ Only rows whose cup rank falls inside the configured place range SHALL be printe
 #### Scenario: Bow-named cup
 - **WHEN** cup diplomas are printed for `CW`
 - **THEN** they read "w Pucharze Polski Łuków Bloczkowych 2026", with the gender left to the "w kategorii" line
+
+#### Scenario: Diplomas for a chosen category
+- **WHEN** the operator selects `BM` and prints the individual diplomas
+- **THEN** only that category's diplomas are produced
 
 #### Scenario: Place range respected
 - **WHEN** the diploma configuration covers places 1–3 and a category has 20 classified athletes

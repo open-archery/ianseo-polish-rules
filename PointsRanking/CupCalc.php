@@ -493,6 +493,32 @@ function pl_cup_build_classifications(array $roundRows, array $barrages, array $
 }
 
 /**
+ * Keep only the chosen categories of both classifications.
+ *
+ * An empty choice keeps everything: a printout of "all categories" is the normal
+ * case, and the selection exists for the runs that are not.
+ *
+ * @param array $selection ['ind' => [category, ...], 'mix' => [...]]
+ */
+function pl_cup_filter_classifications(array $classifications, array $selection)
+{
+    if (empty($selection['ind']) && empty($selection['mix'])) {
+        return $classifications;
+    }
+
+    foreach ($classifications as $classification => &$built) {
+        $wanted = $selection[$classification] ?? [];
+        $built['sections'] = array_values(array_filter(
+            $built['sections'],
+            fn ($section) => in_array($section['category'], $wanted, true)
+        ));
+    }
+    unset($built);
+
+    return $classifications;
+}
+
+/**
  * How many rows differ between a freshly built snapshot and the stored one
  * (added, removed or changed). Rebuilt every view rather than checksummed, so a
  * change in the builder cannot make an old checksum lie (D5).

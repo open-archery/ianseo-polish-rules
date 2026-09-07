@@ -47,6 +47,7 @@ $classifications = pl_cup_build_classifications(
     in_array(PL_CUP_ROUNDS, $storedRounds, true),
     pl_cup_current_directory($tourId)
 );
+$classifications = pl_cup_filter_classifications($classifications, pl_cup_requested_categories());
 
 $diplomaConfig = pl_diploma_get_config($tourId);
 // Everything but the competition name comes from the round's own diploma
