@@ -5,8 +5,9 @@
  * competition name is cup-specific, so the diploma states the cup and not the
  * single round.
  *
- * GET parameters:
- *   Class - 'ind' (individual) or 'mix' (mixed)
+ * One run covers whatever the page's category picker selected — individual
+ * categories, mixed ones, or both — since a diploma is a diploma whichever
+ * classification it comes from.
  */
 require_once(dirname(dirname(dirname(dirname(__FILE__)))) . '/config.php');
 CheckTourSession(true);
@@ -27,11 +28,6 @@ if (pl_points_get_tournament_preset($tourId) !== PL_CUP_PRESET_KEY) {
 
 pl_cup_ensure_tables();
 pl_diploma_ensure_tables();
-
-$classKey = isset($_GET['Class']) && is_string($_GET['Class']) ? $_GET['Class'] : '';
-if (!in_array($classKey, ['ind', 'mix'], true)) {
-    die('Nieprawidłowa klasyfikacja.');
-}
 
 $config = pl_cup_get_config($tourId);
 $roundRows = pl_cup_load_rounds($config['Edition']);
@@ -56,30 +52,35 @@ $diplomaConfig = pl_diploma_get_config($tourId);
 $pdf = PLDiplomaPdf::createInstance('Dyplomy - Puchar Polski ' . intval($config['Edition']));
 $printed = 0;
 
-foreach ($classifications[$classKey]['sections'] as $section) {
-    // Each category names its own cup: "w Pucharze Polski Juniorek Młodszych 2026".
-    $competitionName = pl_cup_diploma_competition_name($classKey, $section['category'], $config['Edition']);
+// Individual categories first, then the mixed ones, as everywhere else.
+foreach (['ind', 'mix'] as $classKey) {
+    $isMixed = $classKey === 'mix';
 
-    foreach ($section['rows'] as $row) {
-        if ($row['rank'] < $diplomaConfig['PlaceFrom'] || $row['rank'] > $diplomaConfig['PlaceTo']) {
-            continue;
+    foreach ($classifications[$classKey]['sections'] as $section) {
+        // Each category names its own cup: "w Pucharze Polski Juniorek Młodszych 2026".
+        $competitionName = pl_cup_diploma_competition_name($classKey, $section['category'], $config['Edition']);
+
+        foreach ($section['rows'] as $row) {
+            if ($row['rank'] < $diplomaConfig['PlaceFrom'] || $row['rank'] > $diplomaConfig['PlaceTo']) {
+                continue;
+            }
+
+            $pdf->printDiploma(
+                $competitionName,
+                $diplomaConfig['Dates'],
+                $diplomaConfig['Location'],
+                $section['label'],
+                $row['rank'],
+                $isMixed ? $row['club_name'] : $row['name'],
+                $isMixed ? '' : $row['club_name'],
+                [], // no member list: a mixed cup row belongs to the club, not a fixed pair
+                $diplomaConfig['BodyText'],
+                $diplomaConfig['HeadJudge'],
+                $diplomaConfig['Organizer'],
+                ''
+            );
+            $printed++;
         }
-
-        $pdf->printDiploma(
-            $competitionName,
-            $diplomaConfig['Dates'],
-            $diplomaConfig['Location'],
-            $section['label'],
-            $row['rank'],
-            $classKey === 'mix' ? $row['club_name'] : $row['name'],
-            $classKey === 'mix' ? '' : $row['club_name'],
-            [], // no member list: a mixed cup row belongs to the club, not a fixed pair
-            $diplomaConfig['BodyText'],
-            $diplomaConfig['HeadJudge'],
-            $diplomaConfig['Organizer'],
-            ''
-        );
-        $printed++;
     }
 }
 
@@ -87,4 +88,4 @@ if ($printed === 0) {
     die('Brak wierszy klasyfikacji w skonfigurowanym zakresie miejsc.');
 }
 
-$pdf->Output($classKey === 'mix' ? 'dyplomy_pp_miksty.pdf' : 'dyplomy_pp_indywidualne.pdf', 'I');
+$pdf->Output('dyplomy_pp_' . intval($config['Edition']) . '.pdf', 'I');

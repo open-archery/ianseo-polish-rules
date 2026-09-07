@@ -356,7 +356,7 @@ Rows of a tied group left without a recorded position SHALL keep sharing a rank 
 ---
 
 ### Requirement: Cup PDF report
-The operator SHALL be able to choose which categories a printout covers, from a picker listing the classification's own sections grouped as individual and mixed, with no choice meaning every category. The chosen categories SHALL apply to the classification PDF and to both diploma sets alike.
+The operator SHALL be able to choose which categories a printout covers, from a picker listing the classification's own sections grouped as individual and mixed, with no choice meaning every category. The chosen categories SHALL apply to the classification PDF and to the diplomas alike, and one diploma run SHALL cover whatever was selected — individual categories, mixed ones, or both together.
 
 The system SHALL generate a single A4 PDF containing the individual and mixed cup classifications, in that order, with the same sectioning as the HTML view, the per-round columns, the sum, the baraż marks and the ranks resulting from any recorded shoot-off. Each section's table SHALL be titled with its cup's Polish name followed by the edition, e.g. "Klasyfikacja generalna Pucharu Polski łuków barebow - indywidualna mężczyzn 2026".
 
@@ -386,8 +386,12 @@ Only rows whose cup rank falls inside the configured place range SHALL be printe
 - **THEN** they read "w Pucharze Polski Łuków Bloczkowych 2026", with the gender left to the "w kategorii" line
 
 #### Scenario: Diplomas for a chosen category
-- **WHEN** the operator selects `BM` and prints the individual diplomas
+- **WHEN** the operator selects `BM` and prints the diplomas
 - **THEN** only that category's diplomas are produced
+
+#### Scenario: Diplomas across both classifications
+- **WHEN** the operator selects an individual category and a mixed one and prints the diplomas
+- **THEN** one PDF holds both, the individual categories first
 
 #### Scenario: Place range respected
 - **WHEN** the diploma configuration covers places 1–3 and a category has 20 classified athletes

@@ -478,8 +478,7 @@ foreach ($pickerGroups as $classification => $group) {
 echo '</select><br>';
 echo '<div style="padding-top:8px;">';
 echo '<input type="submit" value="Generuj PDF klasyfikacji">';
-echo ' <button type="submit" formaction="PrnCupDipl.php" name="Class" value="ind">Dyplomy - indywidualne</button>';
-echo ' <button type="submit" formaction="PrnCupDipl.php" name="Class" value="mix">Dyplomy - miksty</button>';
+echo ' <button type="submit" formaction="PrnCupDipl.php">Dyplomy</button>';
 echo '</div>';
 echo '</form>';
 echo '</td></tr>';
