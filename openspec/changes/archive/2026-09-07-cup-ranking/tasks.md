@@ -40,5 +40,5 @@
 ## 7. Wrap-up
 
 - [x] 7.1 Run `tools\test.cmd` and confirm the whole suite passes
-- [ ] 7.2 Manually verify the full flow in ianseo: import rounds 1–3 from CSV, snapshot round 4, resolve a baraż, print the classification PDF and both diploma sets
+- [x] 7.2 Manually verify the full flow in ianseo: import rounds 1–3 from CSV, snapshot round 4, resolve a baraż, print the classification PDF and both diploma sets
 - [x] 7.3 Add any new footgun found during implementation to `gotchas.md`, then self-review against `.github/agents/reviewer.prompt.md` before committing
