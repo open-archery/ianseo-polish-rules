@@ -97,18 +97,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['snapshot'])) {
         $snapshot = pl_cup_build_snapshot($tourId);
         if (!empty($snapshot['errors'])) {
             $errors = array_merge($errors, $snapshot['errors']);
+        } elseif (empty($snapshot['rows'])) {
+            // Nothing is written: an empty snapshot would otherwise clear the
+            // categories this competition owns in that round.
+            $errors[] = 'Brak wyników do zapisania - żaden zawodnik nie zdobył punktów.';
         } else {
-            $storeError = pl_cup_store_import(
+            $storeError = pl_cup_store_snapshot(
                 $config['Edition'],
                 $config['Round'],
                 $snapshot['rows'],
+                pl_cup_category_meta($tourId),
                 pl_cup_current_source(),
                 $tourId
             );
             if ($storeError !== '') {
                 $errors[] = $storeError;
-            } elseif (empty($snapshot['rows'])) {
-                $errors[] = 'Brak wyników do zapisania - żaden zawodnik nie zdobył punktów.';
             } else {
                 $messages[] = 'Zapisano rundę ' . $config['Round'] . ' (' . count($snapshot['rows']) . ' wierszy).';
                 // Not a blocker here: the snapshot is calculated, so a
@@ -225,7 +228,14 @@ $classifications = pl_cup_build_classifications(
 $staleCount = 0;
 if ($config['Round'] >= 1 && in_array($config['Round'], $storedRounds, true)) {
     $snapshot = pl_cup_build_snapshot($tourId);
-    $staleCount = pl_cup_diff_snapshot($snapshot['rows'], pl_cup_load_rounds($config['Edition'], $config['Round']));
+    // Only against what this competition owns: a round assembled from several
+    // sources would otherwise always look stale, since another host's
+    // categories are missing from the local calculation by definition.
+    $stored = pl_cup_rows_in_categories(
+        pl_cup_load_rounds($config['Edition'], $config['Round']),
+        pl_cup_category_meta($tourId)
+    );
+    $staleCount = pl_cup_diff_snapshot($snapshot['rows'], $stored);
 }
 
 // --- Rendering -------------------------------------------------------------

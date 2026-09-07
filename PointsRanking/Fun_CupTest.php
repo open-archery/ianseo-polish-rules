@@ -328,6 +328,53 @@ final class Fun_CupTest extends PlTestCase
         $this->assertSame(['ind' => ['RM'], 'mix' => []], pl_cup_requested_categories());
     }
 
+    // --- Saving the local round --------------------------------------------
+
+    public function testASnapshotAlsoClearsACategoryThatScoredNothingThisTime()
+    {
+        // BW is set up here but has no row in the new snapshot - its old rows
+        // have to go, or the staleness notice can never be settled.
+        pl_cup_store_snapshot(
+            2026,
+            4,
+            [$this->storedRow('BM', 'PL0001')],
+            ['ind' => ['BM' => [], 'BW' => []], 'mix' => ['BX' => []]],
+            'IV Runda PP (T4RPPBIB)',
+            131
+        );
+
+        $delete = FakeDb::executed('/DELETE FROM PLCupRound/')[0];
+        $this->assertStringContainsString("PlCrCategory = 'BM'", $delete);
+        $this->assertStringContainsString("PlCrCategory = 'BW'", $delete);
+        $this->assertStringContainsString("PlCrCategory = 'BX'", $delete);
+        $this->assertSame(['begin', 'commit'], FakeDb::$tx);
+    }
+
+    public function testASnapshotLeavesCategoriesThisCompetitionDoesNotRun()
+    {
+        pl_cup_store_snapshot(
+            2026,
+            4,
+            [$this->storedRow('BM', 'PL0001')],
+            ['ind' => ['BM' => []], 'mix' => []],
+            'IV Runda PP (T4RPPBIB)',
+            131
+        );
+
+        $delete = FakeDb::executed('/DELETE FROM PLCupRound/')[0];
+        $this->assertStringNotContainsString("'CM'", $delete);
+    }
+
+    public function testASnapshotRollsBackOnAFailedWrite()
+    {
+        FakeDb::throwOn('/INSERT INTO PLCupRound/', 'duplicate key');
+
+        $error = pl_cup_store_snapshot(2026, 4, [$this->storedRow()], ['ind' => ['RM' => []], 'mix' => []], 'x', 131);
+
+        $this->assertStringContainsString('duplicate key', $error);
+        $this->assertSame(['begin', 'rollback'], FakeDb::$tx);
+    }
+
     // --- Import history ----------------------------------------------------
 
     public function testImportsAreGroupedPerRoundSourceAndTimestamp()
@@ -776,6 +823,28 @@ Oddział Zielona Góra";
         ]];
 
         $this->assertSame([], pl_cup_identity_conflicts($incoming, $stored));
+    }
+
+    public function testEveryContradictionOfOneRowIsReported()
+    {
+        // Both directions can fire for the same row: its licence carries another
+        // athlete, and its name is stored under a different licence.
+        $stored = [
+            ['round' => 1, 'classification' => 'ind', 'category' => 'RM', 'identity' => 'PL0001',
+             'name' => 'Adam Nowak', 'club_name' => 'Klub', 'place' => 1, 'points' => 25, 'qual' => 600],
+            ['round' => 2, 'classification' => 'ind', 'category' => 'RM', 'identity' => 'PL0002',
+             'name' => 'Jan Kowalski', 'club_name' => 'Klub', 'place' => 2, 'points' => 21, 'qual' => 590],
+        ];
+        $incoming = [[
+            'classification' => 'ind', 'category' => 'RM', 'identity' => 'PL0001',
+            'name' => 'Jan Kowalski', 'club_name' => 'Klub', 'place' => 3, 'points' => 18, 'qual' => 585,
+        ]];
+
+        $conflicts = pl_cup_identity_conflicts($incoming, $stored);
+
+        $this->assertCount(2, $conflicts);
+        $this->assertStringContainsString('Licencja PL0001', $conflicts[0]);
+        $this->assertStringContainsString('a w zapisanych danych PL0002', $conflicts[1]);
     }
 
     public function testAContradictionInsideOneFileIsAlsoAConflict()

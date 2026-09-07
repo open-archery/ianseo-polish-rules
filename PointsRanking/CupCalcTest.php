@@ -256,6 +256,30 @@ final class CupCalcTest extends PlTestCase
         );
     }
 
+    public function testADivisionOutsideTheCupIsNotNamedAsRecurve()
+    {
+        // ianseo allows divisions this cup has no name for; such a category must
+        // fall back to the tournament's own label, not borrow the recurve one.
+        $this->assertSame(
+            'Klasyfikacja generalna Pucharu Polski - Łuk długi Junior młodszy',
+            pl_cup_series_title('ind', 'DU18M', 'Łuk długi Junior młodszy')
+        );
+        $this->assertSame(
+            'Klasyfikacja generalna Pucharu Polski - LM',
+            pl_cup_series_title('ind', 'LM')
+        );
+        $this->assertSame(
+            'Klasyfikacja generalna Pucharu Polski - LX',
+            pl_cup_series_title('mix', 'LX')
+        );
+    }
+
+    public function testADivisionOutsideTheCupGetsThePlainDiplomaName()
+    {
+        $this->assertSame('Pucharze Polski 2026', pl_cup_diploma_competition_name('ind', 'DU18M', 2026));
+        $this->assertSame('Pucharze Polski 2026', pl_cup_diploma_competition_name('mix', 'LX', 2026));
+    }
+
     public function testSectionsCarryTheirCupTitle()
     {
         $built = pl_cup_build_classifications(
@@ -502,6 +526,19 @@ final class CupCalcTest extends PlTestCase
 
         $this->assertSame(['B', 'A'], array_column($ranked, 'identity'));
         $this->assertSame([1, 2], array_column($ranked, 'rank'));
+    }
+
+    public function testRowsAreFilteredToTheGivenCategories()
+    {
+        $rows = [
+            $this->row(4, 'BM', 'A', 25, 1),
+            $this->row(4, 'CM', 'B', 25, 1),
+            $this->row(4, 'BX', 'KLUB1', 25, 1, 0, 'mix'),
+        ];
+
+        $kept = pl_cup_rows_in_categories($rows, ['ind' => ['BM' => []], 'mix' => ['BX' => []]]);
+
+        $this->assertSame(['BM', 'BX'], array_column($kept, 'category'));
     }
 
     // --- Snapshot diff -----------------------------------------------------

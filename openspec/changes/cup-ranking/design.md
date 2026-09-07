@@ -124,9 +124,10 @@ Create:
 |---|---|
 | `PointsRanking/Fun_Cup.php` | tables, config access, qual-score loader, snapshot builder, CSV read/write |
 | `PointsRanking/CupCalc.php` | pure: aggregation, tie-break comparator, ranking, snapshot diff |
-| `PointsRanking/Cup.php` | UI — edition/round/diploma-name config, snapshot button, import/export, HTML classification, baraż outcome form |
+| `PointsRanking/Cup.php` | UI — edition/round config, snapshot button, import/export, HTML classification, printout category picker, baraż outcome form |
+| `PointsRanking/CupImports.php` | UI — what the edition is assembled from: one row per import still feeding the ranking, with deletes; reached from `Cup.php`, no menu entry |
 | `PointsRanking/PrnCupRanking.php` | cup PDF (TCPDF, same style as `PointsRankingPdf.php`) |
-| `PointsRanking/PrnCupDipl.php` | cup diplomas via `PLDiplomaPdf` + `pl_diploma_get_config()` |
+| `PointsRanking/PrnCupDipl.php` | cup diplomas via `PLDiplomaPdf` + `pl_diploma_get_config()`, the competition name derived per category |
 | `PointsRanking/Fun_CupTest.php`, `PointsRanking/CupCalcTest.php` | PHPUnit, `FakeDb` for the loaders, pure tests for the calc |
 
 Modify:

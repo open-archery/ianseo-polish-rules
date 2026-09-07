@@ -62,6 +62,14 @@ const PL_CUP_AGE_SERIES = [
 /** Divisions whose cup is named by the bow rather than by the age series. */
 const PL_CUP_DIVISION_SERIES = ['C' => 'łuków bloczkowych', 'B' => 'łuków barebow'];
 
+/**
+ * The divisions the Puchar Polski is shot in. ianseo allows others (longbow,
+ * traditional, …) and a competition may be set up for them, but this cup has no
+ * name for such a division — its categories fall back to the tournament's own
+ * label rather than being announced as a recurve cup.
+ */
+const PL_CUP_DIVISIONS = ['R', 'C', 'B'];
+
 /** Gender phrase for the bow-named series, which carry no gendered age noun. */
 const PL_CUP_INDIVIDUAL_GENDER = ['M' => 'indywidualna mężczyzn', 'W' => 'indywidualna kobiet'];
 
@@ -104,7 +112,7 @@ function pl_cup_diploma_competition_name($classification, $category, $edition)
     $parts = pl_cup_split_category($classification, $category);
     $series = $parts ? (PL_CUP_DIPLOMA_AGE_SERIES[$parts['age']] ?? null) : null;
 
-    if ($parts === null || $series === null) {
+    if ($parts === null || $series === null || !in_array($parts['division'], PL_CUP_DIVISIONS, true)) {
         return trim(PL_CUP_DIPLOMA_PREFIX . ' ' . $edition);
     }
 
@@ -173,7 +181,7 @@ function pl_cup_series_title($classification, $category, $fallbackLabel = '')
     $parts = pl_cup_split_category($classification, $category);
     $series = $parts ? (PL_CUP_AGE_SERIES[$parts['age']] ?? null) : null;
 
-    if ($parts === null || $series === null) {
+    if ($parts === null || $series === null || !in_array($parts['division'], PL_CUP_DIVISIONS, true)) {
         return PL_CUP_TITLE_PREFIX . ' - ' . ($fallbackLabel !== '' ? $fallbackLabel : $category);
     }
 
@@ -516,6 +524,19 @@ function pl_cup_filter_classifications(array $classifications, array $selection)
     unset($built);
 
     return $classifications;
+}
+
+/**
+ * The rows belonging to one of the given categories.
+ *
+ * @param array $categories ['ind' => [code => …], 'mix' => [code => …]]
+ */
+function pl_cup_rows_in_categories(array $rows, array $categories)
+{
+    return array_values(array_filter(
+        $rows,
+        fn ($row) => isset($categories[$row['classification']][$row['category']])
+    ));
 }
 
 /**

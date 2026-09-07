@@ -349,6 +349,51 @@ function pl_cup_validate_rows(array $rows)
  */
 function pl_cup_store_import($edition, $round, array $rows, $source, $importTournament)
 {
+    return pl_cup_write_round($edition, $round, $rows, pl_cup_row_categories($rows), $source, $importTournament);
+}
+
+/**
+ * Store the current tournament's own round.
+ *
+ * Unlike an import, a snapshot owns **every category this competition is set up
+ * for**, not only the ones it scored this time: a category whose last athlete
+ * was removed has to disappear from the round, or the staleness notice reports a
+ * difference that saving the round again can never settle. Categories outside
+ * this competition's settings — another host's contribution to the same round —
+ * are left alone.
+ *
+ * @param array $ownedCategories pl_cup_category_meta() output
+ */
+function pl_cup_store_snapshot($edition, $round, array $rows, array $ownedCategories, $source, $tourId)
+{
+    $categories = pl_cup_row_categories($rows);
+    foreach ($ownedCategories as $classification => $codes) {
+        foreach (array_keys($codes) as $code) {
+            $categories[$classification . '|' . $code] = [$classification, $code];
+        }
+    }
+
+    return pl_cup_write_round($edition, $round, $rows, $categories, $source, $tourId);
+}
+
+/** The (classification, category) pairs a set of rows covers, keyed for merging. */
+function pl_cup_row_categories(array $rows)
+{
+    $categories = [];
+    foreach ($rows as $row) {
+        $categories[$row['classification'] . '|' . $row['category']] = [$row['classification'], $row['category']];
+    }
+    return $categories;
+}
+
+/**
+ * Replace the given categories of one round with these rows, atomically.
+ *
+ * @param array $categories "classification|category" => [classification, category]
+ * @return string '' on success, an error message otherwise
+ */
+function pl_cup_write_round($edition, $round, array $rows, array $categories, $source, $importTournament)
+{
     $edition = intval($edition);
     $round = intval($round);
     $importTournament = intval($importTournament);
@@ -356,10 +401,6 @@ function pl_cup_store_import($edition, $round, array $rows, $source, $importTour
     // single entry in the import history.
     $importedAt = date('Y-m-d H:i:s');
 
-    $categories = [];
-    foreach ($rows as $row) {
-        $categories[$row['classification'] . '|' . $row['category']] = [$row['classification'], $row['category']];
-    }
     if (empty($categories)) {
         return '';
     }
@@ -892,38 +933,48 @@ function pl_cup_same_person($a, $b)
  */
 function pl_cup_identity_conflicts(array $rows, array $storedRows)
 {
-    $known = [];
+    // Indexed both ways, because the two checks ask different questions: one
+    // licence's spellings are compared leniently, one name's licences exactly.
+    // A file of a few hundred rows against three stored rounds would otherwise
+    // scan - and re-normalise - hundreds of thousands of pairs.
+    $byIdentity = [];
+    $byName = [];
+    $remember = function ($identity, $name, $where) use (&$byIdentity, &$byName) {
+        $byIdentity[$identity][] = ['name' => $name, 'where' => $where];
+        $byName[pl_cup_normalize_name($name)][$identity] = $where;
+    };
+
     foreach ($storedRows as $row) {
         if ($row['classification'] !== 'ind' || trim((string) $row['name']) === '') {
             continue;
         }
-        $known[] = [
-            'identity' => $row['identity'],
-            'name' => $row['name'],
-            'where' => 'runda ' . intval($row['round'] ?? 0),
-        ];
+        $remember($row['identity'], $row['name'], 'runda ' . intval($row['round'] ?? 0));
     }
 
-    $conflicts = array_merge([], pl_cup_mixed_club_conflicts($rows, $storedRows));
+    $conflicts = pl_cup_mixed_club_conflicts($rows, $storedRows);
 
     foreach ($rows as $row) {
         if ($row['classification'] !== 'ind' || trim((string) $row['name']) === '') {
             continue;
         }
-        foreach ($known as $seen) {
-            $sameIdentity = $seen['identity'] === $row['identity'];
 
-            if ($sameIdentity && !pl_cup_names_match($seen['name'], $row['name'])) {
+        foreach ($byIdentity[$row['identity']] ?? [] as $seen) {
+            if (!pl_cup_names_match($seen['name'], $row['name'])) {
                 $conflicts[] = 'Licencja ' . $row['identity'] . ': w pliku "' . $row['name']
                     . '", a w zapisanych danych "' . $seen['name'] . '" (' . $seen['where'] . ').';
-            } elseif (!$sameIdentity && pl_cup_same_person($seen['name'], $row['name'])) {
-                $conflicts[] = 'Zawodnik "' . $row['name'] . '" ma w pliku licencję ' . $row['identity']
-                    . ', a w zapisanych danych ' . $seen['identity'] . ' (' . $seen['where'] . ').';
             }
         }
-        // Compared against the rest of the file too, so a contradiction inside
-        // one import is caught on the same screen.
-        $known[] = ['identity' => $row['identity'], 'name' => $row['name'], 'where' => 'ten sam plik'];
+
+        foreach ($byName[pl_cup_normalize_name($row['name'])] ?? [] as $identity => $where) {
+            if ($identity !== $row['identity']) {
+                $conflicts[] = 'Zawodnik "' . $row['name'] . '" ma w pliku licencję ' . $row['identity']
+                    . ', a w zapisanych danych ' . $identity . ' (' . $where . ').';
+            }
+        }
+
+        // Remembered as well, so a contradiction inside one import is caught on
+        // the same screen.
+        $remember($row['identity'], $row['name'], 'ten sam plik');
     }
 
     return array_values(array_unique($conflicts));
@@ -937,16 +988,15 @@ function pl_cup_identity_conflicts(array $rows, array $storedRows)
  */
 function pl_cup_mixed_club_conflicts(array $rows, array $storedRows)
 {
-    $known = [];
+    // Club names are matched exactly once normalised - as an athlete's name is
+    // across licences - so the comparison is a lookup, like its individual
+    // counterpart above.
+    $byClub = [];
     foreach ($storedRows as $row) {
         if ($row['classification'] !== 'mix' || trim((string) $row['club_name']) === '') {
             continue;
         }
-        $known[] = [
-            'identity' => $row['identity'],
-            'club' => $row['club_name'],
-            'where' => 'runda ' . intval($row['round'] ?? 0),
-        ];
+        $byClub[pl_cup_normalize_club_name($row['club_name'])][$row['identity']] = 'runda ' . intval($row['round'] ?? 0);
     }
 
     $conflicts = [];
@@ -954,18 +1004,16 @@ function pl_cup_mixed_club_conflicts(array $rows, array $storedRows)
         if ($row['classification'] !== 'mix' || trim((string) $row['club_name']) === '') {
             continue;
         }
-        foreach ($known as $seen) {
-            if ($seen['identity'] === $row['identity']) {
-                continue;
-            }
-            // Exact once normalised, as for an athlete's name across licences:
-            // two clubs can be written a letter apart and still be two clubs.
-            if (pl_cup_normalize_club_name($seen['club']) === pl_cup_normalize_club_name($row['club_name'])) {
+        $club = pl_cup_normalize_club_name($row['club_name']);
+
+        foreach ($byClub[$club] ?? [] as $identity => $where) {
+            if ($identity !== $row['identity']) {
                 $conflicts[] = 'Mikst "' . trim((string) $row['club_name']) . '": w pliku kod klubu '
-                    . $row['identity'] . ', a w zapisanych danych ' . $seen['identity'] . ' (' . $seen['where'] . ').';
+                    . $row['identity'] . ', a w zapisanych danych ' . $identity . ' (' . $where . ').';
             }
         }
-        $known[] = ['identity' => $row['identity'], 'club' => $row['club_name'], 'where' => 'ten sam plik'];
+
+        $byClub[$club][$row['identity']] = 'ten sam plik';
     }
 
     return $conflicts;
