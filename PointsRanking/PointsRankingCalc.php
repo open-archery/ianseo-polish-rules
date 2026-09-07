@@ -336,6 +336,22 @@ function pl_points_compute_club_totals(array $classified, array $classificationK
     return array_values($totals);
 }
 
+/**
+ * Rows a SEPARATE table shows: those whose place actually matched a bracket
+ * (spec "Individual points assignment" — a place outside every bracket, a
+ * missing result and a DSQ/DNS/DNF are omitted from the table).
+ *
+ * The pre-cutoff value decides, not the final one, so a row the cutoff
+ * deliberately zeroed still appears with its 0 — that zero is a result, unlike
+ * a row that never scored at all. Rows are kept in the calculation itself,
+ * where their place and qualification score still matter (the cup layer reads
+ * them for its tie-breaks).
+ */
+function pl_points_scored_rows(array $rows): array
+{
+    return array_values(array_filter($rows, fn ($row) => ($row['raw_points'] ?? $row['points']) > 0));
+}
+
 function pl_points_build_separate_report(array $report, array $classified, array $categories): array
 {
     $ck = $report['classification'];
@@ -647,7 +663,8 @@ function pl_points_calculate($tourId, array $preset): array
 
             $teams[] = [
                 'category' => $row['category'], 'club_id' => $row['club_id'], 'club_code' => $row['club_code'],
-                'club_name' => $row['club_name'], 'points' => $row['points'], 'place' => $row['place'],
+                'club_name' => $row['club_name'], 'points' => $row['points'], 'raw_points' => $row['raw_points'],
+                'place' => $row['place'],
                 'members' => $split['members'], 'roster_empty' => $split['warning'],
                 'name' => $mixed && !empty($memberNames) ? implode(' / ', $memberNames) : null,
             ];

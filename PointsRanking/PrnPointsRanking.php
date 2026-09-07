@@ -37,6 +37,10 @@ function pl_points_pdf_separate_report($pdf, array $report)
     $isTeam = $subject !== 'IND';
 
     foreach ($report['sections'] as $section) {
+        $sectionRows = pl_points_scored_rows($section['rows']);
+        if (empty($sectionRows)) {
+            continue;
+        }
         if ($isMixed) {
             // No license number (a pair has two, not one); club identifies the
             // entry, "Skład" (roster) names the pair.
@@ -53,7 +57,7 @@ function pl_points_pdf_separate_report($pdf, array $report)
                 pl_points_pdf_row_label($row),
                 $row['place'],
                 pl_points_format_number($row['points']),
-            ], $section['rows']);
+            ], $sectionRows);
         } else {
             $columns = [
                 ['label' => 'Miejsce', 'width' => 14, 'align' => 'C', 'bold' => true],
@@ -71,7 +75,7 @@ function pl_points_pdf_separate_report($pdf, array $report)
                 $isTeam ? '' : $row['code'],
                 $row['place'],
                 pl_points_format_number($row['points']),
-            ], $section['rows']);
+            ], $sectionRows);
         }
 
         $pdf->AddPage();
