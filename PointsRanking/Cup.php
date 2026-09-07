@@ -230,6 +230,14 @@ if ($config['Round'] >= 1 && in_array($config['Round'], $storedRounds, true)) {
 
 // --- Rendering -------------------------------------------------------------
 
+/**
+ * The page is a column, not a spreadsheet: every panel is centred and no wider
+ * than its content needs, so a classification of four rounds does not stretch
+ * across a wide screen.
+ */
+const PL_CUP_PANEL_STYLE = 'max-width:760px;margin:0 auto;';
+const PL_CUP_TABLE_STYLE = 'max-width:1100px;margin:0 auto;';
+
 function pl_cup_render_notice($text, $color, $border)
 {
     echo '<div style="background:' . $color . ';border:1px solid ' . $border . ';padding:10px;margin:10px 0;border-radius:4px;">' . $text . '</div>';
@@ -252,7 +260,7 @@ function pl_cup_render_classification(array $classification, $isMixed)
     // A mixed row is a club, not a pair: no athlete column.
     $colCount = ($isMixed ? 3 : 4) + PL_CUP_ROUNDS + 2;
 
-    echo '<table class="Tabella">';
+    echo '<table class="Tabella" style="' . PL_CUP_TABLE_STYLE . '">';
     echo '<tr><th class="Title" colspan="' . $colCount . '">' . htmlspecialchars($classification['label']) . '</th></tr>';
 
     foreach ($classification['sections'] as $section) {
@@ -330,7 +338,7 @@ function pl_cup_render_barrage_form(array $classifications, array $barrages)
         return;
     }
 
-    echo '<table class="Tabella">';
+    echo '<table class="Tabella" style="' . PL_CUP_PANEL_STYLE . '">';
     echo '<tr><th class="Title" colspan="4">Baraż - kolejność ustalona na strzelnicy</th></tr>';
     echo '<tr><td colspan="4" style="padding:8px;">';
     echo '<form method="post" action="">';
@@ -379,7 +387,7 @@ foreach ($messages as $message) {
 $editions = array_unique(array_merge([pl_cup_default_edition(), $config['Edition']], range(pl_cup_default_edition() - 2, pl_cup_default_edition() + 1)));
 sort($editions);
 
-echo '<table class="Tabella">';
+echo '<table class="Tabella" style="' . PL_CUP_PANEL_STYLE . '">';
 echo '<tr><th class="Title">Puchar Polski ' . intval($config['Edition']) . '</th></tr>';
 
 echo '<tr><td style="padding:8px;">';
@@ -455,9 +463,9 @@ $pickerGroups = [
 ];
 $pickerCount = count($pickerGroups['ind']['sections']) + count($pickerGroups['mix']['sections']);
 
-echo '<table class="Tabella">';
+echo '<table class="Tabella" style="' . PL_CUP_PANEL_STYLE . '">';
 echo '<tr><th class="Title">Wydruki</th></tr>';
-echo '<tr><td style="padding:8px;">';
+echo '<tr><td style="padding:8px;text-align:center;">';
 echo '<form method="get" action="PrnCupRanking.php" target="_blank">';
 echo 'Wybierz kategorie (bez wyboru - wszystkie):<br>';
 echo '<select name="Cat[]" multiple="multiple" size="' . min(14, $pickerCount + 3) . '" style="min-width:420px;">';
