@@ -229,7 +229,7 @@ The system SHALL let the operator delete one listed import — exactly its rows 
 ---
 
 ### Requirement: Combined cup classification
-The system SHALL present two cup classifications — individual and mixed — each sectioned per category in the same order as the round reports. Only the categories the current competition itself runs SHALL be shown: the stored rounds cover the whole cup, but a junior competition classifies juniors, not the barebow or compound categories it merely imported.
+The system SHALL present two cup classifications — individual and mixed — each sectioned per category in the same order as the round reports. Only the categories the current competition is **set up for** SHALL be shown — the divisions and classes left in its own settings, whether or not anyone is entered in them yet: the stored rounds cover the whole cup, but a junior competition classifies juniors, not the barebow or compound categories it merely imported. Entries SHALL NOT be the test, since the standings are read before registration opens and a category may be shot by nobody at this round.
 
 Every section SHALL be headed by its cup's own Polish name — "Klasyfikacja generalna Pucharu Polski Juniorek młodszych", "… łuków barebow - indywidualna mężczyzn", "… Seniorów - miksty" — never the raw category code.
 
@@ -256,8 +256,12 @@ Rounds not yet imported or snapshotted SHALL simply be absent, so the classifica
 - **THEN** the classification renders from those two rounds without an error
 
 #### Scenario: Category outside this competition
-- **WHEN** the stored rounds hold barebow rows and the current competition runs only `RU21` and `RU18` categories
+- **WHEN** the stored rounds hold barebow rows and the current competition is set up only for `RU21` and `RU18` categories
 - **THEN** the barebow sections are absent from the classification, its PDF and its diplomas
+
+#### Scenario: Competition without entries yet
+- **WHEN** a competition is set up for the compound and barebow categories but nobody is registered yet
+- **THEN** those categories are classified from the imported rounds all the same
 
 #### Scenario: Display data for an absent athlete
 - **WHEN** an athlete is present in earlier rounds but not in the current tournament

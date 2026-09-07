@@ -1048,27 +1048,48 @@ function pl_cup_current_directory($tourId)
 }
 
 /**
- * Section labels and order for the categories **this competition runs**.
+ * Section labels and order for the categories **this competition is set up for**.
  *
  * The stored rounds cover the whole cup, so a junior competition would otherwise
  * render (and print diplomas for) the barebow and compound sections it only
- * imported. Individual categories therefore come from this tournament's entries
- * and mixed ones from the pairs that actually started here.
+ * imported. The narrowing therefore follows the competition's own events — the
+ * divisions and classes left in its settings — and not its entries: the cup
+ * standings are read long before anyone is registered, and a category emptied of
+ * entries is still part of these competitions.
  *
  * @return array{ind: array, mix: array} category code => ['label' => string, 'order' => array]
  */
 function pl_cup_category_meta($tourId)
 {
     $tourId = intval($tourId);
-    $categories = pl_points_load_categories($tourId, PL_POINTS_PRESETS[PL_CUP_PRESET_KEY]['scope']);
+    $scope = PL_POINTS_PRESETS[PL_CUP_PRESET_KEY]['scope'];
+    $categories = pl_points_load_categories($tourId, $scope);
+    $divLabels = pl_ranking_div_labels($tourId);
+
+    $ind = [];
+    $Rs = safe_r_sql("
+        SELECT DISTINCT EventClass.EcDivision AS DivCode, EventClass.EcClass AS Class
+        FROM EventClass
+        INNER JOIN Events ON Events.EvCode = EventClass.EcCode
+            AND Events.EvTournament = EventClass.EcTournament AND Events.EvTeamEvent = 0
+        WHERE EventClass.EcTournament = $tourId
+    ");
+    while ($row = safe_fetch($Rs)) {
+        if (!pl_points_in_scope($row->DivCode, $row->Class, $scope)) {
+            continue;
+        }
+        $key = $row->DivCode . $row->Class;
+        $ind[$key] = $divLabels[$key] ?? [
+            'division' => $row->DivCode, 'class' => $row->Class, 'label' => $key, 'order' => [999, 999],
+        ];
+    }
+    safe_free_result($Rs);
 
     $mix = [];
     $Rs = safe_r_sql("
-        SELECT DISTINCT Teams.TeEvent AS Event
-        FROM Teams
-        INNER JOIN Events ON Events.EvCode = Teams.TeEvent
-            AND Events.EvTournament = Teams.TeTournament AND Events.EvTeamEvent = 1 AND Events.EvMixedTeam = 1
-        WHERE Teams.TeTournament = $tourId AND Teams.TeFinEvent = 1
+        SELECT DISTINCT EvCode AS Event
+        FROM Events
+        WHERE EvTournament = $tourId AND EvTeamEvent = 1 AND EvMixedTeam = 1
     ");
     while ($row = safe_fetch($Rs)) {
         if (isset($categories['team'][$row->Event])) {
@@ -1077,5 +1098,5 @@ function pl_cup_category_meta($tourId)
     }
     safe_free_result($Rs);
 
-    return ['ind' => $categories['individual'], 'mix' => $mix];
+    return ['ind' => $ind, 'mix' => $mix];
 }

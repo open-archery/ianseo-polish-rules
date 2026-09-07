@@ -886,19 +886,36 @@ Oddział Zielona Góra";
         $this->assertSame('ULKS Zryw Dobrcz', $directory['mix']['ZRYDOB']['club_name']);
     }
 
-    public function testCategoryMetaCoversOnlyWhatThisCompetitionRuns()
+    public function testCategoryMetaCoversWhatThisCompetitionIsSetUpFor()
     {
         FakeDb::on('/FROM Divisions/', [['DivId' => 'R', 'DivDescription' => 'Łuk klasyczny']]);
         FakeDb::on('/FROM Classes/', [['ClId' => 'U18M', 'ClDescription' => 'Junior młodszy', 'ClViewOrder' => 7]]);
-        FakeDb::on('/FROM Entries/', [['EnDivision' => 'R', 'EnClass' => 'U18M']]);
-        FakeDb::on('/FROM EventClass/', [['EvCode' => 'RU18X', 'DivCode' => 'R', 'Class' => 'U18M']]);
-        // Mixed sections come from the pairs that actually started here.
-        FakeDb::on('/FROM Teams/', []);
+        // No entries at all: the categories still come from the competition's
+        // own events, so the standings are readable before anyone registers.
+        FakeDb::on('/FROM Entries/', []);
+        FakeDb::on('/FROM EventClass[\s\S]*EvTeamEvent = 0/', [['DivCode' => 'R', 'Class' => 'U18M']]);
+        FakeDb::on('/FROM Events\s+WHERE/s', []);
 
         $meta = pl_cup_category_meta(1);
 
         $this->assertSame(['RU18M'], array_keys($meta['ind']));
+        $this->assertSame('Łuk klasyczny Junior młodszy', $meta['ind']['RU18M']['label']);
         $this->assertSame([], $meta['mix']);
+    }
+
+    public function testCategoryMetaKeepsAConfiguredMixedEventWithoutPairs()
+    {
+        FakeDb::on('/FROM Divisions/', [['DivId' => 'B', 'DivDescription' => 'Łuk barebow']]);
+        FakeDb::on('/FROM Classes/', [['ClId' => 'M', 'ClDescription' => 'Seniorzy', 'ClViewOrder' => 1]]);
+        FakeDb::on('/FROM EventClass[\s\S]*EvTeamEvent = 0/', [['DivCode' => 'B', 'Class' => 'M']]);
+        // pl_points_load_categories() reads the configured team events...
+        FakeDb::on('/EventClass.EcCode AS EvCode/', [['EvCode' => 'BX', 'DivCode' => 'B', 'Class' => 'M']]);
+        // ...and the mixed events of this competition, with or without teams.
+        FakeDb::on('/FROM Events\s+WHERE/s', [['Event' => 'BX']]);
+
+        $meta = pl_cup_category_meta(1);
+
+        $this->assertSame(['BX'], array_keys($meta['mix']));
     }
 
     public function testValidCategoriesComeFromConfiguredClassesAndMixedEvents()
