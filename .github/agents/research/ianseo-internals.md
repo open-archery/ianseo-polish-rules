@@ -307,11 +307,14 @@ path — see §0.
 
 ### Sub-Rules
 
-`$SetType['PL']['rules']['3'] = ['Poland-TeamsTop3of4'];`
+```php
+$SetType['PL']['rules']['3'] = ['Poland-Full', 'Poland-4x70m'];
+```
 
 Sub-rules are per tournament-type. The key `'3'` means the rule is only available
-when tournament type 3 is selected. A sub-rule string like `'Poland-TeamsTop3of4'`
-influences:
+when tournament type 3 is selected. **verified rev 326** — the rules this module
+actually registers are `Poland-Full` for types 1, 3 and 6, plus `Poland-4x70m`
+for type 3 only. A sub-rule string influences:
 
 1. Setup script selection (via `$SubRule`).
 2. Rank override class resolution (as part of the file name).
@@ -354,7 +357,7 @@ Variables **available** to the setup script (set by the caller):
 | ----------- | ------ | --------------------------------------------------- |
 | `$TourId`   | int    | Current tournament ID                               |
 | `$TourType` | int    | Tournament type ID (1, 3, 6, etc.)                  |
-| `$SubRule`  | string | Sub-rule code (e.g. `'1'`, `'Poland-TeamsTop3of4'`) |
+| `$SubRule`  | string | Sub-rule code (e.g. `'1'`, `'Poland-4x70m'`)        |
 
 Variables the setup script **must set**:
 
@@ -685,7 +688,7 @@ search order (confirmed from source code):
 ```
 
 Where `{SubRule}` = `ToTypeSubRule` with all hyphens stripped (e.g.
-`'Poland-TeamsTop3of4'` → `'PolandTeamsTop3of4'`).
+`'Poland-4x70m'` → `'Poland4x70m'`).
 
 After finding the main class, it similarly searches for a `_calc` variant:
 
@@ -1270,8 +1273,9 @@ between outdoor and indoor for team scoring.
 
 ### 18.7 `sets.php` Expansion
 
-The current `sets.php` registers only types 1, 3, 6 with one rule. It needs
-expansion:
+The current `sets.php` registers only types 1, 3, 6. Historical expansion
+proposal — the rule names below pre-date the `Poland-Full` / `Poland-4x70m`
+rules that shipped, and none of the extra types were implemented:
 
 ```php
 $SetType['PL'] = [
