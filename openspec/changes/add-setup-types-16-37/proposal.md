@@ -16,7 +16,9 @@ Deliberately unresolved — decide before implementing, see `design.md` for deta
 1. The four U12 children's-round distances (the regulation leaves them to the organiser). Blocks `Setup_16_PL.php` only.
 2. Whether U12 Compound exists in the youth round (assumed Recurve-only).
 3. Whether the youth round has eliminations at all (assumed qualification-only, per §2.3.1.8).
-4. Whether any live tournament still uses `Poland-4x70m` — not checked yet, and removal would strand it.
+4. ~~Whether any live tournament still uses `Poland-4x70m`.~~ **Answered:** one does — `KZLZS26` (Mistrzostwa Krajowego Zrzeszenia LZS), dated 2026-09-26, with no entries and no scores yet. It can be recreated as TourType 37 before the event. Repeat the check on production.
+
+The class and event type gates in `lib.php` (`in_array($TourType, array(3, 6))` for U15, `== 6` for U12) exclude both new types and must be extended as part of this change — see `design.md`.
 
 ## Capabilities
 

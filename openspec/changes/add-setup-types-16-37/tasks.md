@@ -4,7 +4,8 @@
 - [ ] 0.2 Get the four U12 children's-round distances from the competition owner (gap #1) and record them in `design.md`.
 - [ ] 0.3 Confirm U12 is Recurve-only in the youth round (gap #2).
 - [ ] 0.4 Confirm the youth round is qualification-only, no eliminations (gap #3).
-- [ ] 0.5 Check the live install for tournaments with `ToTypeSubRule = 'Poland-4x70m'` (gap #4); if any exist, agree with the owner what happens to them before removing the sub-rule.
+- [x] 0.5 Check the install for tournaments with `ToTypeSubRule = 'Poland-4x70m'` (gap #4). Dev install: one, `KZLZS26` (2026-09-26, no entries, no scores) — recreate it as TourType 37 before the event.
+- [ ] 0.6 Repeat the 0.5 check on the production install, which the dev database does not necessarily mirror.
 
 ## 1. Shared session-multiplier helper
 
@@ -16,12 +17,15 @@
 
 - [ ] 2.1 Add `Setup_37_PL.php` calling the helper with multiplier 2, `$tourDetTypeName = 'Type_2x70mRound'`, `$tourDetNumDist = 4`.
 - [ ] 2.2 Unit tests: every class gets 4 sessions; U15 order is 40m, 40m, 20m, 20m; `tourDetMaxDistScore` stays 360.
-- [ ] 2.3 Unit test: elimination and finals configuration identical to TourType 3.
+- [ ] 2.3 Extend the youth type gates in `lib.php` to cover TourType 37 wherever they cover 3 — `CreateStandardClasses()`'s `$hasU15 = in_array($TourType, array(3, 6))` and the matching `in_array()` in `InsertStandardEvents()`. Without this, TourType 37 silently has no U15 classes, events or bindings.
+- [ ] 2.4 Full parity test, TourType 37 against TourType 3: identical divisions, identical class list (U15 included), identical event codes and their class bindings, identical target faces, identical team scoring configuration, identical elimination and finals configuration. Only the session count and `tourDetNumDist` may differ.
 
 ## 3. Class-set filtering
 
 - [ ] 3.1 Add a class-set parameter to `CreateStandardClasses()` so a setup script can request the U15/U12 subset. Coordinate with the `class-presets` change — build it once, reuse it in both.
-- [ ] 3.2 Unit tests: the youth subset creates U15M/W and U12M/W only, in eligible divisions; the default set is unchanged.
+- [ ] 3.2 Apply the same filter in `InsertStandardEvents()`. Its U15 bindings are gated on TourTypes 3 and 6 and its U12 bindings on TourType 6, so TourType 16 would otherwise create `RU15*`, `CU15*` and `RU12*` events with no class bindings at all.
+- [ ] 3.3 Unit tests: the youth subset creates U15M/W and U12M/W only, in eligible divisions; the default set is unchanged.
+- [ ] 3.4 Unit test: every event created for TourType 16 has at least one class binding, and every youth class created has at least one event — no orphans in either direction.
 
 ## 4. Setup_16_PL.php
 
@@ -29,6 +33,7 @@
 - [ ] 4.2 U15 distances and target faces (40m/20m; R 122/80, C 80/60).
 - [ ] 4.3 U12 four distances and faces (two long on 122cm, two short on 80cm), using the values from task 0.2.
 - [ ] 4.4 Unit tests for both class groups' distances, faces and end size.
+- [ ] 4.5 Unit test on distance representation: U15 categories get exactly two distance entries (40m, 20m) and U12 exactly four, with no empty third or fourth entry written for U15 despite `$tourDetNumDist = 4`. Events bind classes, not distance columns, so no separate U15 events are needed for this.
 
 ## 5. Register the types
 

@@ -32,7 +32,11 @@ Each archer shoots **144 arrows** — every session of the Single-Distance Round
 
 ### Requirement: Youth Round (`Setup_16_PL.php`)
 
-The Youth Round SHALL be configured by `Setup_16_PL.php` on ianseo TourType 16, registered in `sets.php` with the single sub-rule `Poland-Full`. It is a youth-only competition: the script SHALL create **only** the U15 and U12 classes, in the divisions those classes are eligible for (U15: R and C; U12: R only), and SHALL NOT create senior, U24, U21, U18 or Master classes.
+> **Provisional.** Two parts of this requirement rest on assumptions the competition owner has not yet confirmed — the divisions U12 competes in, and the four children's-round distances. Both are marked below and must be settled before this requirement is treated as final (`design.md` gaps 1 and 2, `tasks.md` 0.2 and 0.3).
+
+The Youth Round SHALL be configured by `Setup_16_PL.php` on ianseo TourType 16, registered in `sets.php` with the single sub-rule `Poland-Full`. It is a youth-only competition: the script SHALL create **only** the U15 and U12 classes, in the divisions those classes are eligible for, and SHALL NOT create senior, U24, U21, U18 or Master classes.
+
+Eligible divisions are U15 in R and C, and U12 in R only — *provisional, pending gap 2*.
 
 U15 archers shoot the 40m/20m Round (§2.3.1.10.5): 36 arrows at 40m and 36 arrows at 20m. Target faces by division:
 
@@ -41,7 +45,7 @@ U15 archers shoot the 40m/20m Round (§2.3.1.10.5): 36 arrows at 40m and 36 arro
 | R (Recurve) | 122cm | 80cm |
 | C (Compound) | 80cm | 60cm |
 
-U12 archers shoot the Children's Round (§2.3.1.10.11): **18 arrows at each of four distances**, shot longest to shortest. The two longer distances SHALL use a 122cm face and the two shorter distances an 80cm face. The four distance values are a configuration parameter of this setup script, not a regulation constant — the regulation leaves them to the organiser, and the defaults are recorded in the design.
+U12 archers shoot the Children's Round (§2.3.1.10.11): **18 arrows at each of four distances**, shot longest to shortest. The two longer distances SHALL use a 122cm face and the two shorter distances an 80cm face. The four distance values are a configuration parameter of this setup script, not a regulation constant — the regulation leaves them to the organiser. *The values themselves are not yet decided (gap 1); this requirement fixes the arrow count, the ordering and the face split only.*
 
 Both classes shoot **3-arrow ends** (§2.4.1.1).
 
@@ -63,6 +67,13 @@ Both classes shoot **3-arrow ends** (§2.4.1.1).
 - **WHEN** a U12 archer is entered in a TourType 16 tournament
 - **THEN** they shoot 18 arrows at each of four distances, ordered longest to shortest
 - **THEN** the two longer distances use a 122cm face and the two shorter distances an 80cm face
+
+#### Scenario: U15 has no third or fourth distance
+
+- **WHEN** a TourType 16 tournament is created
+- **THEN** U15 categories have exactly two distance entries, 40m and 20m
+- **AND** U12 categories have exactly four distance entries
+- **AND** the tournament-wide distance-column count being 4 does not create empty third or fourth distances for U15
 
 #### Scenario: Youth ends are three arrows
 

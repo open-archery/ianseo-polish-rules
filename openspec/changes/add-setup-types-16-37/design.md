@@ -7,7 +7,31 @@
 | 1 | The four U12 children's-round distances (§2.3.1.10.11 leaves them to the organiser). | `Setup_16_PL.php` cannot be written; everything else in this change can. |
 | 2 | Whether U12 Compound exists in the youth round. §1.2 of the rules research says C excludes U12, so the design assumes U12 is Recurve-only. | Wrong class/division matrix for one class. |
 | 3 | Whether the youth round needs eliminations at all, or is qualification-only. Assumed qualification-only, following §2.3.1.8 (no elimination for U15 at Polish Championships). | Finals structure may need adding later. |
-| 4 | Whether any live tournament still uses `Poland-4x70m`. Checked nowhere yet. | Removal could strand a competition mid-season. |
+| ~~4~~ | ~~Whether any live tournament still uses `Poland-4x70m`.~~ **Answered — see below.** | — |
+
+### Gap 4, answered (checked 2026-09-08 on the dev install)
+
+One tournament uses it: **ToId 129, `KZLZS26`, "Mistrzostwa Krajowego Zrzeszenia LZS", TourType 3, `ToTypeSubRule = 'Poland-4x70m'`**, dated 2026-09-26 — in the future, with **0 entries and 0 scores**. Every other PL tournament is `Poland-Full`.
+
+So removal does affect a real competition, but one that has not started. It can simply be recreated as a TourType 37 tournament before the event, and no score data is at risk. The check must be repeated on the production install, which this dev database does not necessarily mirror — task 0.5 stays, narrowed to that.
+
+### Class and event type gates in `lib.php`
+
+`CreateStandardClasses()` and `InsertStandardEvents()` both gate the youth categories on the TourType number:
+
+```php
+$hasU15 = in_array($TourType, array(3, 6));   // CreateStandardClasses
+$hasU12 = ($TourType == 6);
+if (in_array($TourType, array(3, 6))) { ... } // InsertStandardEvents, U15 bindings
+if ($TourType == 6) { ... }                   // U12 bindings
+```
+
+Neither new type passes these gates, which breaks both halves of this change if the gates are left alone:
+
+- **TourType 37** would silently lose U15 entirely — no classes, no events, no bindings — even though the double round is supposed to be TourType 3 with doubled sessions. The gate must include 37 wherever it includes 3.
+- **TourType 16** would create no youth classes at all, or (if the class gate alone is extended) classes with no event bindings.
+
+Extending the gates is part of this change, not an implementation detail: the class-set filter from `class-presets` is the general form, and the two changes should converge on it rather than adding a third TourType number to each `in_array()`.
 
 ## ianseo hook points
 
