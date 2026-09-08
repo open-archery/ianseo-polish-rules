@@ -4,7 +4,8 @@ $version = date('Y-m-d H:i:s');
 
 $AllowedTypes = array(1, 3, 6);
 
-$SetType['PL']['descr'] = get_text('Setup-PL', 'Install');
+$SetType['PL']['descr'] = 'Polski Związek Łuczniczy';
+$SetType['PL']['noc'] = 'POL';
 $SetType['PL']['types'] = array();
 $SetType['PL']['rules'] = array();
 
