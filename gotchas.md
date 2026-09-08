@@ -169,3 +169,24 @@ commit as the fix. Terse is fine; the goal is "don't step on this rake again," n
   `WHERE Col = ''` written as a defensive "empty or null" branch takes the whole page down
   instead of matching nothing. A nullable `DATETIME` added by `ALTER TABLE ... NULL DEFAULT
   NULL` is `NULL` in the pre-existing rows, never `''`; test for `IS NULL` alone.
+
+## ianseo updates
+
+- **The ianseo updater deletes this whole module.** `Update/FileList.php` sends an
+  md5 listing of every file to ianseo's server, and everything the distribution does
+  not know is reported back as "unused/spurious" and unlinked — directories included.
+  Only `Modules/Custom/`, `Images/`, `TV/Photos/`, `Install/dbdumps/`,
+  `Common/config.inc.php`, `Common/DebugOverrides.php` and **anything whose name starts
+  with `.`** (the scan's `EscludeFiles('^(\.)')`) are spared, which is the only reason
+  `.git/` and `.github/` survive. Since rev ~187 the distribution *also* ships an
+  official `Modules/Sets/PL/` (`sets.php`, `lib.php`, `Setup_{1,3,6,16,37}_PL.php`,
+  `Setup_Target.php`, `Rank/Obj_Rank_Final*_calc.php`, `pdf/chunks/*`), so same-named
+  files of ours are not just deleted but *replaced* with upstream's — a silent change
+  of tournament setup and finals ranking for `ToLocRule='PL'`. After every update:
+  `git -C ianseo/Modules/Sets/PL checkout -- .` and re-download `tools/phpunit.phar`.
+
+- **`docker compose run --rm ianseo-export` destroys the old tree.** It rsyncs the
+  volume onto `./ianseo` with `--delete`, so once it has run there is no pre-update
+  copy left to diff against and "what did this update change?" can only be answered
+  from file mtimes (rsync `-a` preserves them: files the update wrote carry its
+  timestamp). Copy `./ianseo` aside *before* exporting after an update.
