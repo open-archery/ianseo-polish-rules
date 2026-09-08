@@ -25,7 +25,7 @@ PZŁucz standard team competition requires operators to manually declare rosters
 
 - Mixed team composition (separate feature).
 - Modifying ianseo core files (`Qualification/MakeTeams.php`, `Final/Team/` pages).
-- Preventing the core "Make Teams" button from running — mitigation is backup/restore only.
+- Preventing the core "Make Teams" button from running — mitigation is backup/restore only. **Under review:** `MakeTeams()` and `MakeTeamsAbs()` both load a `Modules/Sets/PL/Functions/MakeTeams*.php` override in place of their default body, and ianseo's own PL set ships one, so interception is possible without touching core. See Decision 6 in `design.md`.
 - Field archery and 3D team formats.
 - Finals per-end substitution UI (already handled by ianseo core `ChangeComponents.php`).
 

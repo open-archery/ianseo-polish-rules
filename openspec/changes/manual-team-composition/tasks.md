@@ -42,3 +42,12 @@
 - [ ] 6.1 In `Setup_1_PL.php`: update `EvMaxTeamPerson` to `4` for all `CreateEventNew()` calls where `EvTeamEvent=1`
 - [ ] 6.2 In `Setup_3_PL.php`: update `EvMaxTeamPerson` to `4` for all team event calls
 - [ ] 6.3 In `Setup_6_PL.php`: update `EvMaxTeamPerson` to `4` for all team event calls
+
+## 7. Decide on the team-builder override hook (Decision 6)
+
+- [ ] 7.1 Read Decision 6 in `design.md` and the two core lookups it cites (`Qualification/Fun_Qualification.local.inc.php:363` and `:1044`).
+- [ ] 7.2 Fetch ianseo's official `Modules/Sets/PL/Functions/MakeTeamsAbs.php` and read how upstream uses the hook.
+- [ ] 7.3 Decide: backup/restore only (as designed), override only, or override plus restore as a safety net.
+- [ ] 7.4 If adopting the override — confirm it reproduces core auto-grouping for events with no manual roster, sets `$Errore`, and handles the `require_once` once-per-request behaviour.
+- [ ] 7.5 If adopting the override — decide whether to scope it by sub-rule (`MakeTeams-{ToSubRule}.php`) to limit the blast radius.
+- [ ] 7.6 Update the proposal's non-goal and the risk entry to match the decision.
