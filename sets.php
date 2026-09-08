@@ -4,7 +4,15 @@ $version = date('Y-m-d H:i:s');
 
 $AllowedTypes = array(1, 3, 6);
 
-$SetType['PL']['descr'] = get_text('Setup-PL', 'Install');
+// A literal, not get_text('Setup-PL', 'Install'): that key exists in none of
+// ianseo's language packs, and get_text() renders a missing key as the marker
+// "<b>[[Setup-PL]@[en]@[Install]]</b>" rather than falling back to the key. The
+// packs are re-downloaded on every ianseo update, so adding the key upstream
+// would not survive either. ianseo's own PL set does the same thing.
+$SetType['PL']['descr'] = 'Polski Związek Łuczniczy';
+// Prefills the competition's country on the new-tournament form
+// (Tournament/Fun_Index.js), only when it is new or still empty.
+$SetType['PL']['noc'] = 'POL';
 $SetType['PL']['types'] = array();
 $SetType['PL']['rules'] = array();
 
