@@ -82,6 +82,21 @@ commit as the fix. Terse is fine; the goal is "don't step on this rake again," n
   scope, so the required setup script can read `$subRuleName` directly — compare against
   that (with an `isset()` guard, since non-UI callers may not set it), not `$SubRule`.
 
+- **Our module can hardcode the rule-set name, but not the lookup's name.** The two look
+  alike and are not: core *reads* the rule-set label from us (`GetExistingTournamentTypes()`
+  in `Tournament/index.php` includes every `Modules/Sets/*/sets.php`), so
+  `$SetType['PL']['descr'] = 'Polski Związek Łuczniczy'` is ours to set. The lookup combo
+  label is built entirely inside core as `get_text('LUE-'.$LupIocCode, 'Tournament')`
+  (`Tournament/index.php:493`, `Partecipants/PopEdit.php:753`), and `get_text()`
+  (`Common/Globals.inc.php:128`) resolves keys *only* from
+  `Common/Languages/<lang>/<module>.php` into a function-static cache — no DB table, no
+  `Modules/Sets/*` language glob, no setter, and no jack event on that render path. Upstream
+  ships `LUE-BALT … LUE-SWE` but no `LUE-POL`, so registering our Sportzona row with
+  `LupIocCode='POL'` makes the combo read `[[LUE-POL]@[en]@[Tournament]]`. Cosmetic only —
+  the lookup itself works. The only place that string can live is a core language file, which
+  the updater reverts (see "ianseo updates"), so the fix is upstream. Same trap for any other
+  core-rendered `get_text()` key our module causes to be looked up.
+
 ## Docker / this repo's dev environment
 
 - **Apache's `error.log`/`access.log` inside the app container are symlinks to
