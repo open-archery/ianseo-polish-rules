@@ -22,3 +22,5 @@ research/*.pdf
 
 ## LLMs
 .claude/settings.local.json
+
+ScorecardsOCR/dataset/*
