@@ -137,3 +137,15 @@ if (!function_exists('InsertClassEvent')) {
         CallLog::record('InsertClassEvent', $args);
     }
 }
+
+// Recording shim for ianseo core (Qualification/Fun_Qualification.local.inc.php).
+// Seeds one Individuals row per entered athlete; module code calls it after
+// adding entries. Real signature: MakeIndividuals(&$affected, $tournament = 0): int
+// (0 = ok, 1 = error).
+if (!function_exists('MakeIndividuals')) {
+    function MakeIndividuals(&$affected, $tournament = 0): int
+    {
+        CallLog::record('MakeIndividuals', [$affected, $tournament]);
+        return 0;
+    }
+}

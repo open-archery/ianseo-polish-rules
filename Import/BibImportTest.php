@@ -250,4 +250,40 @@ final class BibImportTest extends \PlTestCase
         $this->assertSame('duplicate key', $result['error']);
         $this->assertSame(['begin', 'rollback'], \FakeDb::$tx);
     }
+
+    // --- pl_bibimport_run: Individuals seeding ----------------------------------
+
+    public function testRunSeedsIndividualsAfterSuccessfulImport(): void
+    {
+        $_SESSION['TourRealWhenTo'] = '2024-07-14';
+        \FakeDb::on('/FROM LookUpEntries/', [(array) $this->sampleLue()]);
+        \FakeDb::on('/FROM Classes/', [['ClId' => 5]]);
+        \FakeDb::on('/FROM Countries/', [['CoId' => 42]]);
+        \FakeDb::willInsertId(123);
+
+        \pl_bibimport_run(7, '5083', 'R', 1);
+
+        $this->assertCount(1, \CallLog::calls('MakeIndividuals'));
+        $this->assertSame(['begin', 'commit'], \FakeDb::$tx);
+    }
+
+    public function testRunDoesNotSeedIndividualsOnRollback(): void
+    {
+        $_SESSION['TourRealWhenTo'] = '2024-07-14';
+        \FakeDb::on('/FROM LookUpEntries/', [(array) $this->sampleLue()]);
+        \FakeDb::on('/FROM Classes/', [['ClId' => 5]]);
+        \FakeDb::on('/FROM Countries/', [['CoId' => 42]]);
+        \FakeDb::throwOn('/INSERT INTO Entries/', 'duplicate key');
+
+        \pl_bibimport_run(7, '5083', 'R', 1);
+
+        $this->assertSame([], \CallLog::calls('MakeIndividuals'));
+    }
+
+    public function testRunDoesNotSeedIndividualsWhenNothingImported(): void
+    {
+        \pl_bibimport_run(7, '9999', 'R', 1);
+
+        $this->assertSame([], \CallLog::calls('MakeIndividuals'));
+    }
 }

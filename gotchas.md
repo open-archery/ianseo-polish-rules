@@ -185,6 +185,21 @@ commit as the fix. Terse is fine; the goal is "don't step on this rake again," n
   instead of matching nothing. A nullable `DATETIME` added by `ALTER TABLE ... NULL DEFAULT
   NULL` is `NULL` in the pre-existing rows, never `''`; test for `IS NULL` alone.
 
+- **Creating `Entries` rows in SQL does not populate `Individuals` — call
+  `MakeIndividuals()` yourself.** ianseo derives an event's individual-final head count
+  from the `Individuals` table (one placeholder row per entered archer, `IndScore=-1`),
+  not from `Entries`: the `IF` branch of `getStatEntriesByEventQuery()` does
+  `INNER JOIN Individuals`, and the FoP bye test (`Fun_Scheduler.php` `FOP()`)
+  `coalesce(IndQty, TeQty, 999)`s a missing count to 999 so nothing shows as a bye. With
+  no `Individuals` rows the event vanishes from `PrnStatEvents` and shows a full bracket
+  on FoP. The GUI participant pages hide this by calling `MakeIndAbs()` on every
+  add/edit/list-load (`Partecipants/*.php`) and `xmlFindCode.php` calls
+  `MakeIndividuals($affected)` after an add — both in
+  `Qualification/Fun_Qualification.local.inc.php`, which you must `require_once`. The
+  team-event equivalent is `MakeTeamsAbs()` → `Teams` (`TeFinEvent=1`), but it only
+  builds teams from athletes with `QuScore>0 or QuHits>0`, so it is a no-op until
+  qualification scores exist.
+
 ## ianseo updates
 
 - **The ianseo updater deletes this whole module.** `Update/FileList.php` sends an
