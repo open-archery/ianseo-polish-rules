@@ -44,6 +44,18 @@ commit as the fix. Terse is fine; the goal is "don't step on this rake again," n
   `9.0`) depending on which code path produced it. `9 !== 9.0` is `true` in PHP, so identity
   comparison silently breaks tie-detection between rows of different origin. This class of
   bug is invisible in a test suite that only ever constructs `int` fixtures.
+- **A numeric-string array key silently becomes `int`, breaking `!==` against the
+  original string.** `$arr["5297"] = ...; foreach ($arr as $k => $v)` yields `$k` as
+  `int(5297)`, not `"5297"` — PHP casts any canonical decimal-integer string key (no
+  leading zero, fits in int range) at assignment time. Comparing that key back against
+  a same-valued string elsewhere (`$k !== $row['identity']`) is `true` even though both
+  represent the same licence/code, producing a false "conflict" (`pl_cup_identity_conflicts`
+  / `pl_cup_mixed_club_conflicts` in `PointsRanking/Fun_Cup.php`, hit by a real CSV import
+  where an athlete's numeric licence repeated across categories in one file). Fix: cast
+  both sides to `(string)` before `!==`/`===` whenever one side may have passed through an
+  array key. Leading-zero identities ("05297") are unaffected — only "clean" numeric strings
+  get cast — which is why this doesn't show up with letter-prefixed licences (`PL0001`) in
+  existing tests.
 - **`max()` over "last place" can pick a DSQ/DNS/DNF sentinel instead of the real last
   place.** This module encodes "no valid result" as a place `>= 29999`. Any cutoff-style
   "zero the worst place" logic must filter those sentinels out *before* taking `max()`,

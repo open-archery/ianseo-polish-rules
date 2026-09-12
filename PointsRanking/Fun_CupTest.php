@@ -926,6 +926,36 @@ Oddział Zielona Góra";
         $this->assertStringContainsString('ten sam plik', $conflicts[0]);
     }
 
+    public function testSameAthleteTwiceInOneFileWithANumericLicenceIsNotAConflict()
+    {
+        // A numeric-string licence used as an array key ("5297") is silently cast
+        // to int by PHP; a naive `!==` against the string form of the same value
+        // then reports a false conflict. Regression for a real rejected import
+        // where an athlete shot two categories under licence 5297.
+        $incoming = [
+            ['classification' => 'ind', 'category' => 'RM', 'identity' => '5297',
+             'name' => 'Tomasz Zubik', 'club_name' => 'Klub', 'place' => 1, 'points' => 25, 'qual' => 600],
+            ['classification' => 'ind', 'category' => 'RM50', 'identity' => '5297',
+             'name' => 'Tomasz Zubik', 'club_name' => 'Klub', 'place' => 1, 'points' => 25, 'qual' => 590],
+        ];
+
+        $this->assertSame([], pl_cup_identity_conflicts($incoming, []));
+    }
+
+    public function testSameClubTwiceInOneFileWithANumericClubCodeIsNotAConflict()
+    {
+        // Same array-key int-cast pitfall as above, in pl_cup_mixed_club_conflicts():
+        // a numeric club code ("501") used twice in one file must not self-conflict.
+        $incoming = [
+            ['classification' => 'mix', 'category' => 'CX', 'identity' => '501',
+             'name' => '', 'club_name' => 'Klub', 'place' => 1, 'points' => 25, 'qual' => 1300],
+            ['classification' => 'mix', 'category' => 'BX', 'identity' => '501',
+             'name' => '', 'club_name' => 'Klub', 'place' => 1, 'points' => 25, 'qual' => 1200],
+        ];
+
+        $this->assertSame([], pl_cup_identity_conflicts($incoming, []));
+    }
+
     public function testClubNamesAreComparedIgnoringCaseDiacriticsAndSpacing()
     {
         $this->assertSame('mkl strzala warszawa', pl_cup_normalize_club_name('  MKŁ   Strzała Warszawa '));
