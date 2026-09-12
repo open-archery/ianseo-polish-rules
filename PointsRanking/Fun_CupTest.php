@@ -942,6 +942,20 @@ Oddział Zielona Góra";
         $this->assertSame([], pl_cup_identity_conflicts($incoming, []));
     }
 
+    public function testSameClubTwiceInOneFileWithANumericClubCodeIsNotAConflict()
+    {
+        // Same array-key int-cast pitfall as above, in pl_cup_mixed_club_conflicts():
+        // a numeric club code ("501") used twice in one file must not self-conflict.
+        $incoming = [
+            ['classification' => 'mix', 'category' => 'CX', 'identity' => '501',
+             'name' => '', 'club_name' => 'Klub', 'place' => 1, 'points' => 25, 'qual' => 1300],
+            ['classification' => 'mix', 'category' => 'BX', 'identity' => '501',
+             'name' => '', 'club_name' => 'Klub', 'place' => 1, 'points' => 25, 'qual' => 1200],
+        ];
+
+        $this->assertSame([], pl_cup_identity_conflicts($incoming, []));
+    }
+
     public function testClubNamesAreComparedIgnoringCaseDiacriticsAndSpacing()
     {
         $this->assertSame('mkl strzala warszawa', pl_cup_normalize_club_name('  MKŁ   Strzała Warszawa '));
