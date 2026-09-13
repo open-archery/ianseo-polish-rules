@@ -12,6 +12,7 @@ function LiveQual_Refresh()
 	var session = document.getElementById('x_Session').value;
 	var distance = document.getElementById('x_Distance').value;
 	var tbody = document.getElementById('tbodyLiveQual');
+	var summary = document.getElementById('idLiveQualSummary');
 
 	if (LiveQual_Timer) {
 		clearTimeout(LiveQual_Timer);
@@ -20,6 +21,7 @@ function LiveQual_Refresh()
 
 	if (session == -1 || distance == -1) {
 		tbody.innerHTML = '';
+		summary.textContent = '';
 		return;
 	}
 
@@ -28,8 +30,10 @@ function LiveQual_Refresh()
 		.then(function (data) {
 			if (data.error) {
 				tbody.innerHTML = '';
+				summary.textContent = '';
 				return;
 			}
+			summary.textContent = 'Tarcze z zaległościami: ' + data.flaggedTargets + ' / ' + data.totalTargets;
 			LiveQual_Render(data.targets);
 		})
 		.catch(function () {})
@@ -52,7 +56,7 @@ function LiveQual_Render(targets)
 		var header = document.createElement('tr');
 		var headerCell = document.createElement('th');
 		headerCell.className = 'SubTitle';
-		headerCell.colSpan = 4;
+		headerCell.colSpan = 5;
 		headerCell.textContent = 'Tarcza ' + no;
 		header.appendChild(headerCell);
 		tbody.appendChild(header);
@@ -60,12 +64,25 @@ function LiveQual_Render(targets)
 		for (var i = 0; i < rows.length; ++i) {
 			var row = rows[i];
 			var tr = document.createElement('tr');
-			var cellClass = row.isBehind ? 'Center TargetKo' : 'Center TargetOk';
+			// A DNS/DNF/DSQ/DQB row (non-empty status) is never highlighted as
+			// behind — its Status column already explains the missing progress.
+			// A dataGap row (scored, but no arrow-by-arrow detail available) gets
+			// its own amber marker — neither "behind" nor "on pace" applies.
+			var cellClass;
+			if (row.status) {
+				cellClass = 'Center';
+			} else if (row.dataGap) {
+				cellClass = 'Center TargetNoComplete';
+			} else {
+				cellClass = row.isBehind ? 'Center TargetKo' : 'Center TargetOk';
+			}
+			var statusText = row.status || (row.dataGap ? 'Brak danych o strzałach' : '—');
 
 			tr.appendChild(LiveQual_Cell(row.letter, cellClass));
 			tr.appendChild(LiveQual_Cell(row.name, cellClass));
 			tr.appendChild(LiveQual_Cell(String(row.score), cellClass));
 			tr.appendChild(LiveQual_Cell(String(row.arrowsShot), cellClass));
+			tr.appendChild(LiveQual_Cell(statusText, cellClass));
 
 			tbody.appendChild(tr);
 		}

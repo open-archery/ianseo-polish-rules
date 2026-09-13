@@ -53,35 +53,74 @@ $scoreCol = 'QuD' . $distance . 'Score';
 $arrowCol = 'QuD' . $distance . 'ArrowString';
 
 $rsQual = safe_r_sql(
-    "SELECT En.EnName, En.EnFirstName, Qu.QuTarget, Qu.QuLetter, "
+    "SELECT En.EnName, En.EnFirstName, Qu.QuTarget, Qu.QuLetter, Qu.QuIrmType, Irm.IrmType, "
     . "Qu.{$scoreCol} AS DistScore, Qu.{$arrowCol} AS DistArrowString "
     . "FROM Qualifications Qu "
     . "INNER JOIN Entries En ON En.EnId = Qu.QuId "
+    . "LEFT JOIN IrmTypes Irm ON Irm.IrmId = Qu.QuIrmType "
     . "WHERE En.EnTournament = " . StrSafe_DB($tourId, true)
     . " AND Qu.QuSession = " . StrSafe_DB($session, true)
     . " AND En.EnStatus <= 1 "
     . "ORDER BY Qu.QuTarget ASC, Qu.QuLetter ASC"
 );
 
+// QuIrmType != 0 means the entry is DNS/DNF/DSQ/DQB for this round (IrmTypes
+// lookup) — not merely behind on pace. Such rows are excluded from the
+// peer-lag pool entirely: their (usually zero) arrow count must not count
+// toward "current max", and they are never flagged as lacking results —
+// their status column already explains why they have no progress.
+//
+// A nonzero score with zero arrows shot (no IRM status) is a different case:
+// it can only happen when the distance was scored through a non-arrow-by-arrow
+// path (bulk/manual entry) instead of a live phone sync — a phone sync always
+// writes the arrow string alongside the score. Flag it as a data gap rather
+// than "behind": it isn't a target falling behind live scoring, it's a target
+// this view has no arrow-level visibility into.
 $rows = [];
 $maxArrows = 0;
 while ($r = safe_fetch($rsQual)) {
     $arrowsShot = pl_live_qual_arrows_shot((string) $r->DistArrowString);
-    $maxArrows = max($maxArrows, $arrowsShot);
+    $score = (int) $r->DistScore;
+    $status = (int) $r->QuIrmType === 0 ? '' : (string) $r->IrmType;
+    $dataGap = ($status === '' && $arrowsShot === 0 && $score > 0);
+    if ($status === '' && !$dataGap) {
+        $maxArrows = max($maxArrows, $arrowsShot);
+    }
     $rows[] = [
         'target' => (string) $r->QuTarget,
         'letter' => (string) $r->QuLetter,
         'name' => trim($r->EnFirstName . ' ' . $r->EnName),
-        'score' => (int) $r->DistScore,
+        'score' => $score,
         'arrowsShot' => $arrowsShot,
+        'status' => $status,
+        'dataGap' => $dataGap,
     ];
 }
 safe_free_result($rsQual);
 
 $targets = [];
 foreach ($rows as $row) {
-    $row['isBehind'] = pl_live_qual_is_behind($row['arrowsShot'], $maxArrows, $arrowsPerEnd);
+    $row['isBehind'] = ($row['status'] === '' && !$row['dataGap'])
+        ? pl_live_qual_is_behind($row['arrowsShot'], $maxArrows, $arrowsPerEnd)
+        : false;
     $targets[$row['target']][] = $row;
 }
 
-JsonOut(['error' => 0, 'maxArrows' => $maxArrows, 'targets' => $targets]);
+// A target is "flagged" if any of its rows is behind.
+$flaggedTargets = 0;
+foreach ($targets as $targetRows) {
+    foreach ($targetRows as $row) {
+        if ($row['isBehind']) {
+            ++$flaggedTargets;
+            break;
+        }
+    }
+}
+
+JsonOut([
+    'error' => 0,
+    'maxArrows' => $maxArrows,
+    'totalTargets' => count($targets),
+    'flaggedTargets' => $flaggedTargets,
+    'targets' => $targets,
+]);

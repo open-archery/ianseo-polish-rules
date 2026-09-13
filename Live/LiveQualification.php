@@ -55,7 +55,16 @@ include('Common/Templates/head.php');
 </tr>
 </table>
 <br>
+<div id="idLiveQualSummary" class="Bold"></div>
+<br>
 <table class="Tabella" id="idLiveQualTable">
+<tr>
+<th width="10%">Litera</th>
+<th width="40%">Zawodnik</th>
+<th width="15%">Wynik</th>
+<th width="15%">Strzały</th>
+<th width="20%">Status</th>
+</tr>
 <tbody id="tbodyLiveQual">
 </tbody>
 </table>

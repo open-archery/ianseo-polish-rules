@@ -5,7 +5,7 @@ Give tournament staff a read-only, auto-refreshing view of a qualification round
 ## ADDED Requirements
 
 ### Requirement: Session and distance selection
-The system SHALL let the user select one qualification session and one distance configured for that session (as defined in `DistanceInformation`), and SHALL display data scoped to exactly that session+distance pair.
+The system SHALL let the user select one qualification session and one distance of the tournament (`1..Tournament.ToNumDist`), and SHALL display data scoped to exactly that session+distance pair.
 
 #### Scenario: No selection made yet
 - **WHEN** the user opens the live view and has not yet chosen a session and distance
@@ -51,6 +51,31 @@ The system SHALL flag an entry as "lacking results" when its arrows-shot count f
 #### Scenario: Everyone at the same point
 - **WHEN** every active entry in the selected session+distance has the same arrows-shot count
 - **THEN** no entry or target is flagged
+
+### Requirement: Round-status entries are never flagged as behind
+An entry recorded as DNS, DNF, DSQ, or DQB for the round (`Qualifications.QuIrmType != 0`) SHALL display its status instead of the lacking-results flag, and SHALL be excluded from the peer-lag comparison pool (it SHALL NOT be counted when determining the session+distance's current maximum arrows-shot).
+
+#### Scenario: DNS entry does not drag down or trigger a flag
+- **WHEN** an entry is marked DNS for the round and every other active entry on its target is progressing normally
+- **THEN** the DNS entry displays "DNS" in its status and is not highlighted as lacking results, and its target is not flagged solely because of it
+
+#### Scenario: DNS entry is not counted as a peer for others
+- **WHEN** a DNS entry has 0 arrows shot and every other active entry in the session+distance has shot at least one full end
+- **THEN** the DNS entry's 0 does not by itself change any other entry's lacking-results flag beyond what the other active entries' own progress already determines
+
+### Requirement: Score-without-arrows entries are marked as a data gap, not behind
+An active entry with a nonzero score for the selected distance but zero arrows shot and no round status (`QuIrmType = 0`) SHALL be marked as a data gap rather than flagged as lacking results, since this combination only arises when the distance was scored through a path other than arrow-by-arrow entry (e.g. bulk/manual entry) — never from a live phone sync, which always writes the arrow string alongside the score.
+
+#### Scenario: Bulk-scored distance is not mistaken for a stalled target
+- **WHEN** an active entry has a nonzero score for the selected distance, zero arrows shot, and no DNS/DNF/DSQ/DQB status
+- **THEN** the entry is marked as a data gap, distinct from both "on pace" and "lacking results", and is excluded from the peer-lag comparison pool
+
+### Requirement: Flagged-target summary count
+The system SHALL display, alongside the per-target display, a count of how many targets in the selected session+distance are currently flagged as lacking results, out of the total number of targets shown, updated on every refresh.
+
+#### Scenario: Summary reflects current flags
+- **WHEN** 2 of the 30 targets in the selected session+distance have at least one entry flagged as lacking results
+- **THEN** the summary shows 2 out of 30 targets flagged
 
 ### Requirement: Auto-refresh without page reload
 The system SHALL periodically re-fetch the current session+distance's data in the background and update the displayed rows and flags without a full page navigation, so newly arrived phone results appear without user action.
