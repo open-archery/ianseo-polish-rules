@@ -38,15 +38,19 @@ The system SHALL derive "arrows shot so far" for an entry's distance from the st
 - **THEN** the displayed arrows-shot count for that entry is 0 and its score is 0
 
 ### Requirement: Peer-lag lacking-results flag
-The system SHALL flag an entry as "lacking results" when its arrows-shot count for the selected session+distance is more than one end's worth of arrows (`DistanceInformation.DiArrows` for that session+distance) behind the highest arrows-shot count among active entries in that same session+distance. A target SHALL be visually flagged if any entry assigned to it is flagged.
+The system SHALL flag an entry as "lacking results" when its arrows-shot count for the selected session+distance trails the highest arrows-shot count among active entries in that same session+distance by a full end's worth of arrows or more (`DistanceInformation.DiArrows` for that session+distance). A target SHALL be visually flagged (counted as a "tarcza z zaległościami" in the summary) if any entry assigned to it is flagged.
 
 #### Scenario: One target stalled while others progress
 - **WHEN** the highest arrows-shot count across the selected session+distance is 30, the round shoots 6 arrows per end, and an entry on target 7 has 18 arrows shot
-- **THEN** that entry (and target 7) is flagged as lacking results, since the 12-arrow gap exceeds one end (6 arrows)
+- **THEN** that entry (and target 7) is flagged as lacking results, since the 12-arrow gap is at least one end (6 arrows)
+
+#### Scenario: A full end behind is already flagged
+- **WHEN** the highest arrows-shot count is 30, the round shoots 6 arrows per end, and an entry has 24 arrows shot
+- **THEN** that entry (and its target) is flagged as lacking results, since the 6-arrow gap equals a full end
 
 #### Scenario: Normal within-target stagger is not flagged
 - **WHEN** the highest arrows-shot count is 30, the round shoots 6 arrows per end, and an entry has 25 arrows shot
-- **THEN** that entry is not flagged, since the 5-arrow gap does not exceed one end
+- **THEN** that entry is not flagged, since the 5-arrow gap is less than one end
 
 #### Scenario: Everyone at the same point
 - **WHEN** every active entry in the selected session+distance has the same arrows-shot count

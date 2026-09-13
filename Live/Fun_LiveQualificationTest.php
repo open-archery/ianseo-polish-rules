@@ -37,7 +37,8 @@ final class Fun_LiveQualificationTest extends \PlTestCase
     public static function behindCases(): array
     {
         return [
-            'gap exactly one end is not behind' => [24, 30, 6, false],
+            'gap one arrow under one end is not behind' => [25, 30, 6, false],
+            'gap exactly one end is behind' => [24, 30, 6, true],
             'gap one arrow over one end is behind' => [23, 30, 6, true],
             'zero gap is not behind' => [30, 30, 6, false],
             'zero arrowsPerEnd is guarded' => [0, 30, 0, false],

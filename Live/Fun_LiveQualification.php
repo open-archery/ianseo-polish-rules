@@ -17,8 +17,8 @@ function pl_live_qual_arrows_shot(string $arrowString): int
 
 /**
  * An entry is "lacking results" when it trails the session+distance's current
- * max arrows-shot by more than one full end — enough to rule out ordinary
- * shoot-order stagger within a target.
+ * max arrows-shot by a full end or more (e.g. 30 vs 24 with 6 arrows/end).
+ * A smaller gap is ordinary shoot-order stagger within a target, not a stall.
  */
 function pl_live_qual_is_behind(int $arrowsShot, int $maxArrows, int $arrowsPerEnd): bool
 {
@@ -26,5 +26,5 @@ function pl_live_qual_is_behind(int $arrowsShot, int $maxArrows, int $arrowsPerE
         return false;
     }
 
-    return ($maxArrows - $arrowsShot) > $arrowsPerEnd;
+    return ($maxArrows - $arrowsShot) >= $arrowsPerEnd;
 }
