@@ -2,7 +2,7 @@
 require_once('Common/Fun_Modules.php');
 $version = date('Y-m-d H:i:s');
 
-$AllowedTypes = array(1, 3, 6);
+$AllowedTypes = array(1, 3, 6, 16, 37);
 
 $SetType['PL']['descr'] = 'Polski Związek Łuczniczy';
 $SetType['PL']['noc'] = 'POL';
@@ -13,13 +13,15 @@ foreach ($AllowedTypes as $val) {
     $SetType['PL']['types']["$val"] = $TourTypes[$val];
 }
 
+// TourTypes 16 and 37 have no Polish translation in ianseo core
+// (Common/Languages/pl/Tournament.php) — get_text() would otherwise render a
+// raw "<b>[[Type_...]@[pl]@[Tournament]]</b>" placeholder here.
+$SetType['PL']['types']['16'] = 'Runda dziecięca';
+$SetType['PL']['types']['37'] = 'Podwójna runda 70m/50m';
+
 // One sub-rule per type: full PZŁucz configuration
 foreach ($AllowedTypes as $val) {
     $SetType['PL']['rules']["$val"] = array(
         'Poland-Full',
     );
 }
-
-// Type 3 (70m Round) only: Podwójna runda — every class shoots double the
-// qualification sessions (§2.11.1.1 / §2.11.1.2).
-$SetType['PL']['rules']['3'][] = 'Poland-4x70m';

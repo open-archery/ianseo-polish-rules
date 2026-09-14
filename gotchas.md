@@ -94,6 +94,51 @@ commit as the fix. Terse is fine; the goal is "don't step on this rake again," n
   scope, so the required setup script can read `$subRuleName` directly — compare against
   that (with an `isset()` guard, since non-UI callers may not set it), not `$SubRule`.
 
+- **Only four `$tourDet*` variables are true PHP globals inside a `Setup_{Type}_{Lang}.php`
+  script — everything else that "just works" there is scope-sharing, not a real global.**
+  `GetSetupFile()` (`Common/Fun_ScriptsOnNewTour.inc.php`) does
+  `global $tourDetGolds, $tourDetXNine, $tourDetGoldsChars, $tourDetXNineChars;` at its own
+  top, before `require_once($file)` — so when the setup script assigns those four, it writes
+  through to `$GLOBALS`, and a real function elsewhere can read them back with its own
+  `global` statement. `$TourId` (a parameter of `GetSetupFile()`, never `global`-declared)
+  and anything a shared `lib.php` assigns at its own top level (e.g. this module's
+  `$PL_CLASS_NAMES`) are **not** promoted this way — they're local to `GetSetupFile()`'s
+  frame, visible to the setup script only because `require` shares the calling scope like a
+  literal `#include`. Pulling shared setup logic out into an actual function (rather than
+  another `require`d script) must pass those as explicit parameters; a `global` for them
+  inside the new function silently sees an undefined variable instead of failing loudly.
+
+- **A `Setup_{Type}_{Lang}.php` script can't be `require`d directly from a PHPUnit test.**
+  Its second `require_once(dirname(dirname(__FILE__)) . '/lib.php')` resolves via `__FILE__`
+  to the *real* `Modules/Sets/lib.php` on disk (this is a full ianseo checkout, not an
+  isolated module), which unconditionally (re)declares `CreateDivision()`/`CreateClass()`/etc.
+  — a fatal "cannot redeclare" the moment it collides with `tests/bootstrap.php`'s shimmed
+  versions of the same names. If a setup script's logic needs a unit test, extract it into a
+  real function in this module's own `lib.php` (as this module already does for
+  `CreateStandardClasses()`/`InsertStandardEvents()`) and make the `Setup_*_PL.php` file a
+  thin wrapper that calls it — never try to test the wrapper file itself.
+
+- **`CreateDistanceInformation()`'s `$Distances` array entries are distance-*legs*, not
+  calendar sessions.** A tournament can have exactly one row in the `Session` table (one
+  target draw/rotation) while archers shoot through several distances within it — e.g. a
+  70m-round PL tournament has `ToNumSession=1` but two `DistanceInformation` rows
+  (`DiDistance=1,2`), both under that one `DiSession`. Don't conflate "how many sessions" with
+  "how many distances/legs" — `$tourDetNumDist` and the `$DistanceInfoArray` you pass in are
+  about the latter, and adding a distance doesn't imply adding a `Session` row.
+
+- **`ClValidClass` (the comma-separated upward-eligibility chain on a `Classes` row) must
+  only name classes that actually exist in *that tournament*, not classes that exist in
+  other tournament types built from the same helper.** `Participants/getCombo.php`'s "class"
+  dropdown (`case 'class':`) joins `Classes c1 on find_in_set(c1.ClId, c2.ClValidClass) and
+  c1.ClTournament = c2.ClTournament` — so it will offer any code listed in the chain as an
+  assignable class for that archer, with no check that a `Classes` row for it exists in *this*
+  tournament first if the join elsewhere doesn't scope it the same way. Copying a chain like
+  `'U12M,U15M,U18M,U21M,M'` from a context where all of those really are created (e.g.
+  TourType 6) into a context that only creates U12 (TourType 16) offers U15/U18/U21/M as
+  assignable classes in a tournament that has no such classes at all. A class with no older
+  bracket to play up into should chain to itself only (`'U12M'`, matching how base classes
+  like plain `'M'` already do).
+
 - **Our module can hardcode the rule-set name, but not the lookup's name.** The two look
   alike and are not: core *reads* the rule-set label from us (`GetExistingTournamentTypes()`
   in `Tournament/index.php` includes every `Modules/Sets/*/sets.php`), so

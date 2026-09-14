@@ -1,31 +1,26 @@
 <?php
 /*
- * PZŁucz — Setup: Runda 70m / Single-Distance Round (Type 3)
+ * PZŁucz — Setup: Runda dziecięca / Children's Round (Type 16)
  *
- * 2 sesje strzeleckie, faza eliminacyjna dla Senior/U24/U21/U18/Master.
- * U15 bez eliminacji (za młodzi zgodnie z przepisami PZŁucz).
+ * Konkurencja wyłącznie dla kategorii Dzieci (U12), łuk klasyczny — żadna inna
+ * klasa ani konkurencja nie jest tworzona (§2.3.1.10.11).
  *
- * Odległości (dystanse): indywidualnie na kategorię
- *   R Senior / U24 / U21:  2 × 70 m
- *   R U18 / 50+:           2 × 60 m
- *   R U15:                 40 m + 20 m
- *   C wszystkie:           2 × 50 m
- *   B wszystkie:           2 × 50 m
+ * 4 dystanse po 18 strzał (72 strzały łącznie), serie 3-strzałowe (§2.4.1.1).
+ * Bez fazy eliminacyjnej — regulamin nie definiuje eliminacji dla U12.
  *
- * Faza eliminacji (outdoor):
- *   Ind:  EvFinalFirstPhase=48 → top 104 kwalifikowanych
- *   Team: EvFinalFirstPhase=12 → top 24 kwalifikowanych
- *   U15:  EvFinalFirstPhase=0  → brak eliminacji
+ * Odległości (§2.1.2.3.1-2): 25 m, 20 m, 15 m, 10 m
+ *   25 m, 20 m → tarcza 122 cm
+ *   15 m, 10 m → tarcza 80 cm
  */
 
-$TourType  = 3;
+$TourType = 16;
 
-$tourDetTypeName        = 'Type_70m Round';
-$tourDetNumDist         = '2';
-$tourDetNumEnds         = '12';
-$tourDetMaxDistScore    = '360';
-$tourDetMaxFinIndScore  = '150';
-$tourDetMaxFinTeamScore = '240';
+$tourDetTypeName        = 'Type_GiochiGioventuW';
+$tourDetNumDist         = '4';
+$tourDetNumEnds         = '24';
+$tourDetMaxDistScore    = '180';
+$tourDetMaxFinIndScore  = '0';
+$tourDetMaxFinTeamScore = '0';
 $tourDetCategory        = '1';   // 1 = Outdoor
 $tourDetElabTeam        = '0';
 $tourDetElimination     = '0';
@@ -38,7 +33,7 @@ $tourDetDouble          = '0';
 require_once(dirname(__FILE__) . '/lib.php');
 require_once(dirname(dirname(__FILE__)) . '/lib.php');
 
-pl_setup_70m_family($TourId, $TourType, 1, $PL_CLASS_NAMES, $PL_MIXED_CLASS_NAMES);
+pl_setup_kids_round($TourId, $TourType, $PL_CLASS_NAMES);
 
 $tourDetails = array(
     'ToCollation'        => $tourCollation,

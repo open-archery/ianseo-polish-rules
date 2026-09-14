@@ -12,6 +12,13 @@ Three competition formats are required as the first priority:
 | `Setup_3_PL.php` | Single-distance Round   | Outdoor, 1–2 distances |
 | `Setup_6_PL.php` | Indoor 18m / Indoor 15m | Indoor                 |
 
+Two further formats round out the outdoor offering:
+
+| Script            | Competition format | Type                            |
+| ----------------- | ------------------- | ------------------------------- |
+| `Setup_37_PL.php` | Double Round        | Outdoor, 4 distances            |
+| `Setup_16_PL.php` | Children's Round    | Outdoor, 4 distances, U12-only  |
+
 ---
 
 ## 1. 1440 Round (`Setup_1_PL.php`)
@@ -89,7 +96,7 @@ Used at the Polish Championships and regional competitions.
 
 The 1440 Round is **a qualification round only** — no elimination matches are configured within this script.
 
-> If a tournament adds elimination matches separately, the post-elimination placement rules from §4 (Shared Rules → Post-Elimination Placement) apply.
+> If a tournament adds elimination matches separately, the post-elimination placement rules from §6 (Shared Rules → Post-Elimination Placement) apply.
 
 ---
 
@@ -97,31 +104,14 @@ The 1440 Round is **a qualification round only** — no elimination matches are 
 
 ### Format Description
 
-The Single-Distance Round is an outdoor competition where each archer shoots **72 arrows at one distance** (or two distances in the variant for Młodzicy) — or double that under the `Poland-4x70m` sub-rule (see Sub-Rules below). Used at the Polish Championships and the most common format for everyday competitions.
+The Single-Distance Round is an outdoor competition where each archer shoots **72 arrows at one distance** (or two distances in the variant for Młodzicy). Used at the Polish Championships and the most common format for everyday competitions.
 
-The script handles **two category variants** (available under either sub-rule):
+The script handles **two category variants**:
 
 - **Variant A — 70m / 60m Round (Recurve, Compound, Barebow):** one distance per session, appropriate for the category
 - **Variant B — 40m+20m Round (Młodzicy U15):** alternating 40 m and 20 m sessions
 
-### Sub-Rules
-
-`Setup_3_PL.php` supports two sub-rules, selected via `$SubRule`:
-
-- **`Poland-Full`** (existing, default): the standard round documented in this section — 72 arrows in 2 sessions (or 40m+20m for Młodzicy U15).
-- **`Poland-4x70m`** (Podwójna runda / Double Round, §2.11.1.1 Recurve/Barebow, §2.11.1.2 Compound): every class shoots its `Poland-Full` session structure **twice** — 144 arrows in 4 sessions — at the same distances, with no other change.
-
-| Class group | `Poland-Full` (2 sessions) | `Poland-4x70m` (4 sessions) |
-| --- | --- | --- |
-| R Senior/U24/U21 (M, W) | 70m, 70m | 70m, 70m, 70m, 70m |
-| R U18 / Master (50+) | 60m, 60m | 60m, 60m, 60m, 60m |
-| R Młodzik (U15) | 40m, 20m | 40m, 40m, 20m, 20m |
-| C (all categories) | 50m, 50m | 50m, 50m, 50m, 50m |
-| B (all categories) | 50m, 50m | 50m, 50m, 50m, 50m |
-
-Under `Poland-4x70m`, `tourDetNumDist` is `4` (instead of `2`); `tourDetMaxDistScore` stays `360` — a per-session cap, unaffected by session count. **Target faces, elimination/finals configuration, event codes, and team scoring are shared and unchanged between both sub-rules** — doubling only affects the qualification round's session count.
-
-`Poland-4x70m` is registered only under TourType 3 in `sets.php` — it is not available for `Setup_1_PL.php` (TourType 1) or `Setup_6_PL.php` (TourType 6).
+`Setup_3_PL.php` supports exactly one sub-rule, `Poland-Full`. The Double Round variant of this format — every class shooting the same session structure twice, 144 arrows in 4 sessions — used to be offered here as a `Poland-4x70m` sub-rule; it is now its own script and TourType, `Setup_37_PL.php` (§4 Double Round), since a `Poland-4x70m` tournament was reporting four qualification sessions on a tournament type ianseo itself believes has two. A tournament created earlier under `Poland-4x70m` keeps that value on its `ToTypeSubRule` column, but the module no longer registers or supports it — re-running setup on such a tournament is unsupported; recreate it as `Setup_37_PL.php` if its setup needs rebuilding.
 
 ### Bow Types
 
@@ -175,7 +165,7 @@ Additionally: **Młodzicy (U15M/U15W)** are active in this format.
 - 40 m session: 12 ends × 3 arrows = 36 arrows
 - 20 m session: 12 ends × 3 arrows = 36 arrows
 
-> Figures above are for `Poland-Full`. Under `Poland-4x70m`, each session is shot twice (see Sub-Rules) — 144 arrows total for every class, including U15 (40m, 40m, 20m, 20m).
+> The Double Round (§4, `Setup_37_PL.php`) shoots every session above twice — 144 arrows total for every class, including U15 (40m, 40m, 20m, 20m).
 
 ### Tiebreaking
 
@@ -200,15 +190,15 @@ After qualification, **the top 104 archers** in each category advance to matches
 
 **Elimination distances = same as qualification distances.**
 
-> Elimination structure (cut counts, set/cumulative match format) is identical between `Poland-Full` and `Poland-4x70m` — doubling only affects the qualification round.
+> Elimination structure (cut counts, set/cumulative match format) is identical on the Double Round (§4) — doubling only affects the qualification round.
 
 > **Important — U15 at the Polish Championships:** Młodzicy (U15) have **no elimination phase** — the qualification score is the final result.
 
-> For all categories that do have elimination, the post-elimination placement rules from §4 (Shared Rules → Post-Elimination Placement) apply — each loser receives a unique place, not a shared round-based rank.
+> For all categories that do have elimination, the post-elimination placement rules from §6 (Shared Rules → Post-Elimination Placement) apply — each loser receives a unique place, not a shared round-based rank.
 
 ### Mixed Team Events (Outdoor)
 
-Mixed teams are formed from qualification results (1 man + 1 woman from the same club, same division, same age category). See §4 Shared Rules → Mixed Team Composition for formation rules.
+Mixed teams are formed from qualification results (1 man + 1 woman from the same club, same division, same age category). See §6 Shared Rules → Mixed Team Composition for formation rules.
 
 **Bracket:** Top **16 mixed teams** advance to elimination.
 
@@ -305,11 +295,11 @@ Set system and cumulative rules: **same as the outdoor round** (see Section 2).
 | All                       | Łuk barebow                  | Single 40 cm                 |
 | Młodzicy (U15)            | All                          | 60 cm                        |
 
-> For all categories with elimination, the post-elimination placement rules from §4 (Shared Rules → Post-Elimination Placement) apply — each loser receives a unique place, not a shared round-based rank.
+> For all categories with elimination, the post-elimination placement rules from §6 (Shared Rules → Post-Elimination Placement) apply — each loser receives a unique place, not a shared round-based rank.
 
 ### Mixed Team Events (Indoor)
 
-Same mixed team formation rules as outdoor (see §4 Shared Rules → Mixed Team Composition).
+Same mixed team formation rules as outdoor (see §6 Shared Rules → Mixed Team Composition).
 
 **Bracket:** Top **16 mixed teams** advance to elimination.
 
@@ -329,7 +319,84 @@ Same mixed team formation rules as outdoor (see §4 Shared Rules → Mixed Team 
 
 ---
 
-## 4. Shared Rules
+## 4. Double Round (`Setup_37_PL.php`)
+
+### Format Description
+
+The Double Round (Podwójna runda, §2.3.1.10.7) is the Single-Distance Round (§2) shot twice: every class shoots its §2 session structure **twice**, at the same distances, with no other change — **144 arrows in 4 sessions**. Runs on ianseo TourType 37 (`Type_2x70mRound`), registered with the single sub-rule `Poland-Full`.
+
+### Bow Types
+
+Same as the Single-Distance Round (§2), with the same age restrictions.
+
+### Shooting Distances by Category
+
+| Class group | Single-Distance Round (§2, 2 sessions) | Double Round (4 sessions) |
+| --- | --- | --- |
+| R Senior/U24/U21 (M, W) | 70m, 70m | 70m, 70m, 70m, 70m |
+| R U18 / Master (50+) | 60m, 60m | 60m, 60m, 60m, 60m |
+| R Młodzik (U15) | 40m, 20m | 40m, 40m, 20m, 20m |
+| C (all categories) | 50m, 50m | 50m, 50m, 50m, 50m |
+| B (all categories) | 50m, 50m | 50m, 50m, 50m, 50m |
+
+`tourDetNumDist` is `4`; `tourDetMaxDistScore` stays `360` — a per-session cap, unaffected by session count. Target faces, event codes, and team scoring are identical to the Single-Distance Round (§2).
+
+### Ends and Arrows
+
+4 sessions, each per the Single-Distance Round's own end/arrow structure (§2) — 144 arrows total.
+
+### Elimination Phase
+
+Identical to the Single-Distance Round (§2): top 104 individual / top 24 team qualify, same set/cumulative match formats, same finals structure. Młodzik (U15) has no elimination phase, same as §2.
+
+### Mixed Team Events
+
+Identical to the Single-Distance Round (§2) — same event codes, bracket size, and match format.
+
+---
+
+## 5. Children's Round (`Setup_16_PL.php`)
+
+### Format Description
+
+The Children's Round (Runda dziecięca, §2.3.1.10.11) is a competition exclusively for Dzieci (U12), Łuk klasyczny only — no other age category or bow type is created. Runs on ianseo TourType 16 (`Type_GiochiGioventuW`), registered with the single sub-rule `Poland-Full`.
+
+Each archer shoots **18 arrows at each of four distances**, longest to shortest — **72 arrows total**, matching every other format's arrow count, just split across four shorter legs instead of two longer ones.
+
+> **U15 is not part of this format.** Młodzicy (U15) keep shooting the 40m/20m Round via `Setup_3_PL.php`/`Setup_37_PL.php` (§2, §4) exactly as before. A single ianseo tournament cannot host both U12 and U15 together: U15's round is 2 distance legs and U12's is 4, and ianseo's qualification score-entry screen has no per-class awareness of how many legs a class actually uses — confirmed by direct testing. A combined U12+U15 event needs two separate ianseo tournaments; nothing in the PZŁucz regulations requires one tournament per event.
+
+### Bow Types
+
+Łuk klasyczny (R) only — Dzieci do not compete in Łuk bloczkowy or Łuk barebow.
+
+### Age Categories
+
+| Polish class name    | Code        |
+| --------------------- | ----------- |
+| Dziecko (chłopcy/dziewczęta) | U12M / U12W |
+
+### Shooting Distances and Target Faces
+
+| Distance | Arrows | Target |
+| -------- | ------ | ------ |
+| 25 m     | 18     | 122 cm full face |
+| 20 m     | 18     | 122 cm full face |
+| 15 m     | 18     | 80 cm full face  |
+| 10 m     | 18     | 80 cm full face  |
+
+Shot longest to shortest. The exact distance values (25/20/15/10 m) are per the Polish federation's own target-face-by-distance table (§2.1.2.3.1-2) — the round-definition section (§2.3.1.10.11) itself only fixes the arrow count, ordering, and face split, leaving distance values to the organiser.
+
+### Ends and Arrows
+
+**3-arrow ends** (§2.4.1.1): 6 ends × 3 arrows = 18 arrows per distance, × 4 distances = 72 arrows total.
+
+### Elimination Phase
+
+**None.** The PZŁucz regulations define no elimination format for U12 anywhere, outdoor or indoor — qualification score is the final result.
+
+---
+
+## 6. Shared Rules
 
 ### Age Calculation
 
@@ -414,7 +481,7 @@ The following are explicitly **not** covered by these three scripts:
 2. Create `Setup_3_PL.php` — verify 70 m/60 m for R; 50 m for C and B; 40 m+20 m for U15 with 3-arrow ends
 3. Create `Setup_6_PL.php` — verify triple 40 cm for Senior/U24/U21 R and C; single 40 cm for U18/B; 60 cm for U15; 80 cm for U12 at 15 m
 4. Confirm U24 only appears under Łuk klasyczny (R), not C or B
-5. Confirm U12 only appears in indoor (type 6), Łuk klasyczny only
+5. Confirm U12 appears only in indoor (type 6, alongside other categories) and in the Children's Round (type 16, U12-only), Łuk klasyczny only in both — never in type 1, 3, or 37
 6. Confirm U15 has no elimination configuration in type 3
 7. Verify post-elimination placement: losers of the same round receive unique places (sub-ranked by match score, then qualification rank) — not shared ranks
 8. Confirm sub-ranking applies to both individual and team brackets
@@ -422,6 +489,8 @@ The following are explicitly **not** covered by these three scripts:
 10. Confirm mixed team events use 2-person teams (`EvMaxTeamPerson = 2`), 4 arrows per end, 2-arrow shoot-off
 11. Confirm `EvMixedTeam = 1` is set on all mixed team events
 12. Confirm U15 mixed teams have no elimination (`EvFinalFirstPhase = 0`)
+13. Create `Setup_37_PL.php` — verify every class's §2 session structure is doubled exactly (e.g. U15 = 40m, 40m, 20m, 20m), `tourDetNumDist = 4`, elimination/finals/mixed-team configuration identical to type 3
+14. Create `Setup_16_PL.php` — verify only U12M/U12W classes exist (no senior/U24/U21/U18/Master, no C or B division), distances are 25m/20m/15m/10m with 122/122/80/80cm faces, 3-arrow ends, and no elimination configuration
 
 ## Decisions
 
