@@ -14,6 +14,9 @@
 require_once dirname(dirname(dirname(dirname(__FILE__)))) . '/config.php';
 CheckTourSession(true);
 require_once dirname(__FILE__) . '/Fun_BibImport.php';
+// Provides MakeIndividuals(), called by pl_bibimport_run() after a successful
+// import (same include ianseo core uses in Partecipants-exp/actions/xmlFindCode.php).
+require_once 'Qualification/Fun_Qualification.local.inc.php';
 
 $tourId = (int) $_SESSION['TourId'];
 

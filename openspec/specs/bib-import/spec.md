@@ -122,6 +122,19 @@ form. This insert must occur inside the same transaction as the `Entries` insert
 so that a DB error in either write rolls back the entire batch with no partial
 data left.
 
+### Step 7 — Seed the `Individuals` table (after commit)
+
+Once the batch has committed, call ianseo's `MakeIndividuals()`
+(`Qualification/Fun_Qualification.local.inc.php`) exactly once. It adds the
+placeholder `Individuals` rows that ianseo's elimination statistics
+(`PrnStatEvents`) and Field-of-Play bye detection read to size each event's
+bracket; without them a freshly populated division is absent from the stats and
+shows a full bracket until an operator runs a manual ranking recalculation. This
+mirrors what the core participant screens do on every add/edit. It runs outside
+the transaction, only when at least one athlete was imported, and is skipped
+entirely on rollback. Team events are not seeded here — that needs
+`MakeTeamsAbs()` and is a no-op before qualification scores exist.
+
 ---
 
 ## 4. Batch behaviour
@@ -230,3 +243,26 @@ fails (Step 3 returns no match), both columns SHALL be set to an empty string.
 - **WHEN** `pl_bibimport_resolve_class()` returns `null`
 - **THEN** the `Entries` INSERT sets `EnClass = ''` AND `EnAgeClass = ''`
 - **AND** the athlete appears in the class-unresolved report
+
+### Requirement: Imported athletes are seeded into `Individuals`
+
+After the import transaction commits, the system SHALL call ianseo's
+`MakeIndividuals()` once so the imported athletes appear in elimination
+statistics and Field-of-Play bracket sizing without a manual ranking
+recalculation. The call SHALL run after commit, only when at least one athlete
+was imported, and SHALL NOT run when the batch rolled back.
+
+#### Scenario: Successful import seeds Individuals
+
+- **WHEN** a batch import commits with one or more athletes imported
+- **THEN** `MakeIndividuals()` is called exactly once after the commit
+
+#### Scenario: Rolled-back import does not seed Individuals
+
+- **WHEN** the batch transaction fails and rolls back
+- **THEN** `MakeIndividuals()` is not called
+
+#### Scenario: Nothing to import
+
+- **WHEN** the input yields no importable athletes (all blank / unmatched / duplicates)
+- **THEN** no transaction is opened AND `MakeIndividuals()` is not called

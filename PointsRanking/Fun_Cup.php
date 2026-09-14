@@ -966,7 +966,10 @@ function pl_cup_identity_conflicts(array $rows, array $storedRows)
         }
 
         foreach ($byName[pl_cup_normalize_name($row['name'])] ?? [] as $identity => $where) {
-            if ($identity !== $row['identity']) {
+            // $identity comes back from an array key, and PHP silently casts a
+            // canonical numeric-string key (e.g. "5297") to int - compare as
+            // strings or the same licence number mismatches itself by type.
+            if ((string) $identity !== (string) $row['identity']) {
                 $conflicts[] = 'Zawodnik "' . $row['name'] . '" ma w pliku licencję ' . $row['identity']
                     . ', a w zapisanych danych ' . $identity . ' (' . $where . ').';
             }
@@ -1007,7 +1010,8 @@ function pl_cup_mixed_club_conflicts(array $rows, array $storedRows)
         $club = pl_cup_normalize_club_name($row['club_name']);
 
         foreach ($byClub[$club] ?? [] as $identity => $where) {
-            if ($identity !== $row['identity']) {
+            // Same array-key int-cast pitfall as pl_cup_identity_conflicts().
+            if ((string) $identity !== (string) $row['identity']) {
                 $conflicts[] = 'Mikst "' . trim((string) $row['club_name']) . '": w pliku kod klubu '
                     . $row['identity'] . ', a w zapisanych danych ' . $identity . ' (' . $where . ').';
             }

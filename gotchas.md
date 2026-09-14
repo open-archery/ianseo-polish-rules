@@ -44,6 +44,18 @@ commit as the fix. Terse is fine; the goal is "don't step on this rake again," n
   `9.0`) depending on which code path produced it. `9 !== 9.0` is `true` in PHP, so identity
   comparison silently breaks tie-detection between rows of different origin. This class of
   bug is invisible in a test suite that only ever constructs `int` fixtures.
+- **A numeric-string array key silently becomes `int`, breaking `!==` against the
+  original string.** `$arr["5297"] = ...; foreach ($arr as $k => $v)` yields `$k` as
+  `int(5297)`, not `"5297"` — PHP casts any canonical decimal-integer string key (no
+  leading zero, fits in int range) at assignment time. Comparing that key back against
+  a same-valued string elsewhere (`$k !== $row['identity']`) is `true` even though both
+  represent the same licence/code, producing a false "conflict" (`pl_cup_identity_conflicts`
+  / `pl_cup_mixed_club_conflicts` in `PointsRanking/Fun_Cup.php`, hit by a real CSV import
+  where an athlete's numeric licence repeated across categories in one file). Fix: cast
+  both sides to `(string)` before `!==`/`===` whenever one side may have passed through an
+  array key. Leading-zero identities ("05297") are unaffected — only "clean" numeric strings
+  get cast — which is why this doesn't show up with letter-prefixed licences (`PL0001`) in
+  existing tests.
 - **`max()` over "last place" can pick a DSQ/DNS/DNF sentinel instead of the real last
   place.** This module encodes "no valid result" as a place `>= 29999`. Any cutoff-style
   "zero the worst place" logic must filter those sentinels out *before* taking `max()`,
@@ -126,6 +138,21 @@ commit as the fix. Terse is fine; the goal is "don't step on this rake again," n
   assignable classes in a tournament that has no such classes at all. A class with no older
   bracket to play up into should chain to itself only (`'U12M'`, matching how base classes
   like plain `'M'` already do).
+
+- **Our module can hardcode the rule-set name, but not the lookup's name.** The two look
+  alike and are not: core *reads* the rule-set label from us (`GetExistingTournamentTypes()`
+  in `Tournament/index.php` includes every `Modules/Sets/*/sets.php`), so
+  `$SetType['PL']['descr'] = 'Polski Związek Łuczniczy'` is ours to set. The lookup combo
+  label is built entirely inside core as `get_text('LUE-'.$LupIocCode, 'Tournament')`
+  (`Tournament/index.php:493`, `Partecipants/PopEdit.php:753`), and `get_text()`
+  (`Common/Globals.inc.php:128`) resolves keys *only* from
+  `Common/Languages/<lang>/<module>.php` into a function-static cache — no DB table, no
+  `Modules/Sets/*` language glob, no setter, and no jack event on that render path. Upstream
+  ships `LUE-BALT … LUE-SWE` but no `LUE-POL`, so registering our Sportzona row with
+  `LupIocCode='POL'` makes the combo read `[[LUE-POL]@[en]@[Tournament]]`. Cosmetic only —
+  the lookup itself works. The only place that string can live is a core language file, which
+  the updater reverts (see "ianseo updates"), so the fix is upstream. Same trap for any other
+  core-rendered `get_text()` key our module causes to be looked up.
 
 ## Docker / this repo's dev environment
 
@@ -214,6 +241,21 @@ commit as the fix. Terse is fine; the goal is "don't step on this rake again," n
   `WHERE Col = ''` written as a defensive "empty or null" branch takes the whole page down
   instead of matching nothing. A nullable `DATETIME` added by `ALTER TABLE ... NULL DEFAULT
   NULL` is `NULL` in the pre-existing rows, never `''`; test for `IS NULL` alone.
+
+- **Creating `Entries` rows in SQL does not populate `Individuals` — call
+  `MakeIndividuals()` yourself.** ianseo derives an event's individual-final head count
+  from the `Individuals` table (one placeholder row per entered archer, `IndScore=-1`),
+  not from `Entries`: the `IF` branch of `getStatEntriesByEventQuery()` does
+  `INNER JOIN Individuals`, and the FoP bye test (`Fun_Scheduler.php` `FOP()`)
+  `coalesce(IndQty, TeQty, 999)`s a missing count to 999 so nothing shows as a bye. With
+  no `Individuals` rows the event vanishes from `PrnStatEvents` and shows a full bracket
+  on FoP. The GUI participant pages hide this by calling `MakeIndAbs()` on every
+  add/edit/list-load (`Partecipants/*.php`) and `xmlFindCode.php` calls
+  `MakeIndividuals($affected)` after an add — both in
+  `Qualification/Fun_Qualification.local.inc.php`, which you must `require_once`. The
+  team-event equivalent is `MakeTeamsAbs()` → `Teams` (`TeFinEvent=1`), but it only
+  builds teams from athletes with `QuScore>0 or QuHits>0`, so it is a no-op until
+  qualification scores exist.
 
 ## ianseo updates
 

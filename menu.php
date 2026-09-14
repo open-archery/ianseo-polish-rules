@@ -7,6 +7,8 @@ if($on and $_SESSION["TourLocRule"]=='PL'){
   $ret['PRNT'][] = 'Puchar Polski - klasyfikacja|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/PointsRanking/Cup.php';
   $ret['PRNT'][] = 'Mapa województw|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/PointsRanking/VoivodeshipMap.php';
 
+  $ret['QUAL'][] = 'Podgląd na żywo|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/Live/LiveQualification.php';
+
   $ret['PART']['SYNC'][] = 'Import by licence|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/Import/BibImport.php';
   $ret['PART']['TARG'][] = 'Rozstaw. tarcze ABC/ACD|' . $CFG->ROOT_DIR . 'Modules/Sets/PL/Targets/SetTargetABCACD.php';
   $ret['PART']['SYNC'][] = MENU_DIVIDER;

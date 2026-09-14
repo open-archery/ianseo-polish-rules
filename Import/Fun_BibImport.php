@@ -219,6 +219,9 @@ function pl_bibimport_create_qualification(int $enId, int $session): void {
  * All Entries inserts are wrapped in a single transaction. If any DB write
  * fails, the transaction is rolled back and an error is returned.
  *
+ * After a successful commit, MakeIndividuals() is called once to seed the
+ * Individuals table for the imported athletes (elimination stats / FoP).
+ *
  * @param int    $tourId    Tournament ID
  * @param string $rawInput  Raw textarea content (lines of licence numbers)
  * @param string $division  Division code selected by the operator
@@ -329,6 +332,16 @@ function pl_bibimport_run($tourId, $rawInput, $division, int $session) {
         safe_w_Rollback();
         $result['imported'] = 0;
         $result['error']    = $e->getMessage();
+    }
+
+    // Seed Individuals rows for the freshly imported athletes so elimination
+    // statistics (PrnStatEvents) and Field-of-Play bye detection pick them up
+    // without a manual "recalculate ranking" pass. Mirrors what ianseo core
+    // does after adding an entry (Partecipants-exp/actions/xmlFindCode.php).
+    // Runs after commit, only when something was imported; skipped on rollback.
+    if ($result['imported'] > 0 && function_exists('MakeIndividuals')) {
+        $affected = [];
+        MakeIndividuals($affected);
     }
 
     return $result;

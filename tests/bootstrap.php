@@ -189,3 +189,15 @@ if (!defined('TGT_IND_1_small10')) define('TGT_IND_1_small10', 3);
 if (!defined('TGT_IND_6_small10')) define('TGT_IND_6_small10', 4);
 if (!defined('TGT_OUT_FULL'))      define('TGT_OUT_FULL', 5);
 if (!defined('TGT_OUT_5_big10'))   define('TGT_OUT_5_big10', 9);
+
+// Recording shim for ianseo core (Qualification/Fun_Qualification.local.inc.php).
+// Seeds one Individuals row per entered athlete; module code calls it after
+// adding entries. Real signature: MakeIndividuals(&$affected, $tournament = 0): int
+// (0 = ok, 1 = error).
+if (!function_exists('MakeIndividuals')) {
+    function MakeIndividuals(&$affected, $tournament = 0): int
+    {
+        CallLog::record('MakeIndividuals', [$affected, $tournament]);
+        return 0;
+    }
+}
