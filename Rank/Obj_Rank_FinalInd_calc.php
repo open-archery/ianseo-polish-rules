@@ -12,7 +12,7 @@
  *  3. Tiebreaking within a phase uses three criteria (§2.6.6.2):
  *       a. Average arrow value in the match (FinScore / arrows, shoot-off excluded)
  *       b. Average arrow value in the shoot-off (0 if no shoot-off)
- *       c. Qualification score (IndScore)
+ *       c. Qualification score (Qualifications.QuScore)
  *  4. FinAverageMatch and FinAverageTie are written to Finals for every phase,
  *     matching ianseo rev 114 core behaviour.
  */
@@ -153,7 +153,7 @@
 	 *  - Unique sequential positions for ALL phases >= 4, sorted by:
 	 *      1. Average arrow value in the match (FinScore / arrows shot, descending)
 	 *      2. Average arrow value in the shoot-off (0 if none, descending)
-	 *      3. Qualification score (IndScore, descending)
+	 *      3. Qualification score (Qualifications.QuScore, descending)
 	 *  - FinAverageMatch and FinAverageTie are written to Finals for all phases.
 	 *
 	 * All other behaviour (gold/bronze/semi handling, EvWinnerFinalRank offset,

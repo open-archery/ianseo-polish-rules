@@ -740,7 +740,9 @@ Behaviour of both forks:
 - No-bronze-match: when the bronze match result is 0-0 (not shot), both
   semifinal losers are awarded shared 3rd place.
 - Sequential positions for ALL phases ≥ 4 (quarterfinals and below).
-- Secondary tiebreaker uses qualification rank (`IndRank`/`TeRank` ASC).
+- Third tiebreak criterion uses qualification score (`QuScore`/`TeScore`
+  descending), not qualification rank — confirmed against the fork's actual
+  `calcFromPhase()` code; this line previously (wrongly) said `IndRank`/`TeRank`.
 
 ---
 
