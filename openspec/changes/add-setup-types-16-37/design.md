@@ -65,7 +65,7 @@ function InsertStandardEvents($TourId, $TourType, $KidsOnly = false) { ... }
 
 Default `false` preserves today's behavior byte-for-byte for TourTypes 1/3/6/37 — `LibTest.php`'s existing count assertions (10/12/14 `CreateClass` calls) stay valid unchanged.
 
-`CreateStandardClasses`, `$KidsOnly = true`: skip the ten base `CreateClass()` calls and the U15 block entirely; create only U12M and U12W (indices 1-2), ignoring `$TourType`-based gating.
+`CreateStandardClasses`, `$KidsOnly = true`: skip the ten base `CreateClass()` calls and the U15 block entirely; create only U12M and U12W (indices 1-2), ignoring `$TourType`-based gating. `ClValidClass` for both is **self-only** (`'U12M'`/`'U12W'`) — not the upward chain (`'U12M,U15M,U18M,U21M,M'`) the base U12 definition uses for TourType 6, since that chain assumes U15/U18/U21/M classes exist in the same tournament. On a U12-only TourType 16 tournament they don't; leaving the full chain in place let the participant-entry screen offer those nonexistent classes as assignable (caught live on `16Test` during verification, fixed before archiving this change).
 
 `InsertStandardEvents`, `$KidsOnly = true`: build the class-code arrays as
 ```php
@@ -90,7 +90,7 @@ Variables the setup script must set (`$tourDetTypeName`, `$tourDetNumDist`, `$to
 
 Copy of `Setup_3_PL.php` with the sub-rule branch resolved to the doubled path:
 
-- `$tourDetTypeName = 'Type_2x70mRound'`, `$tourDetNumDist = 4`, `$tourDetMaxDistScore = 360`, **`$tourDetDouble = '1'`** (not `'0'`).
+- `$tourDetTypeName = 'Type_2x70mRound'`, `$tourDetNumDist = 4`, `$tourDetNumEnds = 24` (6 ends/leg × 4 legs — checked usage across core, mostly display/labeling plus a `DiEnds`-missing fallback in `Obj_Rank_Abs.php:472`; the official legacy PL module used `24` for its own TourType 37, matching the arithmetic, while FITA's own reference oddly kept `12`), `$tourDetMaxDistScore = 360`, **`$tourDetDouble = '1'`** (not `'0'`).
 
   `ToDouble` isn't cosmetic: `Common/Rank/Obj_Rank_*.php` read it into ranking metadata, and `Common/pdf/chunks/QualIndividual.inc.php:19-21` branches on `numDist>=4 && ToDouble` to decide whether the qualification results PDF pairs the 4 distance columns into two round-totals or prints them flat. FITA's reference `Setup_37.php` sets it to `1` for exactly this reason. Leaving it `0` (as `Setup_3_PL.php` does today, even under the current `Poland-4x70m` `$isDouble` path — a pre-existing latent bug, not introduced by this change) prints a double round as 4 flat columns instead of two paired totals.
 - Distances: every `CreateDistanceNew()` call from `Setup_3_PL.php` with each session repeated twice — U15 becomes 40m, 40m, 20m, 20m.
@@ -101,12 +101,21 @@ Rather than duplicating ~16KB of `Setup_3_PL.php`, the shared body moves into a 
 
 ### Scope trap: this body is not a drop-in function body
 
-`Setup_3_PL.php` currently relies on two things that only work because it's a *required script*, not a function:
+`Setup_3_PL.php` currently relies on things that only work because it's a *required script*, not a function — and the fix isn't uniform across them. Verified directly against `Common/Fun_ScriptsOnNewTour.inc.php:43-48`:
 
-- `$TourId` is never passed in — it's inherited from `GetSetupFile()`'s own local scope via `require_once` (see the comment at `Setup_3_PL.php:24-25`). A PHP function does **not** inherit the caller's scope this way; `$TourId` must become an explicit parameter.
-- `$PL_CLASS_NAMES` / `$PL_MIXED_CLASS_NAMES` are read as same-scope globals — they're assigned at `lib.php`'s top level (`lib.php:16,34`), which works when both files are `require`d into the same script scope, but a function body sees neither unless it declares `global $PL_CLASS_NAMES, $PL_MIXED_CLASS_NAMES;` at the top.
+```php
+function GetSetupFile($TourId, $ToType=0, $Lang='', $SubRule='1', $subRuleName='') {
+    global $CFG;
+    global $tourDetGolds, $tourDetXNine, $tourDetGoldsChars, $tourDetXNineChars;
+    ...
+    require_once($file);   // Setup_3_PL.php
+```
 
-Concretely, the helper's signature is `pl_setup_70m_family($TourId, $TourType, $Multiplier)`, and its first line must be the `global` declaration above. `$DistanceInfoArray` should be computed inside the helper from `$Multiplier` (base `array(array(6,6), array(6,6))`, repeated `$Multiplier` times) rather than passed in, so the calling script doesn't need to build it.
+- `$TourId` is a **parameter** of `GetSetupFile()`, not `global`-declared — it's local to that function's frame. `Setup_3_PL.php` sees it only because `require` shares the calling scope, exactly like a `#include`. A real function elsewhere does **not** get it this way — `$TourId` must be an explicit parameter to the new helper.
+- `$tourDetGolds`, `$tourDetXNine`, `$tourDetGoldsChars`, `$tourDetXNineChars` **are** true PHP globals — `GetSetupFile()` itself promotes them with its own `global` statement before the `require_once`, so when `Setup_3_PL.php` assigns them it's writing through to `$GLOBALS`. `global $tourDetGolds, $tourDetXNine, $tourDetGoldsChars, $tourDetXNineChars;` inside the new helper correctly retrieves them.
+- `$PL_CLASS_NAMES` / `$PL_MIXED_CLASS_NAMES` get **no such promotion**. They're assigned at `lib.php`'s top level (`lib.php:16,34`), which runs inside `GetSetupFile()`'s frame the same way `Setup_3_PL.php` does — but `GetSetupFile()` never declares them `global`, so they're just local variables in a frame the new helper has no relationship to. `global $PL_CLASS_NAMES;` inside the helper would silently see an undefined variable. These two **must be passed as explicit parameters** by the calling wrapper, which does have them (same require-chain inheritance Setup_1/6_PL.php already rely on, untouched by this change).
+
+Concretely, the helper's signature is `pl_setup_70m_family($TourId, $TourType, $Multiplier, $PL_CLASS_NAMES, $PL_MIXED_CLASS_NAMES)`, and its first line is `global $tourDetGolds, $tourDetXNine, $tourDetGoldsChars, $tourDetXNineChars;` — only for the four core actually promotes. `$DistanceInfoArray` should be computed inside the helper from `$Multiplier` (base `array(array(6,6), array(6,6))`, repeated `$Multiplier` times) rather than passed in, so the calling script doesn't need to build it.
 
 `pl_double_legs()` (`Setup_3_PL.php:56-77`) moves into `lib.php` as its own top-level function alongside the helper — not nested inside it. If a copy is left behind in `Setup_3_PL.php`, it's a redeclaration fatal the moment both files load in the same request.
 
@@ -126,11 +135,13 @@ Independent confirmation: the official ianseo-distributed PL module (`official-i
 
 ## Setup_16_PL.php
 
-- `$tourDetTypeName = 'Type_GiochiGioventuW'`, `$tourDetCategory = 1` (outdoor), `$tourDetNumEnds` per 3-arrow ends, `$tourDetNumDist = 4` — one distance column per leg, all four populated for the tournament's only class group (U12M/U12W). `$tourDetMaxDistScore = 180` — 18 arrows per distance × max 10, not the 360 (36 arrows) that Types 3/37 use.
+- `$tourDetTypeName = 'Type_GiochiGioventuW'`, `$tourDetCategory = 1` (outdoor), `$tourDetNumEnds = 24` (6 ends/leg × 4 legs), `$tourDetNumDist = 4` — one distance column per leg, all four populated for the tournament's only class group (U12M/U12W). `$tourDetMaxDistScore = 180` — 18 arrows per distance × max 10, not the 360 (36 arrows) that Types 3/37 use.
 - Classes: `CreateStandardClasses($TourId, 16, true)` with the `$KidsOnly` flag — U12M/U12W only.
-- Distances: `CreateDistanceNew($TourId, 16, 'RU12_', …)` — 25m, 20m, 15m, 10m (§2.1.2.3.1-2, see gap 1 above).
-- Target faces via `CreateTargetFace()`: 122cm for 25m/20m, 80cm for 15m/10m.
-- No elimination or finals configuration (gap #3).
+- Distances: two `CreateDistanceNew($TourId, 16, 'RU12M', …)` / `'RU12W'` calls — 25m, 20m, 15m, 10m (§2.1.2.3.1-2, see gap 1 above). Explicit per-class codes, not a `'RU12_'` wildcard — matches this module's own convention (`Setup_3_PL.php` always uses explicit `RU15M`/`RU15W`, never underscore wildcards), not the legacy official module's style.
+- Target faces via `CreateTargetFace()`: 122cm for legs 1-2 (25m/20m), 80cm for legs 3-4 (15m/10m), one call with 4 T/W pairs — `'RU12%'` filter, matching `Setup_6_PL.php`'s existing `%`-wildcard precedent for this class.
+- No elimination or finals configuration (gap #3) — `EvFinalFirstPhase = 0` on both individual and team events, `$tourDetMaxFinIndScore`/`$tourDetMaxFinTeamScore = 0` (no finals bracket ever forms), matching `Setup_16_IT.php`'s reference precedent for a type with no finals at all.
+
+**Testability, discovered during implementation:** `Setup_16_PL.php` can't be `require`d directly in a unit test — like `Setup_3_PL.php`/`Setup_37_PL.php`, its second `require_once` resolves (via `__FILE__`, not cwd) to the *real* `Modules/Sets/lib.php` on this checkout, which unconditionally redeclares `CreateDivision()` etc. over the test bootstrap's shims — a fatal. Same fix as the 70m family: the body moved into `pl_setup_kids_round($TourId, $TourType, $PL_CLASS_NAMES)` in `lib.php`, and `Setup_16_PL.php` is now a thin wrapper calling it. This wasn't in the original plan (Setup_16 has no multiplier to share, so there was no *reuse* reason for a helper) — it's purely for testability, mirroring the pattern already forced on the 70m family for the same reason.
 
 ## Missing Polish translations for the two new type names
 
@@ -152,6 +163,6 @@ Decision: patch `sets.php`'s dropdown only; the public-homepage placeholder is a
 ## Files
 
 - **New:** `Setup_16_PL.php`, `Setup_37_PL.php`
-- **Modified:** `sets.php`, `Setup_3_PL.php`, `lib.php`, `LibTest.php`
+- **Modified:** `sets.php`, `Setup_3_PL.php`, `lib.php`, `LibTest.php`, `tests/bootstrap.php` (new shims for `CreateDistanceNew`/`CreateEventNew`/`CreateTargetFace`/`CreateFinals`/`CreateDistanceInformation`/`UpdateTourDetails` and the `TGT_*` constants this module's setup scripts use — the existing bootstrap only covered `CreateDivision`/`CreateClass`/`InsertClassEvent`, not enough to unit-test `pl_setup_70m_family()`/`pl_setup_kids_round()`)
 - **Menu:** no additions — tournament types appear in ianseo's own creation form.
 - **DB:** no new tables or columns.

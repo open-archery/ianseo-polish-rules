@@ -137,3 +137,55 @@ if (!function_exists('InsertClassEvent')) {
         CallLog::record('InsertClassEvent', $args);
     }
 }
+
+if (!function_exists('CreateDistanceNew')) {
+    function CreateDistanceNew(...$args): void
+    {
+        CallLog::record('CreateDistanceNew', $args);
+    }
+}
+
+if (!function_exists('CreateEventNew')) {
+    function CreateEventNew(...$args): void
+    {
+        CallLog::record('CreateEventNew', $args);
+    }
+}
+
+if (!function_exists('CreateTargetFace')) {
+    function CreateTargetFace(...$args): void
+    {
+        CallLog::record('CreateTargetFace', $args);
+    }
+}
+
+if (!function_exists('CreateFinals')) {
+    function CreateFinals(...$args): void
+    {
+        CallLog::record('CreateFinals', $args);
+    }
+}
+
+if (!function_exists('CreateDistanceInformation')) {
+    function CreateDistanceInformation(...$args): void
+    {
+        CallLog::record('CreateDistanceInformation', $args);
+    }
+}
+
+if (!function_exists('UpdateTourDetails')) {
+    function UpdateTourDetails(...$args): void
+    {
+        CallLog::record('UpdateTourDetails', $args);
+    }
+}
+
+// Target-type constants (Modules/Sets/lib.php in real ianseo) — only the ones
+// this module's setup scripts actually reference (see ianseo-internals.md
+// §6.1 for the full table).
+if (!defined('TGT_IND_1_big10'))   define('TGT_IND_1_big10', 1);
+if (!defined('TGT_IND_6_big10'))   define('TGT_IND_6_big10', 2);
+if (!defined('TGT_IND_1_small10')) define('TGT_IND_1_small10', 3);
+if (!defined('TGT_IND_6_small10')) define('TGT_IND_6_small10', 4);
+if (!defined('TGT_OUT_FULL'))      define('TGT_OUT_FULL', 5);
+if (!defined('TGT_OUT_5_big10'))   define('TGT_OUT_5_big10', 9);
