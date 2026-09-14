@@ -30,53 +30,32 @@ Each archer shoots **144 arrows** — every session of the Single-Distance Round
 - **WHEN** an organiser creates a TourType 37 tournament
 - **THEN** the first-phase cut counts (48 individual / 12 team), set and cumulative match formats, and finals structure are identical to a TourType 3 tournament
 
-### Requirement: Youth Round (`Setup_16_PL.php`)
+### Requirement: Children's Round (`Setup_16_PL.php`)
 
-The Youth Round SHALL be configured by `Setup_16_PL.php` on ianseo TourType 16, registered in `sets.php` with the single sub-rule `Poland-Full`. It is a youth-only competition: the script SHALL create **only** the U15 and U12 classes, in the divisions those classes are eligible for, and SHALL NOT create senior, U24, U21, U18 or Master classes.
+The Children's Round (Runda dziecięca, §2.3.1.10.11) SHALL be configured by `Setup_16_PL.php` on ianseo TourType 16, registered in `sets.php` with the single sub-rule `Poland-Full`. It is a U12-only competition: the script SHALL create **only** the U12 classes, in Recurve only, and SHALL NOT create any other class or division.
 
-Eligible divisions are U15 in R and C, and U12 in R only (`regulamin-lucznictwa.md` — every U12 provision is Recurve-only; none pairs U12 with Compound).
+U12 is Recurve-only (`regulamin-lucznictwa.md` — every U12 provision is paired with Recurve; none pairs U12 with Compound or Barebow).
 
-U15 archers shoot the 40m/20m Round (§2.3.1.10.5): 36 arrows at 40m and 36 arrows at 20m. Target faces by division:
+U12 archers shoot **18 arrows at each of four distances — 25m, 20m, 15m, 10m** (§2.1.2.3.1-2), shot longest to shortest. 25m and 20m SHALL use a 122cm face; 15m and 10m SHALL use an 80cm face. Ends are **3 arrows** (§2.4.1.1).
 
-| Division | 40m | 20m |
-| --- | --- | --- |
-| R (Recurve) | 122cm | 80cm |
-| C (Compound) | 80cm | 60cm |
+> **Note:** U15's own 40m/20m round (§2.3.1.10.5) is unaffected by this requirement and continues to be configured by `Setup_3_PL.php`/`Setup_37_PL.php` — TourType 16 does not host U15. A single ianseo tournament cannot host both, because U15's round is 2 distance-legs and U12's is 4, and ianseo's qualification score-entry screen has no per-class awareness of how many legs a class actually uses (confirmed by direct testing; see `design.md`).
 
-U12 archers shoot the Children's Round (§2.3.1.10.11): **18 arrows at each of four distances — 25m, 20m, 15m, 10m** (§2.1.2.3.1-2), shot longest to shortest. 25m and 20m SHALL use a 122cm face; 15m and 10m SHALL use an 80cm face.
-
-Both classes shoot **3-arrow ends** (§2.4.1.1).
-
-#### Scenario: Creating a Youth Round tournament
+#### Scenario: Creating a Children's Round tournament
 
 - **WHEN** an organiser creates a TourType 16 tournament under the Poland (PZŁucz) rule set
-- **THEN** only U15M, U15W, U12M and U12W classes exist, in their eligible divisions
-- **THEN** no senior, U24, U21, U18 or Master class is created
+- **THEN** only U12M and U12W classes exist, Recurve only
+- **THEN** no other class or division is created
 
-#### Scenario: U15 distances and faces
-
-- **WHEN** a Recurve U15 archer is entered in a TourType 16 tournament
-- **THEN** they shoot 36 arrows at 40m on a 122cm face and 36 arrows at 20m on an 80cm face
-- **WHEN** a Compound U15 archer is entered
-- **THEN** they shoot 36 arrows at 40m on an 80cm face and 36 arrows at 20m on a 60cm face
-
-#### Scenario: U12 children's round
+#### Scenario: U12 children's round distances and faces
 
 - **WHEN** a U12 archer is entered in a TourType 16 tournament
 - **THEN** they shoot 18 arrows at each of 25m, 20m, 15m and 10m, in that order
 - **THEN** 25m and 20m use a 122cm face; 15m and 10m use an 80cm face
 
-#### Scenario: U15 has no third or fourth distance
+#### Scenario: Children's Round ends are three arrows
 
-- **WHEN** a TourType 16 tournament is created
-- **THEN** U15 categories have exactly two distance entries, 40m and 20m
-- **AND** U12 categories have exactly four distance entries
-- **AND** the tournament-wide distance-column count being 4 does not create empty third or fourth distances for U15
-
-#### Scenario: Youth ends are three arrows
-
-- **WHEN** any archer shoots in a TourType 16 tournament
-- **THEN** ends are 3 arrows, for both U15 and U12
+- **WHEN** a U12 archer shoots in a TourType 16 tournament
+- **THEN** ends are 3 arrows
 
 ## MODIFIED Requirements
 
