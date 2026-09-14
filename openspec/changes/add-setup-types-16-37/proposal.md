@@ -13,9 +13,9 @@ Two PZŁucz formats have no proper home in the module. The double round (§2.3.1
 
 Deliberately unresolved — decide before implementing, see `design.md` for detail:
 
-1. The four U12 children's-round distances (the regulation leaves them to the organiser). Blocks `Setup_16_PL.php` only.
-2. Whether U12 Compound exists in the youth round (assumed Recurve-only).
-3. Whether the youth round has eliminations at all (assumed qualification-only, per §2.3.1.8).
+1. ~~The four U12 children's-round distances.~~ **Answered:** 25m, 20m, 15m, 10m (Recurve), 18 arrows each — 72 total, same as every other class — `regulamin-lucznictwa.md` §2.1.2.3.1-2. See `design.md`.
+2. ~~Whether U12 Compound exists in the youth round.~~ **Answered:** no — every U12 provision in the regulation is Recurve-only, confirmed by exhaustive check, not assumption. See `design.md`.
+3. ~~Whether the youth round has eliminations at all.~~ **Answered:** no, for both classes, but for different reasons — U15 follows existing module precedent (already no-elimination in `Setup_3_PL.php`/`Setup_6_PL.php`, independent of the championship-only exemption in §2.3.1.8); U12 has no elimination format defined anywhere in the regulation at all. See `design.md`.
 4. ~~Whether any live tournament still uses `Poland-4x70m`.~~ **Answered:** one does — `KZLZS26` (Mistrzostwa Krajowego Zrzeszenia LZS), dated 2026-09-26, with no entries and no scores yet. It can be recreated as TourType 37 before the event. Repeat the check on production.
 
 The class and event type gates in `lib.php` (`in_array($TourType, array(3, 6))` for U15, `== 6` for U12) exclude both new types and must be extended as part of this change — see `design.md`.
@@ -29,6 +29,10 @@ _(none)_
 ### Modified Capabilities
 
 - `tournament-setup`: adds TourType 16 (youth-only round) and TourType 37 (double round) as supported types; removes the `Poland-4x70m` sub-rule now that TourType 37 covers the format.
+
+## Known limitations
+
+- The public tournament homepage (core `Main.php`) will show a raw `<b>[[Type_2x70mRound]@[pl]@[Tournament]]</b>`-style placeholder for TourType 16/37 tournaments to Polish-language visitors, because `Common/Languages/pl/Tournament.php` lacks translations for these two type names and the real fix is a core file this module can't touch. The admin creation dropdown is patched around this (`sets.php` overrides); the public homepage isn't. See `design.md`.
 
 ## Non-goals
 
