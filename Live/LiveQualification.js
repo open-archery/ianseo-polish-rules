@@ -6,6 +6,7 @@
 
 var LiveQual_ReloadTime = 5000; // matches Qualification/Fun_AJAX_CheckTargetUpdate.js's ReloadTime
 var LiveQual_Timer = null;
+var LiveQual_Seq = 0; // guards against a stale request (previous selection) resolving after a newer one
 
 function LiveQual_Refresh()
 {
@@ -19,6 +20,8 @@ function LiveQual_Refresh()
 		LiveQual_Timer = null;
 	}
 
+	var seq = ++LiveQual_Seq;
+
 	if (session == -1 || distance == -1) {
 		tbody.innerHTML = '';
 		summary.textContent = '';
@@ -28,6 +31,9 @@ function LiveQual_Refresh()
 	fetch('LiveQualificationData.php?Session=' + encodeURIComponent(session) + '&Distance=' + encodeURIComponent(distance))
 		.then(function (resp) { return resp.json(); })
 		.then(function (data) {
+			if (seq !== LiveQual_Seq) {
+				return; // superseded by a newer selection/refresh — discard this response
+			}
 			if (data.error) {
 				tbody.innerHTML = '';
 				summary.textContent = '';
@@ -36,9 +42,17 @@ function LiveQual_Refresh()
 			summary.textContent = 'Tarcze z zaległościami: ' + data.flaggedTargets + ' / ' + data.totalTargets;
 			LiveQual_Render(data.targets);
 		})
-		.catch(function () {})
+		.catch(function () {
+			if (seq !== LiveQual_Seq) {
+				return;
+			}
+			tbody.innerHTML = '';
+			summary.textContent = 'Nie udało się odświeżyć danych.';
+		})
 		.then(function () {
-			LiveQual_Timer = setTimeout(LiveQual_Refresh, LiveQual_ReloadTime);
+			if (seq === LiveQual_Seq) {
+				LiveQual_Timer = setTimeout(LiveQual_Refresh, LiveQual_ReloadTime);
+			}
 		});
 }
 

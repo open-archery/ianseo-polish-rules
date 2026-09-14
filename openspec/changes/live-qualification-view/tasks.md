@@ -1,6 +1,6 @@
 ## 1. Pure calculation helpers (TDD)
 
-- [x] 1.1 Write `Live/Fun_LiveQualificationTest.php` covering `pl_live_qual_arrows_shot()` (empty string → 0, fully-padded → 0, fully-shot → full length, mixed shot+padding → shot count only) and `pl_live_qual_is_behind()` (gap exactly one end → not behind, gap one arrow over one end → behind, zero gap → not behind, negative/zero `arrowsPerEnd` guarded); verify the new test file fails (functions don't exist yet).
+- [x] 1.1 Write `Live/Fun_LiveQualificationTest.php` covering `pl_live_qual_arrows_shot()` (empty string → 0, fully-padded → 0, fully-shot → full length, mixed shot+padding → shot count only) and `pl_live_qual_is_behind()` (gap one arrow under one end → not behind, gap exactly one end → behind, gap one arrow over one end → behind, zero gap → not behind, negative/zero `arrowsPerEnd` guarded); verify the new test file fails (functions don't exist yet).
 - [x] 1.2 Implement `Live/Fun_LiveQualification.php` with `pl_live_qual_arrows_shot(string $arrowString): int` and `pl_live_qual_is_behind(int $arrowsShot, int $maxArrows, int $arrowsPerEnd): bool`; verify `tools/test.cmd --filter LiveQualification` (or `tools/test.sh` equivalent) passes.
 
 ## 2. Data endpoint

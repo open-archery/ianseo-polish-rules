@@ -7,7 +7,7 @@ Tournament staff run scoring on phones (Scorekeepr Lite) that push results into 
 - New PL admin page: pick a qualification session + distance, see every entry on it grouped by physical target (A/B/C/D letters together), each row showing running score and arrows shot so far for that distance.
 - Arrow count is read from `QuD{n}ArrowString` (space-padded, one char per arrow) — no new write path, no new score storage.
 - Auto-refresh via polling (interval matches core's own `CheckTargetUpdate` cadence), no page reload.
-- "Lacking results" flag: an entry (and its target) is flagged when its arrows-shot count trails the current max across the selected session+distance by more than one full end (`DistanceInformation.DiArrows`), among active entries (`EnStatus <= 1`) only.
+- "Lacking results" flag: an entry (and its target) is flagged when its arrows-shot count trails the current max across the selected session+distance by one full end or more (`DistanceInformation.DiArrows`), among active entries (`EnStatus <= 1`) only.
 - Strictly read-only: reuses `checkFullACL(AclQualification, '', AclReadOnly)`, same guard as core's own live-status page. No form fields, no write endpoints.
 
 ## Non-goals
