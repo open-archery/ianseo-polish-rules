@@ -198,8 +198,8 @@ The sub-ranking does **not** introduce new scoring. It reuses existing data:
   recorded), with configured arrows-per-match as fallback
 - **Shoot-off score (`FinTie` / `TfTie`)** and **shoot-off arrows
   (`FinTiebreak` / `TfTiebreak`)** — already recorded when a shoot-off occurs
-- **Qualification score (`IndScore` / `TeScore`)** — already stored on
-  `Individuals` / `Teams` from the qualification ranking step
+- **Qualification score (`QuScore` / `TeScore`)** — already stored on
+  `Qualifications` / `Teams` from the qualification ranking step
 
 No additional data collection is required.
 
