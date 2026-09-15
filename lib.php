@@ -224,22 +224,22 @@ function pl_standard_class_candidates($TourType) {
     $hasMasters  = ($TourType == 3);
 
     $c = array();
-    $c[] = array('code' => 'M',    'ageFrom' => 21, 'ageTo' => 49,  'sex' => 0, 'valid' => 'M',                        'name' => 'Seniorzy',              'div' => array('R', 'C', 'B'));
-    $c[] = array('code' => 'W',    'ageFrom' => 21, 'ageTo' => 49,  'sex' => 1, 'valid' => 'W',                        'name' => 'Seniorki',              'div' => array('R', 'C', 'B'));
+    $c[] = array('code' => 'M',    'ageFrom' => 21, 'ageTo' => 100, 'sex' => 0, 'valid' => 'M',                        'name' => 'Seniorzy',              'div' => array('R', 'C', 'B'));
+    $c[] = array('code' => 'W',    'ageFrom' => 21, 'ageTo' => 100, 'sex' => 1, 'valid' => 'W',                        'name' => 'Seniorki',              'div' => array('R', 'C', 'B'));
     $c[] = array('code' => 'U24M', 'ageFrom' => 21, 'ageTo' => 23,  'sex' => 0, 'valid' => 'U24M,M',                   'name' => 'Młodzieżowiec',         'div' => array('R'));
     $c[] = array('code' => 'U24W', 'ageFrom' => 21, 'ageTo' => 23,  'sex' => 1, 'valid' => 'U24W,W',                   'name' => 'Młodzieżowniczka',      'div' => array('R'));
     $c[] = array('code' => 'U21M', 'ageFrom' => 18, 'ageTo' => 20,  'sex' => 0, 'valid' => 'U21M,M',                   'name' => 'Junior',                'div' => array('R', 'C', 'B'));
     $c[] = array('code' => 'U21W', 'ageFrom' => 18, 'ageTo' => 20,  'sex' => 1, 'valid' => 'U21W,W',                   'name' => 'Juniorka',              'div' => array('R', 'C', 'B'));
-    $c[] = array('code' => 'U18M', 'ageFrom' => 15, 'ageTo' => 17,  'sex' => 0, 'valid' => 'U18M,U21M,M',              'name' => 'Junior młodszy',        'div' => array('R', 'C', 'B'));
-    $c[] = array('code' => 'U18W', 'ageFrom' => 15, 'ageTo' => 17,  'sex' => 1, 'valid' => 'U18W,U21W,W',              'name' => 'Juniorka młodsza',      'div' => array('R', 'C', 'B'));
+    $c[] = array('code' => 'U18M', 'ageFrom' => 15, 'ageTo' => 17,  'sex' => 0, 'valid' => 'U18M,U21M',                'name' => 'Junior młodszy',        'div' => array('R', 'C', 'B'));
+    $c[] = array('code' => 'U18W', 'ageFrom' => 15, 'ageTo' => 17,  'sex' => 1, 'valid' => 'U18W,U21W',                'name' => 'Juniorka młodsza',      'div' => array('R', 'C', 'B'));
 
     if ($hasU15) {
-        $c[] = array('code' => 'U15M', 'ageFrom' => 13, 'ageTo' => 14, 'sex' => 0, 'valid' => 'U15M,U18M,U21M,M', 'name' => 'Młodzik',    'div' => array('R', 'C'));
-        $c[] = array('code' => 'U15W', 'ageFrom' => 13, 'ageTo' => 14, 'sex' => 1, 'valid' => 'U15W,U18W,U21W,W', 'name' => 'Młodziczka', 'div' => array('R', 'C'));
+        $c[] = array('code' => 'U15M', 'ageFrom' => 13, 'ageTo' => 14, 'sex' => 0, 'valid' => 'U15M', 'name' => 'Młodzik',    'div' => array('R', 'C'));
+        $c[] = array('code' => 'U15W', 'ageFrom' => 13, 'ageTo' => 14, 'sex' => 1, 'valid' => 'U15W', 'name' => 'Młodziczka', 'div' => array('R', 'C'));
     }
     if ($hasU12) {
-        $c[] = array('code' => 'U12M', 'ageFrom' => 9, 'ageTo' => 12, 'sex' => 0, 'valid' => 'U12M,U15M,U18M,U21M,M', 'name' => 'Dziecko chłopcy',        'div' => array('R'));
-        $c[] = array('code' => 'U12W', 'ageFrom' => 9, 'ageTo' => 12, 'sex' => 1, 'valid' => 'U12W,U15W,U18W,U21W,W', 'name' => 'Dziecko dziewczęta',        'div' => array('R'));
+        $c[] = array('code' => 'U12M', 'ageFrom' => 9, 'ageTo' => 12, 'sex' => 0, 'valid' => 'U12M', 'name' => 'Dziecko chłopcy',        'div' => array('R'));
+        $c[] = array('code' => 'U12W', 'ageFrom' => 9, 'ageTo' => 12, 'sex' => 1, 'valid' => 'U12W', 'name' => 'Dziecko dziewczęta',        'div' => array('R'));
     }
     if ($hasPU12) {
         $c[] = array('code' => 'PU12M', 'ageFrom' => 9, 'ageTo' => 12, 'sex' => 0, 'valid' => 'PU12M', 'name' => 'Dziecko chłopcy - łuk popularny',        'div' => array('R'));
