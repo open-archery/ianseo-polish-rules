@@ -384,7 +384,8 @@ final class SetTargetABCACDTest extends \PlTestCase
             ['EnId' => 3, 'EnFirstName' => 'Piotr', 'EnName' => 'Zielinski', 'EnDivision' => 'R', 'EnClass' => 'MO', 'EnCountry' => 'BIG', 'EnClubName' => 'Big Club'],
         ]);
 
-        $clubs = \pl_abc_acd_load_athletes(1, 1, 'RMO');
+        $groups = \pl_abc_acd_load_athletes(1, 1, 'RMO');
+        $clubs  = $groups[0]['clubs'];
 
         $codes = array_keys($clubs);
         $this->assertSame('BIG', $codes[0]);
@@ -402,6 +403,151 @@ final class SetTargetABCACDTest extends \PlTestCase
         $this->assertCount(1, \FakeDb::executed("/EnTournament='7'/"));
         $this->assertCount(1, \FakeDb::executed("/QuSession='2'/"));
         $this->assertCount(1, \FakeDb::executed("/CONCAT\\(TRIM\\(EnDivision\\),TRIM\\(EnClass\\)\\) LIKE 'RMO'/"));
+    }
+
+    public function testLoadAthletesBothFlagsFalseReturnsSingleGroupEquivalentToFlatMap(): void
+    {
+        \FakeDb::on('/FROM Entries/', [
+            ['EnId' => 1, 'EnFirstName' => 'Jan', 'EnName' => 'Kowalski', 'EnDivision' => 'R', 'EnClass' => 'MO', 'EnCountry' => 'AZS', 'EnClubName' => 'AZS Club'],
+            ['EnId' => 2, 'EnFirstName' => 'Adam', 'EnName' => 'Nowak', 'EnDivision' => 'C', 'EnClass' => 'WO', 'EnCountry' => 'AZS', 'EnClubName' => 'AZS Club'],
+        ]);
+
+        // Filter matches two different division+class combos; with both flags
+        // false they must still land in exactly one pooled group.
+        $groups = \pl_abc_acd_load_athletes(1, 1, '%');
+
+        $this->assertCount(1, $groups);
+        $this->assertCount(2, $groups[0]['clubs']['AZS']);
+    }
+
+    public function testLoadAthletesGroupsByClassOnlyPoolsAcrossDivisions(): void
+    {
+        \FakeDb::on('/FROM Entries/', [
+            ['EnId' => 1, 'EnFirstName' => 'Jan', 'EnName' => 'Kowalski', 'EnDivision' => 'R', 'EnClass' => 'MO', 'EnCountry' => 'AZS', 'EnClubName' => 'AZS Club', 'DivViewOrder' => 1, 'ClViewOrder' => 1],
+            ['EnId' => 2, 'EnFirstName' => 'Adam', 'EnName' => 'Nowak', 'EnDivision' => 'C', 'EnClass' => 'MO', 'EnCountry' => 'LKS', 'EnClubName' => 'LKS Club', 'DivViewOrder' => 2, 'ClViewOrder' => 1],
+            ['EnId' => 3, 'EnFirstName' => 'Ewa', 'EnName' => 'Zielinska', 'EnDivision' => 'R', 'EnClass' => 'WO', 'EnCountry' => 'AZS', 'EnClubName' => 'AZS Club', 'DivViewOrder' => 1, 'ClViewOrder' => 2],
+        ]);
+
+        $groups = \pl_abc_acd_load_athletes(1, 1, '%', false, true);
+
+        $this->assertCount(2, $groups);
+        $this->assertSame('MO', $groups[0]['label']);
+        $this->assertSame('WO', $groups[1]['label']);
+        // RMO and CMO (same class, different division) pool into the same group.
+        $this->assertArrayHasKey('AZS', $groups[0]['clubs']);
+        $this->assertArrayHasKey('LKS', $groups[0]['clubs']);
+    }
+
+    public function testLoadAthletesGroupsByDivisionOnlyPoolsAcrossClasses(): void
+    {
+        \FakeDb::on('/FROM Entries/', [
+            ['EnId' => 1, 'EnFirstName' => 'Jan', 'EnName' => 'Kowalski', 'EnDivision' => 'R', 'EnClass' => 'MO', 'EnCountry' => 'AZS', 'EnClubName' => 'AZS Club', 'DivViewOrder' => 1, 'ClViewOrder' => 1],
+            ['EnId' => 2, 'EnFirstName' => 'Ewa', 'EnName' => 'Zielinska', 'EnDivision' => 'R', 'EnClass' => 'WO', 'EnCountry' => 'AZS', 'EnClubName' => 'AZS Club', 'DivViewOrder' => 1, 'ClViewOrder' => 2],
+            ['EnId' => 3, 'EnFirstName' => 'Adam', 'EnName' => 'Nowak', 'EnDivision' => 'C', 'EnClass' => 'MO', 'EnCountry' => 'LKS', 'EnClubName' => 'LKS Club', 'DivViewOrder' => 2, 'ClViewOrder' => 1],
+        ]);
+
+        $groups = \pl_abc_acd_load_athletes(1, 1, '%', true, false);
+
+        $this->assertCount(2, $groups);
+        $this->assertSame('R', $groups[0]['label']);
+        $this->assertSame('C', $groups[1]['label']);
+        // RMO and RWO (same division, different class) pool into the same group.
+        $this->assertCount(2, $groups[0]['clubs']['AZS']);
+    }
+
+    public function testLoadAthletesGroupsByBothDivisionAndClass(): void
+    {
+        \FakeDb::on('/FROM Entries/', [
+            ['EnId' => 1, 'EnFirstName' => 'Jan', 'EnName' => 'Kowalski', 'EnDivision' => 'R', 'EnClass' => 'MO', 'EnCountry' => 'AZS', 'EnClubName' => 'AZS Club', 'DivViewOrder' => 1, 'ClViewOrder' => 1],
+            ['EnId' => 2, 'EnFirstName' => 'Ewa', 'EnName' => 'Zielinska', 'EnDivision' => 'R', 'EnClass' => 'WO', 'EnCountry' => 'AZS', 'EnClubName' => 'AZS Club', 'DivViewOrder' => 1, 'ClViewOrder' => 2],
+            ['EnId' => 3, 'EnFirstName' => 'Adam', 'EnName' => 'Nowak', 'EnDivision' => 'C', 'EnClass' => 'MO', 'EnCountry' => 'LKS', 'EnClubName' => 'LKS Club', 'DivViewOrder' => 2, 'ClViewOrder' => 1],
+        ]);
+
+        $groups = \pl_abc_acd_load_athletes(1, 1, '%', true, true);
+
+        $this->assertCount(3, $groups);
+        $labels = array_column($groups, 'label');
+        $this->assertContains('RMO', $labels);
+        $this->assertContains('RWO', $labels);
+        $this->assertContains('CMO', $labels);
+    }
+
+    public function testLoadAthletesGroupsOrderedByViewOrderNotAppearanceOrder(): void
+    {
+        \FakeDb::on('/FROM Entries/', [
+            // Appears first in the result set but has the higher ClViewOrder.
+            ['EnId' => 1, 'EnFirstName' => 'Adam', 'EnName' => 'Nowak', 'EnDivision' => 'R', 'EnClass' => 'WO', 'EnCountry' => 'AZS', 'EnClubName' => 'AZS Club', 'DivViewOrder' => 1, 'ClViewOrder' => 2],
+            ['EnId' => 2, 'EnFirstName' => 'Jan', 'EnName' => 'Kowalski', 'EnDivision' => 'R', 'EnClass' => 'MO', 'EnCountry' => 'AZS', 'EnClubName' => 'AZS Club', 'DivViewOrder' => 1, 'ClViewOrder' => 1],
+        ]);
+
+        $groups = \pl_abc_acd_load_athletes(1, 1, '%', false, true);
+
+        $this->assertSame('MO', $groups[0]['label']);
+        $this->assertSame('WO', $groups[1]['label']);
+    }
+
+    // --- pl_abc_acd_carve_group_ranges -----------------------------------------
+
+    public function testCarveGroupRangesExactFit(): void
+    {
+        // 3 athletes = exactly 1 boss (3 usable slots).
+        $ranges = \pl_abc_acd_carve_group_ranges(1, 6, [3, 3]);
+
+        $this->assertSame([[1, 1], [2, 2]], $ranges);
+    }
+
+    public function testCarveGroupRangesLeavesBoundaryLeftoverUnusedAndNextGroupStartsFresh(): void
+    {
+        // 4 athletes needs 2 bosses (ceil(4/3)) even though the 2nd boss is
+        // mostly empty; the next group must start at boss 3, not reuse boss 2.
+        $ranges = \pl_abc_acd_carve_group_ranges(1, 10, [4, 3]);
+
+        $this->assertSame([1, 2], $ranges[0]);
+        $this->assertSame([3, 3], $ranges[1]);
+    }
+
+    public function testCarveGroupRangesTruncatesWhenRangeTooSmall(): void
+    {
+        // Range 1-2 (2 bosses = 6 slots) but groups need 3 + 3 bosses.
+        $ranges = \pl_abc_acd_carve_group_ranges(1, 2, [9, 9]);
+
+        $this->assertSame([1, 2], $ranges[0]); // first group takes everything available
+        $this->assertSame([3, 2], $ranges[1]); // second group: nothing left (empty range)
+    }
+
+    // --- pl_abc_acd_merge_tally --------------------------------------------------
+
+    public function testMergeTallyCountsLettersAdditivelyPerClub(): void
+    {
+        $base = ['AZS' => ['wave1' => 1, 'wave2' => 0]];
+        $assignments = [
+            '1A' => $this->athlete('1', 'AZS'),
+            '1C' => $this->athlete('2', 'LKS'),
+            '2B' => $this->athlete('3', 'AZS'),
+        ];
+
+        $tally = \pl_abc_acd_merge_tally($base, $assignments);
+
+        // base wave1=1, plus 1A (wave1) and 2B (wave1) = 3.
+        $this->assertSame(['wave1' => 3, 'wave2' => 0], $tally['AZS']);
+        $this->assertSame(['wave1' => 0, 'wave2' => 1], $tally['LKS']);
+    }
+
+    public function testMergeTallyIntoEmptyBaseMatchesSessionWaveTallyShape(): void
+    {
+        \FakeDb::on('/SELECT CoCode EnCountry, QuLetter/', [
+            ['EnCountry' => 'AZS', 'QuLetter' => 'A'],
+            ['EnCountry' => 'AZS', 'QuLetter' => 'C'],
+        ]);
+        $savedTally = \pl_abc_acd_session_wave_tally(1, 1, 'RWO');
+
+        $assignments = [
+            '1A' => $this->athlete('1', 'AZS'),
+            '1C' => $this->athlete('2', 'AZS'),
+        ];
+        $mergedTally = \pl_abc_acd_merge_tally([], $assignments);
+
+        $this->assertSame($savedTally['AZS'], $mergedTally['AZS']);
     }
 
     // --- pl_abc_acd_erase -----------------------------------------------------
