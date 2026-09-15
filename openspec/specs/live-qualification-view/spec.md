@@ -1,3 +1,5 @@
+# Live Qualification View Specification
+
 ## Purpose
 
 Give tournament staff a read-only, auto-refreshing view of a qualification round in progress — current score and arrows shot per athlete, grouped by physical target, with targets falling behind their peers visibly flagged.
