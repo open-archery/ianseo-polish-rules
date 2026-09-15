@@ -38,7 +38,8 @@ $tourDetDouble          = '0';
 require_once(dirname(__FILE__) . '/lib.php');
 require_once(dirname(dirname(__FILE__)) . '/lib.php');
 
-pl_setup_70m_family($TourId, $TourType, 1, $PL_CLASS_NAMES, $PL_MIXED_CLASS_NAMES);
+$preset = pl_resolve_preset($TourType, isset($subRuleName) ? $subRuleName : '');
+pl_setup_70m_family($TourId, $TourType, 1, $PL_CLASS_NAMES, $PL_MIXED_CLASS_NAMES, $preset);
 
 $tourDetails = array(
     'ToCollation'        => $tourCollation,

@@ -239,8 +239,6 @@ function pl_diploma_get_title_defaults($rawEventCode) {
 			case 'U18':
 				if ($division === 'R') return array('prefix' => '', 'text' => 'Ogólnopolskiej Olimpiady Młodzieży');
 				return array('prefix' => '', 'text' => 'Polski Juniorów Młodszych');
-			case '50':
-				return array('prefix' => '', 'text' => '');
 			case 'U15':
 				return array('prefix' => 'Międzywojewódzkiego', 'text' => 'Młodzików');
 			default:
@@ -263,9 +261,6 @@ function pl_diploma_get_title_defaults($rawEventCode) {
 		case 'U18W':
 			if ($division === 'R') return array('prefix' => '', 'text' => 'Ogólnopolskiej Olimpiady Młodzieży');
 			return array('prefix' => '', 'text' => 'Polski Juniorów Młodszych');
-		case '50M':
-		case '50W':
-			return array('prefix' => '', 'text' => '');
 		case 'U15M':
 		case 'U15W':
 			return array('prefix' => 'Międzywojewódzkiego', 'text' => 'Młodzików');

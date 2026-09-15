@@ -154,6 +154,32 @@ commit as the fix. Terse is fine; the goal is "don't step on this rake again," n
   the updater reverts (see "ianseo updates"), so the fix is upstream. Same trap for any other
   core-rendered `get_text()` key our module causes to be looked up.
 
+- **The sub-rule dropdown hits this exact same `get_text()` dead end** — confirmed live, not
+  just by reading the code. `Tournament/index.php` renders each `d_SubRule` `<option>` via
+  `get_text($v, 'Install')`; any value we register in `sets.php` that has no matching key in
+  `Common/Languages/<lang>/Install.php` shows as `<b>[[Poland-RU21]@[en]@[Install]]</b>` —
+  verified by fetching `Tournament/index.php?New=&d_Rule=PL&d_ToType=1` directly. Only
+  ianseo's own generic, already-translated `Install.php` keys escape this (`SetAllClass`,
+  `SetSeniorClass`, `SetYouthClass`, `SetMasterClass`, ...) — reuse those wherever the meaning
+  actually fits (see `lib.php`'s `pl_preset_table()`) instead of inventing a new key, which
+  guarantees the placeholder. `$_LANG` inside `get_text()` is a function-local `static`, not a
+  true PHP global (no `global $_LANG;` in its own signature) — there is no injection point
+  from module code, and `Common/DebugOverrides.php` (the one update-exempt file that sounds
+  like an override hook) doesn't exist in this checkout and has zero references anywhere in
+  core, so it isn't a live extension point either. Confirmed dead end, not just unexplored.
+
+- **`CreateEventNew()` (core, `Modules/Sets/lib.php:198`) unconditionally inserts an `Events`
+  row — it has no idea whether any class will ever be bound to it.** Only `InsertClassEvent()`
+  checks whether the class/division/event all exist before writing the `EventClass` binding,
+  and silently no-ops otherwise. So a preset/filter that only touches `CreateStandardClasses()`
+  and `InsertStandardEvents()` (skipping the class and skipping the binding) still leaves a
+  bindable-to-nothing orphan row in `Events` for every filtered-out class, because nothing told
+  the `CreateEventNew()` loop itself to skip that class. Every `Setup_*_PL.php`-equivalent
+  per-class `foreach (... as $cl) { CreateEventNew(...) }` loop needs its own filter guard
+  (this module's `pl_class_in_preset()`), not just the shared class/division/binding builders —
+  verified with a live tournament create + `Events LEFT JOIN EventClass` orphan check (zero
+  orphans after adding the guard everywhere `CreateEventNew()` is called per-class).
+
 ## Docker / this repo's dev environment
 
 - **Apache's `error.log`/`access.log` inside the app container are symlinks to
@@ -183,6 +209,16 @@ commit as the fix. Terse is fine; the goal is "don't step on this rake again," n
   query the affected tables in a *separate* invocation — don't trust that script's own exit
   code or trailing output, and don't treat `Tournament`-table columns as confirmed without a
   real browser-driven tournament create/reset.
+- **A real HTTP flow works for CLI verification instead** (`curl -X POST Tournament/index.php`
+  with `Command=SAVE&New=1&...` and the full form field set, since `GetSetupFile()` needs the
+  HTTP/session context a bare CLI script doesn't have — see above) — but a *fresh cookie jar
+  per `curl` call does not guarantee a new tournament.* Two `New=1` POSTs with two entirely
+  separate `-c`/cookie-jar files still landed on the *same* `ToId`, silently overwriting the
+  first tournament's data instead of creating a second one — something in ianseo's "current
+  tournament" tracking isn't purely per-session-cookie the way a multi-tenant app's would be.
+  Query `Tournament` by `ToCode` (or `ORDER BY ToId DESC`) after every creation to confirm a
+  *new* row actually appeared before trusting the DB state you're about to inspect — don't
+  assume distinct cookie jars bought you distinct tournaments.
 
 ## Testing (`tests/Support/FakeDb.php`)
 

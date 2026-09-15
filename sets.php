@@ -19,9 +19,29 @@ foreach ($AllowedTypes as $val) {
 $SetType['PL']['types']['16'] = 'Runda dziecięca';
 $SetType['PL']['types']['37'] = 'Podwójna runda 70m/50m';
 
-// One sub-rule per type: full PZŁucz configuration
-foreach ($AllowedTypes as $val) {
-    $SetType['PL']['rules']["$val"] = array(
-        'Poland-Full',
-    );
-}
+// Category presets per TourType, selected from ianseo's sub-rule dropdown.
+// Abstract naming: reuses ianseo's own translated Install.php sub-rule
+// vocabulary where its meaning fits (SetAllClass/SetSeniorClass/
+// SetYouthClass/SetMasterClass — same convention the official ianseo PL
+// module uses), module-specific keys elsewhere (rendered untranslated by
+// ianseo core — see gotchas.md). Resolved against these exact strings by
+// lib.php's pl_preset_table()/pl_resolve_preset().
+$SetType['PL']['rules']['1'] = array(
+    'SetAllClass', 'SetSeniorClass', 'Poland-RU24', 'Poland-RU21', 'Poland-RU18',
+);
+$SetType['PL']['rules']['3'] = array(
+    'SetAllClass', 'SetSeniorClass', 'Poland-RU24U21U18', 'SetYouthClass',
+    'Poland-RU18', 'Poland-RU15', 'SetMasterClass',
+);
+$SetType['PL']['rules']['37'] = array(
+    'SetAllClass', 'SetSeniorClass', 'Poland-RU24U21U18', 'SetYouthClass',
+    'Poland-RU18', 'Poland-RU15',
+);
+$SetType['PL']['rules']['6'] = array(
+    'SetAllClass', 'SetSeniorClass', 'SetYouthClass', 'Poland-RU18', 'Poland-RU15',
+);
+// TourType 16 (Children's Round) has one fixed, non-selectable configuration
+// — Setup_16_PL.php never resolves a preset from this value.
+$SetType['PL']['rules']['16'] = array(
+    'SetAllClass',
+);

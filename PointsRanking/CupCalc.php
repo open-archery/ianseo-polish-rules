@@ -56,7 +56,14 @@ const PL_CUP_AGE_SERIES = [
     'U18' => ['M' => 'Juniorów młodszych', 'W' => 'Juniorek młodszych'],
     'U15' => ['M' => 'Młodzików', 'W' => 'Młodziczek'],
     'U12' => ['M' => 'Dzieci - chłopców', 'W' => 'Dzieci - dziewcząt'],
-    '50' => ['M' => 'Masters - mężczyzn', 'W' => 'Masters - kobiet'],
+    // Five age bands replace the old flat 50+ Master class (see lib.php,
+    // pl_standard_class_candidates()) — each a distinct series, not one
+    // shared "Masters" bucket.
+    '40' => ['M' => 'Masters 40-49 - mężczyzn', 'W' => 'Masters 40-49 - kobiet'],
+    '50' => ['M' => 'Masters 50-59 - mężczyzn', 'W' => 'Masters 50-59 - kobiet'],
+    '60' => ['M' => 'Masters 60-69 - mężczyzn', 'W' => 'Masters 60-69 - kobiet'],
+    '70' => ['M' => 'Masters 70+ - mężczyzn', 'W' => 'Masters 70+ - kobiet'],
+    '80' => ['M' => 'Masters 80+ - mężczyzn', 'W' => 'Masters 80+ - kobiet'],
 ];
 
 /** Divisions whose cup is named by the bow rather than by the age series. */
@@ -89,7 +96,11 @@ const PL_CUP_DIPLOMA_AGE_SERIES = [
     'U18' => ['M' => 'Juniorów Młodszych', 'W' => 'Juniorek Młodszych'],
     'U15' => ['M' => 'Młodzików', 'W' => 'Młodziczek'],
     'U12' => ['M' => 'Dzieci', 'W' => 'Dzieci'],
-    '50' => ['M' => 'Masters', 'W' => 'Masters'],
+    '40' => ['M' => 'Masters 40-49', 'W' => 'Masters 40-49'],
+    '50' => ['M' => 'Masters 50-59', 'W' => 'Masters 50-59'],
+    '60' => ['M' => 'Masters 60-69', 'W' => 'Masters 60-69'],
+    '70' => ['M' => 'Masters 70+', 'W' => 'Masters 70+'],
+    '80' => ['M' => 'Masters 80+', 'W' => 'Masters 80+'],
 ];
 
 /** Bow-named cups, in the same title case. */

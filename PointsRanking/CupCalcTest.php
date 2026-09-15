@@ -324,7 +324,12 @@ final class CupCalcTest extends PlTestCase
         $this->assertSame('Pucharze Polski Młodzieżowców 2026', $name('ind', 'RU24M'));
         $this->assertSame('Pucharze Polski Młodziczek 2026', $name('ind', 'RU15W'));
         $this->assertSame('Pucharze Polski Dzieci 2026', $name('ind', 'RU12W'));
-        $this->assertSame('Pucharze Polski Masters 2026', $name('ind', 'R50M'));
+        // Five Masters bands replace the old flat 50+ class — each its own series.
+        $this->assertSame('Pucharze Polski Masters 40-49 2026', $name('ind', 'R40M'));
+        $this->assertSame('Pucharze Polski Masters 50-59 2026', $name('ind', 'R50M'));
+        $this->assertSame('Pucharze Polski Masters 60-69 2026', $name('ind', 'R60M'));
+        $this->assertSame('Pucharze Polski Masters 70+ 2026', $name('ind', 'R70M'));
+        $this->assertSame('Pucharze Polski Masters 80+ 2026', $name('ind', 'R80M'));
 
         // Compound and barebow: named by the bow, gender left to the category line.
         $this->assertSame('Pucharze Polski Łuków Bloczkowych 2026', $name('ind', 'CM'));

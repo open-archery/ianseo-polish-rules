@@ -51,23 +51,23 @@ Unchanged from the abandoned proposal's design — still the right shape given t
 | 3 | `SetSeniorClass` | R/C/B, M/W |
 | 3 | `Poland-RU24U21U18` | R only, U24+U21+U18 |
 | 3 | `SetYouthClass` | R only, U24+U21 |
-| 3 | `Poland-RU18Only` | R only, U18 |
+| 3 | `Poland-RU18` | R only, U18 |
 | 3 | `Poland-RU15` | R only, U15 |
 | 3 | `SetMasterClass` | Masters (R/C/B, 5 bands) — TourType 3 exclusive |
 | 37 | `SetAllClass` | everything (R/C/B, all classes, no U12/PU12/Masters) |
 | 37 | `SetSeniorClass` | R/C/B, M/W |
 | 37 | `Poland-RU24U21U18` | R only, U24+U21+U18 |
 | 37 | `SetYouthClass` | R only, U24+U21 |
-| 37 | `Poland-RU18Only` | R only, U18 |
+| 37 | `Poland-RU18` | R only, U18 |
 | 37 | `Poland-RU15` | R only, U15 |
 | 6 | `SetAllClass` | everything (incl. PU12) |
 | 6 | `SetSeniorClass` | R/C/B, M/W |
 | 6 | `SetYouthClass` | R only, U24+U21 |
-| 6 | `Poland-RU18Only` | R only, U18 |
+| 6 | `Poland-RU18` | R only, U18 |
 | 6 | `Poland-RU15` | R only, U15 |
 | 16 | `SetAllClass` | U12 only, fixed, not organiser-selectable (single entry) |
 
-`Poland-RU18Only` (not `Poland-RU18`) avoids a value collision between TourType 1's per-class U24/U21/U18 trio and TourType 3/37/6's same-shaped-but-different-composition U18-only preset — both are "R only, U18", but registered under different `$SetType['PL']['rules'][ToType]` arrays, so a shared literal string would still resolve correctly per-TourType; the distinct names are for readability in `lib.php`'s preset table, not a functional requirement.
+`Poland-RU18` is deliberately the *same* string on TourType 1 and on 3/37/6 — both mean exactly "R only, U18". Registered under different `$SetType['PL']['rules'][ToType]` arrays, so no collision risk — one name, one consistent meaning, matching how `SetAllClass`/`SetSeniorClass`/`SetYouthClass` already work across TourTypes.
 
 ### Masters class codes
 
