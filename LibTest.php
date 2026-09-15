@@ -515,6 +515,64 @@ final class LibTest extends \PlTestCase
         // both genders survive the preset — no CU21M/BU21M.
         sort($events);
         $this->assertSame(['RU21M', 'RU21M', 'RU21W', 'RU21W', 'RU21X'], $events);
+
+        // Regression: distances and target faces used to be created
+        // unconditionally regardless of preset — a Recurve-only, U21-only
+        // preset must not leave RM/RU24M/RU18M/RU15M/RU12M/RPU12M/R40M-R80M
+        // distances, C%/B% wildcard distances, or any Compound/Barebow
+        // target face lying around unused.
+        $distanceClasses = array_column(\CallLog::calls('CreateDistanceNew'), 2);
+        $this->assertSame(['RU21M', 'RU21W'], $distanceClasses);
+
+        $faceNames = array_column(\CallLog::calls('CreateTargetFace'), 2);
+        $this->assertNotContains('Łuk bloczkowy domyślna', $faceNames);
+        $this->assertNotContains('Łuk bloczkowy Master 70+/80+', $faceNames);
+    }
+
+    public function testPlSetup70mFamilySeniorOnlyPresetLeavesNoOrphanedDistancesOrFaces(): void
+    {
+        // Regression: SetSeniorClass (no division restriction, classes M/W
+        // only) must not leave U12/PU12/Masters/U15/U18/U21/U24 distances or
+        // faces behind, and must still create the shared C%/B% distances
+        // (M/W exist in every division).
+        \pl_setup_70m_family(7, 3, 1, $this->plClassNames(), $this->plMixedClassNames(),
+            \pl_resolve_preset(3, 'SetSeniorClass'));
+
+        $distanceClasses = array_column(\CallLog::calls('CreateDistanceNew'), 2);
+        sort($distanceClasses);
+        // M/W are eligible in every division, so C% and B% both survive too.
+        $this->assertSame(['B%', 'C%', 'RM', 'RW'], array_values(array_unique($distanceClasses)));
+        $this->assertCount(0, array_filter($distanceClasses, fn ($c) => str_contains($c, 'U12') || preg_match('/^R(40|50|60|70|80)[MW]$/', $c)));
+    }
+
+    public function testPlSetup70mFamilyMasterPresetLeavesNoU12OrPU12Distances(): void
+    {
+        // Regression: SetMasterClass (classes = the 10 band codes, no
+        // division restriction) must not leave RU12M/RU12W/RPU12M/RPU12W
+        // distances behind — CreateStandardClasses() never creates those
+        // classes under this preset.
+        \pl_setup_70m_family(7, 3, 1, $this->plClassNames(), $this->plMixedClassNames(),
+            \pl_resolve_preset(3, 'SetMasterClass'));
+
+        $distanceClasses = array_column(\CallLog::calls('CreateDistanceNew'), 2);
+        $this->assertCount(0, array_filter($distanceClasses, fn ($c) => str_contains($c, 'U12')));
+    }
+
+    public function testPlSetup1440MastersClassNamesAreGenderedAndDistinct(): void
+    {
+        \CreateStandardClasses(7, 3);
+
+        $named = [];
+        foreach (\CallLog::calls('CreateClass') as $call) {
+            if (preg_match('/^(40|50|60|70|80)[MW]$/', $call[5])) $named[$call[5]] = $call[7];
+        }
+        $this->assertNotSame($named['40M'], $named['40W'], '40M and 40W must not share a display name');
+        $this->assertStringContainsString('mężczyźni', $named['40M']);
+        $this->assertStringContainsString('kobiety', $named['40W']);
+        // 70+ and 80+ are both open-ended and deliberately distinct labels
+        // even though the age ranges overlap by design.
+        $this->assertStringContainsString('70+', $named['70M']);
+        $this->assertStringContainsString('80+', $named['80M']);
     }
 
     // --- pl_setup_kids_round (Setup_16_PL.php) ---------------------------------
@@ -605,13 +663,28 @@ final class LibTest extends \PlTestCase
     {
         \pl_setup_1440(7, 1, $this->plClassNames());
 
-        foreach (['M', 'W', 'U24M', 'U24W', 'U21M', 'U21W', 'U18M', 'U18W'] as $cl) {
+        // U24 is Recurve-only (never eligible in Compound) — excluded here,
+        // covered separately below.
+        foreach (['M', 'W', 'U21M', 'U21W', 'U18M', 'U18W'] as $cl) {
             $r = \CallLog::callsMatching('CreateDistanceNew', fn ($a) => $a[2] === "R{$cl}");
             $c = \CallLog::callsMatching('CreateDistanceNew', fn ($a) => $a[2] === "C{$cl}");
             $this->assertCount(1, $r, "missing R{$cl} distance");
             $this->assertCount(1, $c, "missing C{$cl} distance");
             $this->assertSame($r[0][3], $c[0][3], "C{$cl} distances must equal R{$cl}'s");
         }
+    }
+
+    public function testPlSetup1440NoCompoundU24Distance(): void
+    {
+        // Regression: a shared R+C distance loop that iterates the same
+        // class array for both divisions previously created CU24M/CU24W
+        // distances even though U24 is Recurve-only and CreateStandardClasses()
+        // never creates a Compound U24 class to use them.
+        \pl_setup_1440(7, 1, $this->plClassNames());
+
+        $this->assertCount(1, \CallLog::callsMatching('CreateDistanceNew', fn ($a) => $a[2] === 'RU24M'));
+        $this->assertCount(0, \CallLog::callsMatching('CreateDistanceNew', fn ($a) => $a[2] === 'CU24M'));
+        $this->assertCount(0, \CallLog::callsMatching('CreateDistanceNew', fn ($a) => $a[2] === 'CU24W'));
     }
 
     public function testPlSetup1440CompoundFaceStaysSixRing(): void
@@ -653,6 +726,25 @@ final class LibTest extends \PlTestCase
         foreach (\CallLog::callsMatching('CreateEventNew', fn ($a) => str_contains($a[1], 'U12')) as $ev) {
             $this->assertSame(0, $ev[4]['EvFinalFirstPhase']);
         }
+    }
+
+    public function testPlSetupIndoorU12TeamMatchesU12IndividualNotU15(): void
+    {
+        // Regression: U12 team events used to inherit U15's team config
+        // unchanged (18 m, 40 cm, triple face) because both classes shared
+        // one foreach loop and one options array. Team must match
+        // individual U12's own 15 m / 80 cm / single face, and must differ
+        // from U15's 18 m / 40 cm.
+        \pl_setup_indoor(7, 6, $this->plClassNames(), $this->plMixedClassNames());
+
+        $indiv = \CallLog::callsMatching('CreateEventNew', fn ($a) => $a[1] === 'RU12M' && ($a[4]['EvTeamEvent'] ?? 0) === 0)[0][4];
+        $team  = \CallLog::callsMatching('CreateEventNew', fn ($a) => $a[1] === 'RU12M' && ($a[4]['EvTeamEvent'] ?? 0) === 1)[0][4];
+
+        $this->assertSame($indiv['EvDistance'], $team['EvDistance']);
+        $this->assertSame($indiv['EvTargetSize'], $team['EvTargetSize']);
+        $this->assertSame($indiv['EvFinalTargetType'], $team['EvFinalTargetType']);
+        $this->assertSame(15, $team['EvDistance']);
+        $this->assertSame(80, $team['EvTargetSize']);
     }
 
     public function testPlSetupIndoorPU12RecurveOnly(): void

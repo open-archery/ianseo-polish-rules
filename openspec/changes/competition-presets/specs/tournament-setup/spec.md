@@ -22,11 +22,11 @@ Sub-rule values SHALL reuse ianseo's existing translated `Install.php` keys wher
 
 ### Requirement: PZŁucz Masters age-band classes (TourType 3)
 
-TourType 3 (Single-Distance Round) SHALL offer a dedicated Masters sub-rule creating five age-band classes per gender (40-49, 50-59, 60-69, 70+, 80+) in divisions R, C and B. Distances: R shoots 70m (40-49, 50-59), 60m (60-69), 50m (70+, 80+); C and B shoot 50m for every band. Target faces: R and B use the 122cm full face at every band; C uses the 80cm 6-ring face for bands 40-49/50-59/60-69 and the 80cm full face for bands 70+/80+. Every Masters class SHALL have an elimination phase, following the same set/cumulative match rules as the corresponding adult R/C/B classes in §2 of this spec. This preset SHALL NOT be offered on any other TourType.
+TourType 3 (Single-Distance Round) SHALL offer a dedicated Masters sub-rule creating five age-band classes per gender (40-49, 50-59, 60-69, 70+, 80+) in divisions R, C and B. 40-49/50-59/60-69 are closed decade ranges; 70+ and 80+ are both open-ended and deliberately overlap — an 80-or-older archer may choose to enter either band. Distances: R shoots 70m (40-49, 50-59), 60m (60-69), 50m (70+, 80+); C and B shoot 50m for every band. Target faces: R and B use the 122cm full face at every band; C uses the 80cm 6-ring face for bands 40-49/50-59/60-69 and the 80cm full face for bands 70+/80+. Every Masters class SHALL have an elimination phase, following the same set/cumulative match rules as the corresponding adult R/C/B classes in §2 of this spec. This preset SHALL NOT be offered on any other TourType.
 
 #### Scenario: Masters band creation
 - **WHEN** an organiser creates a TourType 3 tournament and selects the Masters sub-rule
-- **THEN** 30 classes are created (5 bands × 2 genders × 3 divisions)
+- **THEN** 10 classes are created (5 bands × 2 genders), each eligible in divisions R, C and B
 - **AND** the 70+ and 80+ Compound classes use the 80cm full face, not the 6-ring face used by the younger three bands
 - **AND** every Masters class has an elimination phase configured
 
