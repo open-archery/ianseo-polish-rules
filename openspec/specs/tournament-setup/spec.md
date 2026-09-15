@@ -21,6 +21,45 @@ Two further formats round out the outdoor offering:
 
 ---
 
+## Category Presets (Sub-Rules)
+
+The setup scripts support named category presets, registered per TourType in `sets.php` and selected by the organiser from ianseo's sub-rule dropdown when creating the tournament. A preset names the divisions and/or classes the competition uses; omitting an axis means "all" for that axis. When a preset is selected, the setup script creates only the divisions/classes it names — in only the divisions those classes are eligible for — and only the individual/team events those surviving division×class combinations compete in. The unfiltered default (equivalent to the module's former `Poland-Full`) remains available on every TourType and creates the full set exactly as an unfiltered setup would. A preset does not change distances, target faces, end structure, elimination cut counts or finals configuration for the categories it does create.
+
+Sub-rule values reuse ianseo's own translated `Install.php` vocabulary wherever the meaning matches (`SetAllClass` for "everything", `SetSeniorClass` for "Senior class only", `SetYouthClass` for the broadest youth-only cut available on that TourType, `SetMasterClass` for the Masters preset — the same convention ianseo's own official PL module uses); presets with no matching core vocabulary use module-specific keys (e.g. `Poland-RU21`), which ianseo renders in the dropdown without a translated label — a known, accepted cosmetic limitation (see `gotchas.md`).
+
+**Registered sub-rules per TourType:**
+
+| TourType | Sub-rule value | Selects |
+|---|---|---|
+| 1 | `SetAllClass` | everything (R+C, all classes — no Barebow) |
+| 1 | `SetSeniorClass` | R+C, M/W |
+| 1 | `Poland-RU24` | Recurve only, U24 |
+| 1 | `Poland-RU21` | Recurve only, U21 |
+| 1 | `Poland-RU18` | Recurve only, U18 |
+| 3 | `SetAllClass` | everything (R/C/B, all classes incl. U12/PU12) |
+| 3 | `SetSeniorClass` | R/C/B, M/W |
+| 3 | `Poland-RU24U21U18` | Recurve only, U24+U21+U18 |
+| 3 | `SetYouthClass` | Recurve only, U24+U21 |
+| 3 | `Poland-RU18` | Recurve only, U18 |
+| 3 | `Poland-RU15` | Recurve only, U15 |
+| 3 | `SetMasterClass` | Masters (R/C/B, 5 bands) — TourType 3 exclusive |
+| 37 | `SetAllClass` | everything (R/C/B, all classes — no U12/PU12/Masters) |
+| 37 | `SetSeniorClass` | R/C/B, M/W |
+| 37 | `Poland-RU24U21U18` | Recurve only, U24+U21+U18 |
+| 37 | `SetYouthClass` | Recurve only, U24+U21 |
+| 37 | `Poland-RU18` | Recurve only, U18 |
+| 37 | `Poland-RU15` | Recurve only, U15 |
+| 6 | `SetAllClass` | everything (incl. PU12) |
+| 6 | `SetSeniorClass` | R/C/B, M/W |
+| 6 | `SetYouthClass` | Recurve only, U24+U21 |
+| 6 | `Poland-RU18` | Recurve only, U18 |
+| 6 | `Poland-RU15` | Recurve only, U15 |
+| 16 | `SetAllClass` | fixed, not organiser-selectable (single entry) |
+
+The Masters preset (`SetMasterClass`) is never offered on TourType 1, 6, 16 or 37.
+
+---
+
 ## 1. 1440 Round (`Setup_1_PL.php`)
 
 ### Format Description
@@ -32,26 +71,27 @@ Used at the Polish Championships and regional competitions.
 ### Bow Types (Divisions)
 
 | Polish name   | Code | Description                                      |
-| ------------- | ---- | ------------------------------------------------ |
+| ------------- | ---- | ------------------------------------------------- |
 | Łuk klasyczny | R    | Recurve — sight, stabilisers, clicker allowed    |
 | Łuk bloczkowy | C    | Compound — release aid, magnifying scope allowed |
-| Łuk barebow   | B    | Barebow — no sight, no stabilisers               |
+
+**Łuk barebow (B) is not offered on this TourType** — PZŁucz's 1440 Round does not have a Barebow category.
 
 **Age eligibility per bow type:**
 
-- Łuk klasyczny (R): all age categories
-- Łuk bloczkowy (C): Młodzik (U15) through Seniorzy and Master 50+ (no U12; no U24)
-- Łuk barebow (B): Senior, Junior (U21), and Junior młodszy (U18) only (no U12, U15, U24, Master)
+- Łuk klasyczny (R): Senior, Młodzieżowiec (U24), Junior (U21), Junior młodszy (U18)
+- Łuk bloczkowy (C): Senior, Junior (U21), Junior młodszy (U18) — no U24 (U24 is Recurve-only, same restriction as everywhere else in this module)
 
 ### Age Categories (Classes)
 
-| Polish class name                       | Code        | Age range          | Sex     |
-| --------------------------------------- | ----------- | ------------------ | ------- |
-| Seniorzy / Seniorki                     | M / W       | Open (21 and over) | M and W |
-| Młodzieżowiec / Młodzieżowniczka        | U24M / U24W | 21–23 years        | M and W |
-| Junior / Juniorka                       | U21M / U21W | 18–20 years        | M and W |
-| Junior młodszy / Juniorka młodsza       | U18M / U18W | 15–17 years        | M and W |
-| Master mężczyźni / Master kobiety (50+) | 50M / 50W   | 50 years and over  | M and W |
+| Polish class name                 | Code        | Age range           | Sex     |
+| ---------------------------------- | ----------- | -------------------- | ------- |
+| Seniorzy / Seniorki                | M / W       | Open (21 and over)   | M and W |
+| Młodzieżowiec / Młodzieżowniczka   | U24M / U24W | 21–23 years          | M and W |
+| Junior / Juniorka                  | U21M / U21W | 18–20 years          | M and W |
+| Junior młodszy / Juniorka młodsza  | U18M / U18W | 15–17 years          | M and W |
+
+There is no Master category at the 1440 Round — the flat "Master 50+" class that used to exist here was removed (see §2's Masters age-band classes, which are TourType 3 only; no 1440-round Masters format is defined).
 
 > **Młodzik (U15) and Dziecko (U12) do not participate in the standard 1440 Round.** They have separate shorter rounds (see `Setup_3_PL.php` and `Setup_6_PL.php`).
 
@@ -59,25 +99,25 @@ Used at the Polish Championships and regional competitions.
 
 ### Shooting Distances by Category
 
+**Łuk klasyczny (R):**
+
 | Category/ies                                              | Distance 1 | Distance 2 | Distance 3 | Distance 4 |
 | --------------------------------------------------------- | ---------- | ---------- | ---------- | ---------- |
-| R — Mężczyźni (M, U24M, U21M)                             | 90 m       | 70 m       | 50 m       | 30 m       |
-| R — Kobiety (W, U24W, U21W) and R Junior młodszy M (U18M) | 70 m       | 60 m       | 50 m       | 30 m       |
-| R — Juniorka młodsza K (U18W)                             | 60 m       | 50 m       | 40 m       | 30 m       |
-| R — Master mężczyźni (50M)                                | 70 m       | 60 m       | 50 m       | 30 m       |
-| R — Master kobiety (50W)                                  | 60 m       | 50 m       | 40 m       | 30 m       |
-| Łuk bloczkowy (C) — all categories                        | 50 m       | 50 m       | 50 m       | 50 m       |
-| Łuk barebow (B) — all categories                          | 50 m       | 50 m       | 50 m       | 50 m       |
+| Mężczyźni (M, U24M, U21M)                                 | 90 m       | 70 m       | 50 m       | 30 m       |
+| Kobiety (W, U24W, U21W) and Junior młodszy M (U18M)        | 70 m       | 60 m       | 50 m       | 30 m       |
+| Juniorka młodsza K (U18W)                                  | 60 m       | 50 m       | 40 m       | 30 m       |
 
-> Łuk bloczkowy and Łuk barebow shoot 4 sessions of 18 arrows each at 50 m (72 arrows total). The distance does not change, but the 4-session structure is maintained for consistency with the round format.
+**Łuk bloczkowy (C):** identical per-class distances to Łuk klasyczny above — Compound mirrors Recurve's distance table exactly on this TourType (this is a change from the round's earlier flat 4×50m Compound distance).
+
+> Compound's target face stays the 80cm 6-ring face regardless of which of the distances above it's shooting at any given leg — only the *distances* mirror Recurve, not the scoring face (see Target Faces below).
 
 ### Target Faces and Scoring
 
-| Distance                                  | Target           | Rings                     |
-| ----------------------------------------- | ---------------- | ------------------------- |
-| 90 m, 70 m, 60 m (Recurve long distances) | 122 cm full face | 1–10 + X (gold = 10)      |
-| 50 m, 40 m, 30 m (Recurve, Barebow)       | 80 cm full face  | 1–10 + X                  |
-| 50 m (Łuk bloczkowy, all sessions)        | 80 cm            | 5–10 + X (6-ring variant) |
+| Division / Distance                        | Target           | Rings                     |
+| ------------------------------------------- | ---------------- | ------------------------- |
+| Łuk klasyczny, 90 m / 70 m / 60 m           | 122 cm full face | 1–10 + X (gold = 10)      |
+| Łuk klasyczny, 50 m / 40 m / 30 m           | 80 cm full face  | 1–10 + X                  |
+| Łuk bloczkowy, any distance                 | 80 cm            | 5–10 + X (6-ring variant) |
 
 **X ring (inner 10):** Counts as 10 points but is recorded separately for tiebreaking.
 
@@ -98,6 +138,10 @@ The 1440 Round is **a qualification round only** — no elimination matches are 
 
 > If a tournament adds elimination matches separately, the post-elimination placement rules from §6 (Shared Rules → Post-Elimination Placement) apply.
 
+### Sub-rules
+
+See "Category Presets (Sub-Rules)" above for the full list. TourType 1 offers: everything (R+C, all classes), Senior-only (R+C, M/W), and three Recurve-only single-class cuts (U24, U21, U18) — each excludes the class from Compound even though it's normally eligible there in the unfiltered default.
+
 ---
 
 ## 2. Single-Distance Round (`Setup_3_PL.php`)
@@ -106,18 +150,26 @@ The 1440 Round is **a qualification round only** — no elimination matches are 
 
 The Single-Distance Round is an outdoor competition where each archer shoots **72 arrows at one distance** (or two distances in the variant for Młodzicy). Used at the Polish Championships and the most common format for everyday competitions.
 
-The script handles **two category variants**:
+The script handles **several category variants**:
 
 - **Variant A — 70m / 60m Round (Recurve, Compound, Barebow):** one distance per session, appropriate for the category
 - **Variant B — 40m+20m Round (Młodzicy U15):** alternating 40 m and 20 m sessions
+- **Variant C — 15m Round (Dziecko U12):** one distance per session, Recurve only
+- **Variant D — 10m Round (łuk popularny / PU12):** one distance per session, Recurve only
+- **Variant E — Masters bands:** one distance per session, varying by age band, Recurve/Compound/Barebow
 
-`Setup_3_PL.php` supports exactly one sub-rule, `Poland-Full`. The Double Round variant of this format — every class shooting the same session structure twice, 144 arrows in 4 sessions — used to be offered here as a `Poland-4x70m` sub-rule; it is now its own script and TourType, `Setup_37_PL.php` (§4 Double Round), since a `Poland-4x70m` tournament was reporting four qualification sessions on a tournament type ianseo itself believes has two. A tournament created earlier under `Poland-4x70m` keeps that value on its `ToTypeSubRule` column, but the module no longer registers or supports it — re-running setup on such a tournament is unsupported; recreate it as `Setup_37_PL.php` if its setup needs rebuilding.
+The Double Round variant of this format — every class shooting the same session structure twice, 144 arrows in 4 sessions — used to be offered here as a `Poland-4x70m` sub-rule; it is now its own script and TourType, `Setup_37_PL.php` (§4 Double Round), since a `Poland-4x70m` tournament was reporting four qualification sessions on a tournament type ianseo itself believes has two. A tournament created earlier under `Poland-4x70m` keeps that value on its `ToTypeSubRule` column, but the module no longer registers or supports it — re-running setup on such a tournament is unsupported; recreate it as `Setup_37_PL.php` if its setup needs rebuilding.
 
 ### Bow Types
 
-Same as the 1440 Round (R, C, B) with the same age restrictions.
+Same as the 1440 Round (R, C), **plus Łuk barebow (B)** — Barebow exists on this TourType, unlike the 1440 Round.
 
-Additionally: **Młodzicy (U15M/U15W)** are active in this format.
+Additionally active on this format:
+
+- **Młodzicy (U15M/U15W)**
+- **Dziecko (U12M/U12W)** — new to this TourType (previously indoor- and Children's-Round-only)
+- **Łuk popularny (PU12M/PU12W)** — simplified-recurve equipment category, same 9–12 age bracket as U12 but a distinct class, Recurve only
+- **Master age bands (`40M`/`40W`…`80M`/`80W`)** — Recurve, Compound and Barebow, TourType 3 exclusive (own sub-rule, `SetMasterClass`)
 
 ### Shooting Distances by Category
 
@@ -129,43 +181,55 @@ Additionally: **Młodzicy (U15M/U15W)** are active in this format.
 | Senior W (W), U24W, U21W  | 70 m            | 72      |
 | Junior młodszy M (U18M)   | 60 m            | 72      |
 | Juniorka młodsza K (U18W) | 60 m            | 72      |
-| Master mężczyźni (50M)    | 60 m            | 72      |
-| Master kobiety (50W)      | 60 m            | 72      |
 | Młodzik M (U15M)          | **40 m + 20 m** | 36 + 36 |
 | Młodziczka K (U15W)       | **40 m + 20 m** | 36 + 36 |
+| Dziecko (U12M/U12W)       | 15 m            | 72      |
+| Łuk popularny (PU12M/PU12W) | 10 m          | 72      |
+| Master 40-49 / 50-59 (`40M/W`, `50M/W`) | 70 m | 72 |
+| Master 60-69 (`60M/W`)    | 60 m            | 72      |
+| Master 70+ / 80+ (`70M/W`, `80M/W`) | 50 m  | 72      |
 
 **Łuk bloczkowy (C):**
 
-| Class                               | Distance | Arrows |
-| ----------------------------------- | -------- | ------ |
-| All categories (Senior through U15) | 50 m     | 72     |
+| Class                                    | Distance | Arrows |
+| ------------------------------------------ | -------- | ------ |
+| Senior, U21, Junior młodszy, Młodzik (M/W/U21M/U21W/U18M/U18W/U15M/U15W) | 50 m     | 72     |
+| Master, all 5 bands (`40M/W`…`80M/W`)      | 50 m     | 72     |
+
+U12 and PU12 do not shoot Compound — Recurve only.
 
 **Łuk barebow (B):**
 
-| Class                                                      | Distance | Arrows |
-| ---------------------------------------------------------- | -------- | ------ |
-| Senior M/W, Junior (U21M/U21W), Junior młodszy (U18M/U18W) | 50 m     | 72     |
+| Class                                                       | Distance | Arrows |
+| ------------------------------------------------------------ | -------- | ------ |
+| Senior M/W, Junior (U21M/U21W), Junior młodszy (U18M/U18W)   | 50 m     | 72     |
+| Master, all 5 bands (`40M/W`…`80M/W`)                        | 50 m     | 72     |
+
+Master Barebow is new — previously Barebow's oldest eligible class was Senior; the age-band Masters classes now shoot Barebow at every band.
 
 ### Target Faces
 
-| Bow / Distance        | Target                           |
-| --------------------- | -------------------------------- |
-| Recurve 70 m and 60 m | 122 cm full face (1–10 + X)      |
-| Recurve 40 m (U15)    | 122 cm full face                 |
-| Recurve 20 m (U15)    | 80 cm full face                  |
-| Łuk bloczkowy 50 m    | 80 cm, 6-ring variant (5–10 + X) |
-| Łuk barebow 50 m      | 122 cm full face (1–10 + X)      |
+| Bow / Category                          | Target                                     |
+| ---------------------------------------- | ------------------------------------------- |
+| Recurve 70 m / 60 m                      | 122 cm full face (1–10 + X)                 |
+| Recurve 40 m (U15)                       | 122 cm full face                            |
+| Recurve 20 m (U15)                       | 80 cm full face                             |
+| Recurve 15 m (U12) / 10 m (łuk popularny) | 122 cm full face                           |
+| Recurve, Masters (all bands)             | 122 cm full face                            |
+| Łuk bloczkowy 50 m, bands 40-49/50-59/60-69 and non-Masters | 80 cm, 6-ring variant (5–10 + X) |
+| Łuk bloczkowy 50 m, Masters 70+/80+      | 80 cm full face (1–10 + X) — **not** the 6-ring variant |
+| Łuk barebow 50 m                         | 122 cm full face (1–10 + X)                 |
 
 ### Ends and Arrows
 
-**Standard (all except U15):** 2 sessions × (6 ends × 6 arrows) = 72 arrows total.
+**Standard (adult classes, U12, PU12, Masters):** 2 sessions × (6 ends × 6 arrows) = 72 arrows total.
 
-**40m+20m Round (U15):**
+**40m+20m Round (U15 only):**
 
 - 40 m session: 12 ends × 3 arrows = 36 arrows
 - 20 m session: 12 ends × 3 arrows = 36 arrows
 
-> The Double Round (§4, `Setup_37_PL.php`) shoots every session above twice — 144 arrows total for every class, including U15 (40m, 40m, 20m, 20m).
+> The Double Round (§4, `Setup_37_PL.php`) shoots every session above twice — 144 arrows total for the classes it offers (U15: 40m, 40m, 20m, 20m). U12, PU12 and Masters are not offered on the Double Round at all (see §4).
 
 ### Tiebreaking
 
@@ -173,7 +237,7 @@ Same as the 1440 Round — 10s first, then Xs, then same rank.
 
 ### Elimination Phase
 
-After qualification, **the top 104 archers** in each category advance to matches (at the Polish Championships).
+After qualification, **the top 104 archers** in each category advance to matches (at the Polish Championships) — this includes every Masters band.
 
 **Łuk klasyczny and Łuk barebow — Set System:**
 
@@ -192,7 +256,7 @@ After qualification, **the top 104 archers** in each category advance to matches
 
 > Elimination structure (cut counts, set/cumulative match format) is identical on the Double Round (§4) — doubling only affects the qualification round.
 
-> **Important — U15 at the Polish Championships:** Młodzicy (U15) have **no elimination phase** — the qualification score is the final result.
+> **U15, U12 and PU12 have no elimination phase** — the qualification score is the final result. Masters classes *do* have an elimination phase (unlike U15/U12/PU12), following the same rules as the corresponding adult class.
 
 > For all categories that do have elimination, the post-elimination placement rules from §6 (Shared Rules → Post-Elimination Placement) apply — each loser receives a unique place, not a shared round-based rank.
 
@@ -213,15 +277,21 @@ Mixed teams are formed from qualification results (1 man + 1 woman from the same
 
 **Mixed team events per division:**
 
-| Division          | Event codes                          |
-| ----------------- | ------------------------------------ |
-| Łuk klasyczny (R) | RX, RU24X, RU21X, RU18X, R50X, RU15X |
-| Łuk bloczkowy (C) | CX, CU21X, CU18X, C50X, CU15X        |
-| Łuk barebow (B)   | BX, BU21X, BU18X                     |
+| Division          | Event codes                    |
+| ----------------- | ------------------------------- |
+| Łuk klasyczny (R) | RX, RU24X, RU21X, RU18X, RU15X |
+| Łuk bloczkowy (C) | CX, CU21X, CU18X, CU15X        |
+| Łuk barebow (B)   | BX, BU21X, BU18X               |
+
+**No mixed team events exist for U12, PU12 or Master classes.**
 
 **Distances:** Same as the corresponding individual elimination distance for each division × category.
 
 > **U15 mixed teams** have **no elimination** (same as U15 individual/team). They are ranked by combined qualification score only.
+
+### Sub-rules
+
+See "Category Presets (Sub-Rules)" above for the full list — 7 sub-rules on this TourType, including the TourType-3-exclusive Masters preset.
 
 ---
 
@@ -234,41 +304,46 @@ The Indoor Round is held indoors at a short distance. Each archer shoots **60 ar
 ### Bow Types
 
 - Łuk klasyczny (R), Łuk bloczkowy (C), Łuk barebow (B)
-- Dziecko (U12): **Łuk klasyczny (R) only** — Compound and Barebow are not permitted
+- Dziecko (U12) and Łuk popularny (PU12): **Łuk klasyczny (R) only** — Compound and Barebow are not permitted
 
 ### Age Categories
 
 | Polish class name                 | Code        | Notes                       |
-| --------------------------------- | ----------- | --------------------------- |
-| Seniorzy / Seniorki               | M / W       |                             |
-| Młodzieżowiec / Młodzieżowniczka  | U24M / U24W | Recurve only                |
-| Junior / Juniorka                 | U21M / U21W |                             |
-| Junior młodszy / Juniorka młodsza | U18M / U18W |                             |
-| Master mężczyźni / Master kobiety | 50M / 50W   |                             |
-| Młodzik / Młodziczka              | U15M / U15W |                             |
-| Dziecko                           | U12M / U12W | Recurve only; shoot at 15 m |
+| ---------------------------------- | ----------- | ---------------------------- |
+| Seniorzy / Seniorki                | M / W       |                               |
+| Młodzieżowiec / Młodzieżowniczka   | U24M / U24W | Recurve only                 |
+| Junior / Juniorka                  | U21M / U21W |                               |
+| Junior młodszy / Juniorka młodsza  | U18M / U18W |                               |
+| Młodzik / Młodziczka               | U15M / U15W |                               |
+| Dziecko                            | U12M / U12W | Recurve only; shoot at 15 m  |
+| Łuk popularny                      | PU12M / PU12W | Recurve only; shoot at 10 m |
+
+There is no Master category indoors — the flat "Master 50+" class that used to exist here was removed; no indoor Masters replacement is defined.
 
 ### Shooting Distance
 
-All categories: **18 metres**, except **Dzieci (U12)** who shoot at **15 metres**.
+All categories: **18 metres**, except **Dzieci (U12)** who shoot at **15 metres** and **łuk popularny (PU12)** who shoot at **10 metres**.
 
 ### Target Faces
 
-| Category                        | Bow type           | Distance | Target                                               |
-| ------------------------------- | ------------------ | -------- | ---------------------------------------------------- |
-| Senior (M/W), U24, Junior (U21) | Łuk klasyczny (R)  | 18 m     | **Triple 40 cm** (3 small faces arranged vertically) |
-| Senior (M/W), U24, Junior (U21) | Łuk bloczkowy (C)  | 18 m     | **Triple 40 cm**                                     |
-| Junior młodszy (U18)            | Łuk klasyczny (R)  | 18 m     | Single 40 cm full face                               |
-| Junior młodszy (U18)            | Łuk bloczkowy (C)  | 18 m     | Single 40 cm full face                               |
-| All categories                  | Łuk barebow (B)    | 18 m     | Single 40 cm full face                               |
-| Młodzik / Młodziczka (U15)      | All bow types      | 18 m     | 60 cm full face                                      |
-| Dziecko (U12)                   | Łuk klasyczny only | 15 m     | 80 cm full face                                      |
+| Category                        | Bow type            | Distance | Target                                               |
+| -------------------------------- | -------------------- | -------- | ----------------------------------------------------- |
+| Senior (M/W), U24, Junior (U21)  | Łuk klasyczny (R)     | 18 m     | **Triple 40 cm** (3 small faces arranged vertically) |
+| Senior (M/W), Junior (U21)       | Łuk bloczkowy (C)     | 18 m     | **Triple 40 cm**                                     |
+| Junior młodszy (U18)             | Łuk klasyczny (R)     | 18 m     | Single 40 cm full face                                |
+| Junior młodszy (U18)             | Łuk bloczkowy (C)     | 18 m     | Single 40 cm full face                                |
+| All categories                   | Łuk barebow (B)       | 18 m     | Single 40 cm full face                                |
+| Młodzik / Młodziczka (U15)       | All bow types         | 18 m     | 60 cm full face                                       |
+| Dziecko (U12)                    | Łuk klasyczny only    | 15 m     | 80 cm full face                                       |
+| Łuk popularny (PU12)             | Łuk klasyczny only    | 10 m     | 122 cm full face                                      |
 
 > **Triple 40 cm:** Three 40 cm faces arranged vertically on one stand. Within one end, each arrow must hit a different face (prevents stacking in the same zone). Used by Seniorzy and Juniorzy — it is the precision target for experienced archers.
 
 ### Ends and Arrows
 
 All categories: **20 ends × 3 arrows = 60 arrows total.**
+
+Individual and team events use the same distance/target-size configuration per class — U12's team event shoots the same 15 m / 80 cm single face as U12's individual event (not U15's 18 m / 40 cm triple face).
 
 ### Scoring and Tiebreaking
 
@@ -289,13 +364,17 @@ Set system and cumulative rules: **same as the outdoor round** (see Section 2).
 **Indoor elimination target faces:**
 
 | Category                  | Bow type                     | Target                       |
-| ------------------------- | ---------------------------- | ---------------------------- |
-| Senior, U24, Junior (U21) | Łuk klasyczny, Łuk bloczkowy | Triple 40 cm (linear layout) |
-| Junior młodszy (U18)      | Łuk klasyczny, Łuk bloczkowy | Single 40 cm                 |
-| All                       | Łuk barebow                  | Single 40 cm                 |
-| Młodzicy (U15)            | All                          | 60 cm                        |
+| ------------------------- | ---------------------------- | ----------------------------- |
+| Senior, Junior (U21)      | Łuk klasyczny, Łuk bloczkowy | Triple 40 cm (linear layout)  |
+| Junior młodszy (U18)      | Łuk klasyczny, Łuk bloczkowy | Single 40 cm                  |
+| All                       | Łuk barebow                  | Single 40 cm                  |
+| Młodzicy (U15)            | All                          | 60 cm                         |
+
+> U12 and PU12 have no elimination — see Ends and Arrows / Elimination note below.
 
 > For all categories with elimination, the post-elimination placement rules from §6 (Shared Rules → Post-Elimination Placement) apply — each loser receives a unique place, not a shared round-based rank.
+
+> **U15, U12 and PU12 have no elimination phase** — the qualification score is the final result.
 
 ### Mixed Team Events (Indoor)
 
@@ -307,15 +386,21 @@ Same mixed team formation rules as outdoor (see §6 Shared Rules → Mixed Team 
 
 **Mixed team events per division:**
 
-| Division          | Event codes                          |
-| ----------------- | ------------------------------------ |
-| Łuk klasyczny (R) | RX, RU24X, RU21X, RU18X, R50X, RU15X |
-| Łuk bloczkowy (C) | CX, CU21X, CU18X, C50X, CU15X        |
-| Łuk barebow (B)   | BX, BU21X, BU18X                     |
+| Division          | Event codes                    |
+| ----------------- | -------------------------------- |
+| Łuk klasyczny (R) | RX, RU24X, RU21X, RU18X, RU15X  |
+| Łuk bloczkowy (C) | CX, CU21X, CU18X, CU15X         |
+| Łuk barebow (B)   | BX, BU21X, BU18X                |
 
-**Indoor mixed team elimination target faces:** Same as indoor individual elimination — triple 40 cm for Senior/U24/U21 R and C; single 40 cm for U18 and all B; 60 cm for U15.
+**No mixed team events exist for U12 or PU12.**
+
+**Indoor mixed team elimination target faces:** Same as indoor individual elimination — triple 40 cm for Senior/U21 R and C; single 40 cm for U18 and all B; 60 cm for U15.
 
 > **U15 mixed teams** have **no elimination** — ranked by combined qualification score only.
+
+### Sub-rules
+
+See "Category Presets (Sub-Rules)" above for the full list — 5 sub-rules on this TourType.
 
 ---
 
@@ -323,23 +408,25 @@ Same mixed team formation rules as outdoor (see §6 Shared Rules → Mixed Team 
 
 ### Format Description
 
-The Double Round (Podwójna runda, §2.3.1.10.7) is the Single-Distance Round (§2) shot twice: every class shoots its §2 session structure **twice**, at the same distances, with no other change — **144 arrows in 4 sessions**. Runs on ianseo TourType 37 (`Type_2x70mRound`), registered with the single sub-rule `Poland-Full`.
+The Double Round (Podwójna runda, §2.3.1.10.7) is the Single-Distance Round (§2) shot twice: every class shoots its §2 session structure **twice**, at the same distances, with no other change — **144 arrows in 4 sessions**. Runs on ianseo TourType 37 (`Type_2x70mRound`).
 
 ### Bow Types
 
-Same as the Single-Distance Round (§2), with the same age restrictions.
+Same as the Single-Distance Round's Senior/U24/U21/U18/U15 classes (§2), with the same age restrictions.
+
+**U12, łuk popularny (PU12) and Masters are explicitly not offered on this TourType** — this is the one place §2's roster and §4's diverge. A tournament needing U12/PU12/Masters must use TourType 3 instead.
 
 ### Shooting Distances by Category
 
 | Class group | Single-Distance Round (§2, 2 sessions) | Double Round (4 sessions) |
 | --- | --- | --- |
 | R Senior/U24/U21 (M, W) | 70m, 70m | 70m, 70m, 70m, 70m |
-| R U18 / Master (50+) | 60m, 60m | 60m, 60m, 60m, 60m |
+| R U18 | 60m, 60m | 60m, 60m, 60m, 60m |
 | R Młodzik (U15) | 40m, 20m | 40m, 40m, 20m, 20m |
 | C (all categories) | 50m, 50m | 50m, 50m, 50m, 50m |
 | B (all categories) | 50m, 50m | 50m, 50m, 50m, 50m |
 
-`tourDetNumDist` is `4`; `tourDetMaxDistScore` stays `360` — a per-session cap, unaffected by session count. Target faces, event codes, and team scoring are identical to the Single-Distance Round (§2).
+`tourDetNumDist` is `4`; `tourDetMaxDistScore` stays `360` — a per-session cap, unaffected by session count. Target faces, event codes, and team scoring are identical to the Single-Distance Round (§2), for the classes both formats share.
 
 ### Ends and Arrows
 
@@ -351,7 +438,11 @@ Identical to the Single-Distance Round (§2): top 104 individual / top 24 team q
 
 ### Mixed Team Events
 
-Identical to the Single-Distance Round (§2) — same event codes, bracket size, and match format.
+Identical to the Single-Distance Round (§2) for the classes both formats share — same event codes, bracket size, and match format.
+
+### Sub-rules
+
+See "Category Presets (Sub-Rules)" above for the full list — 6 sub-rules on this TourType (same as TourType 3 minus the Masters preset).
 
 ---
 
@@ -359,7 +450,9 @@ Identical to the Single-Distance Round (§2) — same event codes, bracket size,
 
 ### Format Description
 
-The Children's Round (Runda dziecięca, §2.3.1.10.11) is a competition exclusively for Dzieci (U12), Łuk klasyczny only — no other age category or bow type is created. Runs on ianseo TourType 16 (`Type_GiochiGioventuW`), registered with the single sub-rule `Poland-Full`.
+The Children's Round (Runda dziecięca, §2.3.1.10.11) is a competition exclusively for Dzieci (U12), Łuk klasyczny only — no other age category or bow type is created. Runs on ianseo TourType 16 (`Type_GiochiGioventuW`), with one fixed, non-organiser-selectable configuration.
+
+**Łuk popularny (PU12) is explicitly not offered on this TourType**, even though it shares U12's 9–12 age bracket on TourType 3/6.
 
 Each archer shoots **18 arrows at each of four distances**, longest to shortest — **72 arrows total**, matching every other format's arrow count, just split across four shorter legs instead of two longer ones.
 
@@ -404,13 +497,15 @@ Age is calculated **by year of birth**: age = competition year − birth year, i
 
 ### Division × Age Eligibility Summary
 
-| Bow type          | Minimum class        | Maximum class | Notes                    |
-| ----------------- | -------------------- | ------------- | ------------------------ |
-| Łuk klasyczny (R) | Dziecko (U12)        | Master 50+    | No age restrictions      |
-| Łuk bloczkowy (C) | Młodzik (U15)        | Master 50+    | No U12; no U24           |
-| Łuk barebow (B)   | Junior młodszy (U18) | Senior        | No U12, U15, U24, Master |
-| Tradycyjny (T)    | Senior               | Senior        | 3D only                  |
-| Longbow (L)       | Senior               | Senior        | 3D only                  |
+| Bow type          | Minimum class          | Maximum class    | Notes                              |
+| ----------------- | ----------------------- | ------------------ | ------------------------------------ |
+| Łuk klasyczny (R) | Dziecko (U12) / łuk popularny (PU12) | Master (all bands) | No age restrictions |
+| Łuk bloczkowy (C) | Młodzik (U15)            | Master (all bands) | No U12; no PU12; no U24              |
+| Łuk barebow (B)   | Junior młodszy (U18)     | Master (all bands) | No U12, U15, U24, PU12               |
+| Tradycyjny (T)    | Senior                   | Senior              | 3D only                              |
+| Longbow (L)       | Senior                   | Senior              | 3D only                              |
+
+Master classes reach every division (R, C, B) — this is new: the flat Master class Barebow never included, but the five age-band Masters classes (TourType 3 only) shoot Barebow at every band.
 
 ### Post-Elimination Placement (§2.6.5)
 
@@ -425,13 +520,13 @@ PZŁucz regulations require **unique individual places** for all athletes after 
 **Resulting placement example (104-archer bracket, outdoor):**
 
 | Round lost in        | Default ianseo rank | PZŁucz ranks (unique)    |
-| -------------------- | ------------------- | ------------------------ |
-| Gold-medal match     | 2                   | 2                        |
-| Bronze-medal match   | 4                   | 4                        |
-| 1/2 final (2 losers) | 5 (shared)          | 5, 6 (sub-ranked)        |
-| 1/4 final (4 losers) | 9 (shared)          | 7, 8, 9, 10 (sub-ranked) |
-| 1/8 final (8 losers) | 17 (shared)         | 11–18 (sub-ranked)       |
-| …and so on           | …                   | …                        |
+| -------------------- | -------------------- | -------------------------- |
+| Gold-medal match     | 2                     | 2                           |
+| Bronze-medal match   | 4                     | 4                           |
+| 1/2 final (2 losers) | 5 (shared)            | 5, 6 (sub-ranked)           |
+| 1/4 final (4 losers) | 9 (shared)            | 7, 8, 9, 10 (sub-ranked)    |
+| 1/8 final (8 losers) | 17 (shared)           | 11–18 (sub-ranked)          |
+| …and so on           | …                     | …                            |
 
 > This sub-ranking applies to **both individual and team** elimination brackets.
 
@@ -455,47 +550,55 @@ Mixed teams pair **1 man + 1 woman** from the same club, same division, same age
 
 **Match differences vs standard (3-person) teams:**
 
-| Parameter      | Standard team         | Mixed team            |
-| -------------- | --------------------- | --------------------- |
-| Team size      | 3 (or 3+1 substitute) | 2 (1 man + 1 woman)   |
-| Arrows per end | 6 (2 per archer)      | 4 (2 per archer)      |
-| Shoot-off      | 3 arrows (1 each)     | 2 arrows (1 each)     |
-| Bracket size   | Top 24                | Top 16                |
-| Sets (R/B)     | First to 5 set points | First to 5 set points |
-| Ends (C)       | 4 cumulative          | 4 cumulative          |
+| Parameter      | Standard team          | Mixed team             |
+| -------------- | ------------------------ | ------------------------- |
+| Team size      | 3 (or 3+1 substitute)    | 2 (1 man + 1 woman)       |
+| Arrows per end | 6 (2 per archer)         | 4 (2 per archer)          |
+| Shoot-off      | 3 arrows (1 each)        | 2 arrows (1 each)         |
+| Bracket size   | Top 24                   | Top 16                    |
+| Sets (R/B)     | First to 5 set points    | First to 5 set points     |
+| Ends (C)       | 4 cumulative              | 4 cumulative               |
+
+No mixed team events exist for U12, PU12, or Master classes on any TourType.
 
 ### Out of Scope
 
-The following are explicitly **not** covered by these three scripts:
+The following are explicitly **not** covered by these scripts:
 
 - **Para-archery** (R OPEN, C OPEN, W1, VI categories)
 - **Field archery** (terenowe)
 - **3D archery**
 - **Special Shootings** (Kur, Słonecznik, Koniczyna, Mak) — PZŁucz Championships tradition
+- **Masters format on TourType 1 or 6** — no Masters replacement is defined outside TourType 3
 
 ---
 
 ## Verification Checklist
 
-1. Create `Setup_1_PL.php` for a test tournament type 1 — confirm R distances vary by category; C/B all show 4 × 50 m
-2. Create `Setup_3_PL.php` — verify 70 m/60 m for R; 50 m for C and B; 40 m+20 m for U15 with 3-arrow ends
-3. Create `Setup_6_PL.php` — verify triple 40 cm for Senior/U24/U21 R and C; single 40 cm for U18/B; 60 cm for U15; 80 cm for U12 at 15 m
-4. Confirm U24 only appears under Łuk klasyczny (R), not C or B
-5. Confirm U12 appears only in indoor (type 6, alongside other categories) and in the Children's Round (type 16, U12-only), Łuk klasyczny only in both — never in type 1, 3, or 37
-6. Confirm U15 has no elimination configuration in type 3
-7. Verify post-elimination placement: losers of the same round receive unique places (sub-ranked by match score, then qualification rank) — not shared ranks
-8. Confirm sub-ranking applies to both individual and team brackets
-9. Verify mixed team events are created for R, C, B with correct event codes (suffix `X`)
-10. Confirm mixed team events use 2-person teams (`EvMaxTeamPerson = 2`), 4 arrows per end, 2-arrow shoot-off
-11. Confirm `EvMixedTeam = 1` is set on all mixed team events
-12. Confirm U15 mixed teams have no elimination (`EvFinalFirstPhase = 0`)
-13. Create `Setup_37_PL.php` — verify every class's §2 session structure is doubled exactly (e.g. U15 = 40m, 40m, 20m, 20m), `tourDetNumDist = 4`, elimination/finals/mixed-team configuration identical to type 3
-14. Create `Setup_16_PL.php` — verify only U12M/U12W classes exist (no senior/U24/U21/U18/Master, no C or B division), distances are 25m/20m/15m/10m with 122/122/80/80cm faces, 3-arrow ends, and no elimination configuration
+1. Create `Setup_1_PL.php` for a test tournament type 1 — confirm R distances vary by category; C mirrors R's per-class distances exactly; confirm no Barebow division/class/event is created
+2. Create `Setup_3_PL.php` — verify 70 m/60 m for R; 50 m for C and B; 40 m+20 m for U15 with 3-arrow ends; 15 m for U12; 10 m for łuk popularny (PU12); Masters bands at their documented per-band distances
+3. Create `Setup_6_PL.php` — verify triple 40 cm for Senior/U24/U21 R and C; single 40 cm for U18/B; 60 cm for U15; 80 cm for U12 at 15 m; 122 cm for łuk popularny at 10 m
+4. Confirm U24 only appears under Łuk klasyczny (R), not C or B, on every TourType including the 1440 Round
+5. Confirm U12 appears in indoor (type 6), the Single-Distance Round (type 3, new), and the Children's Round (type 16, U12-only) — Łuk klasyczny only in all three — never in type 1 or 37
+6. Confirm łuk popularny (PU12) appears only on types 3 and 6, never on 1, 16 or 37
+7. Confirm the flat Master class (`50M`/`50W`) is never created on any TourType; confirm the five age-band Masters classes are created only when the `SetMasterClass` sub-rule is selected on TourType 3
+8. Confirm Masters classes have an elimination phase; confirm U12, PU12 and U15 do not
+9. Confirm U15 has no elimination configuration in type 3
+10. Verify post-elimination placement: losers of the same round receive unique places (sub-ranked by match score, then qualification rank) — not shared ranks
+11. Confirm sub-ranking applies to both individual and team brackets
+12. Verify mixed team events are created for R, C, B with correct event codes (suffix `X`); confirm no mixed team events exist for U12, PU12, or Masters
+13. Confirm mixed team events use 2-person teams (`EvMaxTeamPerson = 2`), 4 arrows per end, 2-arrow shoot-off
+14. Confirm `EvMixedTeam = 1` is set on all mixed team events
+15. Confirm U15 mixed teams have no elimination (`EvFinalFirstPhase = 0`)
+16. Create `Setup_37_PL.php` — verify every shared class's §2 session structure is doubled exactly (e.g. U15 = 40m, 40m, 20m, 20m), `tourDetNumDist = 4`, elimination/finals/mixed-team configuration identical to type 3; confirm U12/PU12/Masters are never created
+17. Create `Setup_16_PL.php` — verify only U12M/U12W classes exist (no senior/U24/U21/U18/Master/PU12, no C or B division), distances are 25m/20m/15m/10m with 122/122/80/80cm faces, 3-arrow ends, and no elimination configuration
+18. Select each registered sub-rule on the tournament-creation form and confirm the category list matches this document's Category Presets table, with no leftover distance, target-face or event row for a class the preset didn't create
 
 ## Decisions
 
 - Requirements written in English; Polish names kept for age class names only (e.g. "Junior młodszy", "Młodzik", "Dziecko")
-- Compound 1440 = 4 sessions all at 50 m — same distance repeated
+- Every target face label the setup scripts create uses this module's established Polish division vocabulary (`Łuk klasyczny`/`Łuk bloczkowy`/`Łuk barebow`), not the English bow-type words some labels used before this module's category-presets rework
 - Para-archery, field, 3D out of scope for this delivery
-- U24 and U12 must be created as custom classes (no equivalent in the WA/FITA standard)
-- Sub-rules: define at minimum one sub-rule per type ("Full configuration"); additional sub-rules can be added later
+- U24 and U12 must be created as custom classes (no equivalent in the WA/FITA standard); łuk popularny (PU12) likewise has no WA/FITA equivalent
+- Category presets (sub-rules) are a fixed list defined in the module, per TourType — there is no runtime editing; adding a preset is a code change
+- The flat "Master 50+" class does not reflect how PZŁucz Masters competitions are actually run — replaced by five age-band classes (40-49/50-59/60-69/70+/80+), TourType 3 only; 70+ and 80+ are both open-ended and deliberately overlap (an 80-or-older archer may choose either band)
