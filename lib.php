@@ -383,13 +383,17 @@ function pl_setup_70m_family($TourId, $TourType, $Multiplier, $PL_CLASS_NAMES, $
     CreateDistanceNew($TourId, $TourType, 'RU15M', pl_double_legs(array(array('40m', 40), array('20m', 20)), $isDouble));
     CreateDistanceNew($TourId, $TourType, 'RU15W', pl_double_legs(array(array('40m', 40), array('20m', 20)), $isDouble));
 
-    // Recurve — U12: 2 × 15 m (4 × 15 m when doubled) — TourType 3 only, never 37
-    CreateDistanceNew($TourId, $TourType, 'RU12M', pl_double_legs(array(array('15m-1', 15), array('15m-2', 15)), $isDouble));
-    CreateDistanceNew($TourId, $TourType, 'RU12W', pl_double_legs(array(array('15m-1', 15), array('15m-2', 15)), $isDouble));
-
-    // Recurve — PU12: 2 × 10 m — TourType 3 only, never 37
-    CreateDistanceNew($TourId, $TourType, 'RPU12M', pl_double_legs(array(array('10m-1', 10), array('10m-2', 10)), $isDouble));
-    CreateDistanceNew($TourId, $TourType, 'RPU12W', pl_double_legs(array(array('10m-1', 10), array('10m-2', 10)), $isDouble));
+    // Recurve — U12: 2 × 15 m (4 × 15 m when doubled); PU12: 2 × 10 m —
+    // TourType 3 only, never 37 (pl_class_in_preset() only checks the
+    // preset axis, not TourType eligibility — this guard is load-bearing,
+    // not redundant with pl_standard_class_candidates() excluding these
+    // classes from TourType 37's roster).
+    if ($TourType == 3) {
+        CreateDistanceNew($TourId, $TourType, 'RU12M', pl_double_legs(array(array('15m-1', 15), array('15m-2', 15)), $isDouble));
+        CreateDistanceNew($TourId, $TourType, 'RU12W', pl_double_legs(array(array('15m-1', 15), array('15m-2', 15)), $isDouble));
+        CreateDistanceNew($TourId, $TourType, 'RPU12M', pl_double_legs(array(array('10m-1', 10), array('10m-2', 10)), $isDouble));
+        CreateDistanceNew($TourId, $TourType, 'RPU12W', pl_double_legs(array(array('10m-1', 10), array('10m-2', 10)), $isDouble));
+    }
 
     // Compound — all: 2 × 50 m (4 × 50 m when doubled)
     CreateDistanceNew($TourId, $TourType, 'C%', pl_double_legs(array(array('50m-1', 50), array('50m-2', 50)), $isDouble));
@@ -449,21 +453,24 @@ function pl_setup_70m_family($TourId, $TourType, $Multiplier, $PL_CLASS_NAMES, $
         if (!pl_class_in_preset($cl, 'R', $preset)) continue;
         CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]}", $i++, $optRU15);
     }
-    $optRU12 = $optR;
-    $optRU12['EvFinalFirstPhase'] = 0;
-    $optRU12['EvDistance']        = 15;
-    $optRU12['EvTargetSize']      = 122;
-    foreach (array('U12M', 'U12W') as $cl) {
-        if (!pl_class_in_preset($cl, 'R', $preset)) continue;
-        CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]}", $i++, $optRU12);
-    }
-    $optRPU12 = $optR;
-    $optRPU12['EvFinalFirstPhase'] = 0;
-    $optRPU12['EvDistance']        = 10;
-    $optRPU12['EvTargetSize']      = 122;
-    foreach (array('PU12M', 'PU12W') as $cl) {
-        if (!pl_class_in_preset($cl, 'R', $preset)) continue;
-        CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]}", $i++, $optRPU12);
+    // TourType 3 only, never 37 — same reason as the distances above.
+    if ($TourType == 3) {
+        $optRU12 = $optR;
+        $optRU12['EvFinalFirstPhase'] = 0;
+        $optRU12['EvDistance']        = 15;
+        $optRU12['EvTargetSize']      = 122;
+        foreach (array('U12M', 'U12W') as $cl) {
+            if (!pl_class_in_preset($cl, 'R', $preset)) continue;
+            CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]}", $i++, $optRU12);
+        }
+        $optRPU12 = $optR;
+        $optRPU12['EvFinalFirstPhase'] = 0;
+        $optRPU12['EvDistance']        = 10;
+        $optRPU12['EvTargetSize']      = 122;
+        foreach (array('PU12M', 'PU12W') as $cl) {
+            if (!pl_class_in_preset($cl, 'R', $preset)) continue;
+            CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]}", $i++, $optRPU12);
+        }
     }
 
     // --- Compound individual (cumulative) ---
@@ -578,17 +585,20 @@ function pl_setup_70m_family($TourId, $TourType, $Multiplier, $PL_CLASS_NAMES, $
         if (!pl_class_in_preset($cl, 'R', $preset)) continue;
         CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]} zespoły", $i++, $optRTU15);
     }
-    $optRTU12 = $optRTU15;
-    $optRTU12['EvDistance'] = 15;
-    foreach (array('U12M', 'U12W') as $cl) {
-        if (!pl_class_in_preset($cl, 'R', $preset)) continue;
-        CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]} zespoły", $i++, $optRTU12);
-    }
-    $optRTPU12 = $optRTU15;
-    $optRTPU12['EvDistance'] = 10;
-    foreach (array('PU12M', 'PU12W') as $cl) {
-        if (!pl_class_in_preset($cl, 'R', $preset)) continue;
-        CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]} zespoły", $i++, $optRTPU12);
+    // TourType 3 only, never 37 — same reason as the individual events above.
+    if ($TourType == 3) {
+        $optRTU12 = $optRTU15;
+        $optRTU12['EvDistance'] = 15;
+        foreach (array('U12M', 'U12W') as $cl) {
+            if (!pl_class_in_preset($cl, 'R', $preset)) continue;
+            CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]} zespoły", $i++, $optRTU12);
+        }
+        $optRTPU12 = $optRTU15;
+        $optRTPU12['EvDistance'] = 10;
+        foreach (array('PU12M', 'PU12W') as $cl) {
+            if (!pl_class_in_preset($cl, 'R', $preset)) continue;
+            CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]} zespoły", $i++, $optRTPU12);
+        }
     }
 
     // Compound team (cumulative)

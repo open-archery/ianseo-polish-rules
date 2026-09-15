@@ -454,6 +454,25 @@ final class LibTest extends \PlTestCase
         $this->assertCount(0, array_filter($type37Codes, fn ($c) => preg_match('/^(40|50|60|70|80)[MW]$/', $c)));
     }
 
+    public function testPlSetup70mFamilyType37CreatesNoU12PU12OrMastersEventsOrDistances(): void
+    {
+        // Regression: pl_class_in_preset() only checks the preset axis, not
+        // TourType eligibility — a per-class CreateEventNew()/CreateDistanceNew()
+        // loop that forgets an explicit TourType guard still fires on 37 even
+        // though CreateStandardClasses() correctly excludes these classes
+        // there, leaving orphaned Events/TournamentDistances rows with no
+        // class to bind to.
+        \pl_setup_70m_family(7, 37, 2, $this->plClassNames(), $this->plMixedClassNames());
+
+        $eventCodes = array_column(\CallLog::calls('CreateEventNew'), 1);
+        $this->assertCount(0, array_filter($eventCodes, fn ($c) => str_contains($c, 'U12') || preg_match('/^R(40|50|60|70|80)[MW]$/', $c)),
+            'no U12/PU12/Masters event should be created on TourType 37');
+
+        $distanceClasses = array_column(\CallLog::calls('CreateDistanceNew'), 2);
+        $this->assertCount(0, array_filter($distanceClasses, fn ($c) => str_contains($c, 'U12') || preg_match('/^R(40|50|60|70|80)[MW]$/', $c)),
+            'no U12/PU12/Masters distance should be created on TourType 37');
+    }
+
     public function testPlSetup70mFamilyMastersOnlyOnType3(): void
     {
         \pl_setup_70m_family(7, 3, 1, $this->plClassNames(), $this->plMixedClassNames());
