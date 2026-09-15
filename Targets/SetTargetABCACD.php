@@ -8,6 +8,12 @@ require_once(__DIR__ . '/Fun_SetTargetABCACD.php');
 $tourId  = (int)$_SESSION['TourId'];
 $sessions = GetSessions('Q');
 
+// Both grouping checkboxes default to checked on first load (no FormSubmitted
+// marker yet); once the form has been submitted, an unchecked box is simply
+// absent from $_REQUEST like any HTML checkbox, so its real value is honored.
+$groupByDiv   = isset($_REQUEST['FormSubmitted']) ? !empty($_REQUEST['GroupByDiv'])   : true;
+$groupByClass = isset($_REQUEST['FormSubmitted']) ? !empty($_REQUEST['GroupByClass']) : true;
+
 // ─── Erase action ─────────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST'
     && isset($_REQUEST['Erase'])
@@ -25,14 +31,17 @@ $PAGE_TITLE = 'Rozstawianie tarcz ABC/ACD';
 include('Common/Templates/head.php');
 ?>
 <form name="Frm" method="POST" action="">
+<input type="hidden" name="FormSubmitted" value="1">
 <table class="Tabella">
-<tr><th class="Title" colspan="7"><?php echo htmlspecialchars($PAGE_TITLE); ?></th></tr>
-<tr class="Divider"><td colspan="7"></td></tr>
+<tr><th class="Title" colspan="9"><?php echo htmlspecialchars($PAGE_TITLE); ?></th></tr>
+<tr class="Divider"><td colspan="9"></td></tr>
 <tr>
   <td class="Center">Sesja</td>
   <td class="Center">Klasa</td>
   <td class="Center">Tarcza od</td>
   <td class="Center">Tarcza do</td>
+  <td class="Center">Rozdziel dywizje</td>
+  <td class="Center">Rozdziel klasy</td>
   <td class="Center">Zapisz</td>
   <td class="Center" colspan="2">&nbsp;</td>
 </tr>
@@ -59,6 +68,14 @@ include('Common/Templates/head.php');
   <td class="Center">
     <input type="text" name="TgtTo" maxlength="4" size="5"
            value="<?= htmlspecialchars($_REQUEST['TgtTo'] ?? '') ?>">
+  </td>
+  <td class="Center">
+    <input type="checkbox" name="GroupByDiv" value="1"
+           <?= $groupByDiv ? 'checked' : '' ?>>
+  </td>
+  <td class="Center">
+    <input type="checkbox" name="GroupByClass" value="1"
+           <?= $groupByClass ? 'checked' : '' ?>>
   </td>
   <td class="Center">
     <input type="checkbox" name="DoAssign" value="1"
@@ -92,11 +109,13 @@ if ($sesOrder >= 1 && $event !== '' && $tgtFrom >= 1 && $tgtTo >= $tgtFrom) {
            . ' Zmień ustawienie sesji przed rozstawieniem ABC/ACD.</strong></p>';
     } else {
 
-        // ─── Build slot list ────────────────────────────────────────
+        // ─── Build slot list (whole requested range, for rendering) ──
         $slots = pl_abc_acd_build_slots($tgtFrom, $tgtTo);
 
         // ─── Load and group athletes ──────────────────────────
-        $orderedClubs = pl_abc_acd_load_athletes($tourId, $sesOrder, $event);
+        // When both checkboxes are unchecked this is a single group covering
+        // everything $event matches (today's pooled behavior).
+        $groups = pl_abc_acd_load_athletes($tourId, $sesOrder, $event, $groupByDiv, $groupByClass);
 
         $palette    = [
             '#ffd6d6','#d6f0ff','#d6ffd6','#fff3d6','#f0d6ff','#d6ffee',
@@ -108,16 +127,41 @@ if ($sesOrder >= 1 && $event !== '' && $tgtFrom >= 1 && $tgtTo >= $tgtFrom) {
         ];
         $clubColors = [];
         $clubNames  = [];
-        foreach (array_keys($orderedClubs) as $i => $code) {
-            $clubColors[$code] = $palette[$i % count($palette)];
-            $clubNames[$code]  = $orderedClubs[$code][0]['clubName'] ?? $code;
+        $colorIdx   = 0;
+        foreach ($groups as $group) {
+            foreach ($group['clubs'] as $code => $athletes) {
+                if (!isset($clubColors[$code])) {
+                    $clubColors[$code] = $palette[$colorIdx % count($palette)];
+                    $clubNames[$code]  = $athletes[0]['clubName'] ?? $code;
+                    $colorIdx++;
+                }
+            }
         }
 
-        // ─── Run assignment algorithm ──────────────────────────
+        // ─── Carve one boss-aligned sub-range per group ───────────────
+        $groupSizes = array_map(
+            fn($group) => array_sum(array_map('count', $group['clubs'])),
+            $groups
+        );
+        $groupRanges = pl_abc_acd_carve_group_ranges($tgtFrom, $tgtTo, $groupSizes);
+
+        // ─── Run assignment algorithm per group ────────────────────
         // Wave tally from other classes already saved in this session biases
-        // which column (A vs C) each club gets (PZŁucz §2.5.1.5).
-        $waveTally = pl_abc_acd_session_wave_tally($tourId, $sesOrder, $event);
-        [$assignments, $unassigned] = pl_abc_acd_assign($orderedClubs, $slots, $waveTally);
+        // which column (A vs C) each club gets (PZŁucz §2.5.1.5). Groups
+        // processed earlier in this same request also feed the tally seen by
+        // later groups, on top of previously-saved history.
+        $runningTally = pl_abc_acd_session_wave_tally($tourId, $sesOrder, $event);
+        $assignments  = [];
+        $unassigned   = [];
+        foreach ($groups as $i => $group) {
+            [$from, $to]  = $groupRanges[$i];
+            $groupSlots   = pl_abc_acd_build_slots($from, $to);
+            [$groupAssignments, $groupUnassigned] = pl_abc_acd_assign($group['clubs'], $groupSlots, $runningTally);
+
+            $assignments  = array_merge($assignments, $groupAssignments);
+            $unassigned   = array_merge($unassigned, $groupUnassigned);
+            $runningTally = pl_abc_acd_merge_tally($runningTally, $groupAssignments);
+        }
 
         // ─── Erase and save ─────────────────────────
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_REQUEST['DoAssign'])) {

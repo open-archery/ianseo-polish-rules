@@ -172,15 +172,23 @@ function pl_abc_acd_assign(array $clubs, array $slots, array $waveTally = []): a
 }
 
 /**
- * Loads athletes for the given class+session, grouped by club (EnCountry),
- * sorted with the largest club first.
+ * Loads athletes for the given class+session, optionally split into groups by
+ * division and/or class (mirroring native ianseo's GroupByDiv/GroupByClass),
+ * each grouped by club (EnCountry) and sorted with the largest club first
+ * within its group.
  *
- * @return array club_code => [['id','name','club','clubName'], ...]
+ * When neither $groupByDiv nor $groupByClass is set, the result is a single
+ * group covering everything $event matches (today's pooled behavior). Groups
+ * are ordered by whichever of Divisions.DivViewOrder/Classes.ClViewOrder are
+ * active for the grouping, matching native's own group ordering convention.
+ *
+ * @return array list of ['label' => string, 'clubs' => club_code => [['id','name','club','clubName'], ...]]
  */
-function pl_abc_acd_load_athletes(int $tourId, int $sesOrder, string $event): array
+function pl_abc_acd_load_athletes(int $tourId, int $sesOrder, string $event, bool $groupByDiv = false, bool $groupByClass = false): array
 {
     $q = safe_r_sql(
-        "SELECT EnId, EnFirstName, EnName, EnDivision, EnClass, CoCode EnCountry, CoName EnClubName"
+        "SELECT EnId, EnFirstName, EnName, EnDivision, EnClass, CoCode EnCountry, CoName EnClubName,"
+        . " DivViewOrder, ClViewOrder"
         . " FROM Entries"
         . " INNER JOIN Countries ON EnCountry=CoId"
         . " INNER JOIN Qualifications ON EnId=QuId"
@@ -192,28 +200,112 @@ function pl_abc_acd_load_athletes(int $tourId, int $sesOrder, string $event): ar
         . " ORDER BY EnCountry, RAND()"
     );
 
-    $clubCounts   = [];
-    $clubAthletes = [];
+    // groupKey => ['label', 'order' => [divOrder, clOrder], 'clubCounts', 'clubAthletes']
+    $buckets = [];
     while ($r = safe_fetch($q)) {
+        $divPart = $groupByDiv   ? trim($r->EnDivision) : '';
+        $clPart  = $groupByClass ? trim($r->EnClass)    : '';
+        $key     = $divPart . '|' . $clPart;
+
+        if (!isset($buckets[$key])) {
+            $buckets[$key] = [
+                'label'        => $divPart . $clPart,
+                'order'        => [$groupByDiv ? (int)$r->DivViewOrder : 0, $groupByClass ? (int)$r->ClViewOrder : 0],
+                'clubCounts'   => [],
+                'clubAthletes' => [],
+            ];
+        }
+
         $code = $r->EnCountry;
-        $clubAthletes[$code][] = [
+        $buckets[$key]['clubAthletes'][$code][] = [
             'id'       => (int)$r->EnId,
             'name'     => trim($r->EnName . ' ' . $r->EnFirstName),
             'club'     => $code,
             'clubName' => $r->EnClubName,
         ];
-        $clubCounts[$code] = ($clubCounts[$code] ?? 0) + 1;
+        $buckets[$key]['clubCounts'][$code] = ($buckets[$key]['clubCounts'][$code] ?? 0) + 1;
     }
     safe_free_result($q);
 
-    arsort($clubCounts); // largest club first
+    uasort($buckets, fn($a, $b) => $a['order'] <=> $b['order']);
 
-    $orderedClubs = [];
-    foreach (array_keys($clubCounts) as $code) {
-        $orderedClubs[$code] = $clubAthletes[$code];
+    $groups = [];
+    foreach ($buckets as $bucket) {
+        $clubCounts = $bucket['clubCounts'];
+        arsort($clubCounts); // largest club first
+
+        $orderedClubs = [];
+        foreach (array_keys($clubCounts) as $code) {
+            $orderedClubs[$code] = $bucket['clubAthletes'][$code];
+        }
+
+        $groups[] = ['label' => $bucket['label'], 'clubs' => $orderedClubs];
     }
 
-    return $orderedClubs;
+    return $groups;
+}
+
+/**
+ * Splits [$tgtFrom, $tgtTo] into one boss-aligned sub-range per group, sized
+ * to hold each group's athlete count (3 usable ABC/ACD slots per boss - see
+ * pl_abc_acd_build_slots). Groups are carved in order; a group that doesn't
+ * fully fit in what's left gets whatever whole bosses remain (possibly none),
+ * so overflow is reported via the normal unassigned-athlete path rather than
+ * thrown.
+ *
+ * @param  int[] $groupSizes athlete count per group, in carving order
+ * @return array list of [$from, $to] boss ranges, one per entry in $groupSizes,
+ *               in the same order (an exhausted/zero-size group yields an
+ *               empty range where $to < $from)
+ */
+function pl_abc_acd_carve_group_ranges(int $tgtFrom, int $tgtTo, array $groupSizes): array
+{
+    $ranges = [];
+    $cursor = $tgtFrom;
+
+    foreach ($groupSizes as $size) {
+        if ($size <= 0 || $cursor > $tgtTo) {
+            $ranges[] = [$cursor, $cursor - 1];
+            continue;
+        }
+
+        $bossesNeeded = (int)ceil($size / 3);
+        $end          = min($tgtTo, $cursor + $bossesNeeded - 1);
+
+        $ranges[] = [$cursor, $end];
+        $cursor   = $end + 1;
+    }
+
+    return $ranges;
+}
+
+/**
+ * Folds a computed assignment map (slot => athlete) into a wave1/wave2 tally,
+ * additive with whatever the base tally already has. Used to thread the
+ * cross-class wave-balance bias (PZŁucz §2.5.1.5) across groups processed
+ * within the same request, on top of the saved-history tally from
+ * pl_abc_acd_session_wave_tally().
+ *
+ * @param  array $tally       club_code => ['wave1' => int, 'wave2' => int]
+ * @param  array $assignments slot => athlete_array (from pl_abc_acd_assign)
+ * @return array merged tally, same shape as $tally
+ */
+function pl_abc_acd_merge_tally(array $tally, array $assignments): array
+{
+    foreach ($assignments as $slot => $athlete) {
+        $club = $athlete['club'];
+        if (!isset($tally[$club])) {
+            $tally[$club] = ['wave1' => 0, 'wave2' => 0];
+        }
+        $letter = strtoupper(substr($slot, -1));
+        if ($letter === 'A' || $letter === 'B') {
+            $tally[$club]['wave1']++;
+        } elseif ($letter === 'C' || $letter === 'D') {
+            $tally[$club]['wave2']++;
+        }
+    }
+
+    return $tally;
 }
 
 /**
