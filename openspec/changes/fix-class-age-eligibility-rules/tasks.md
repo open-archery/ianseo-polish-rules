@@ -15,20 +15,27 @@
 
 ## 4. Manual verification
 
-> **Deferred (user decision, apply session):** the Docker app container bind-mounts
-> the main checkout's `Modules/Sets/PL`, not this worktree, so the running ianseo
-> instance can't see these edits without switching or copying into that checkout.
-> User chose to skip live verification for this session — the change is pure data
-> (two integers, a few comma-separated strings, no new SQL/schema) and is already
-> covered by 435 passing PHPUnit tests, including two new ones asserting exactly
-> this behavior (`testCreateStandardClassesSeniorAgeToIsOpenEnded`,
-> `testCreateStandardClassesUpwardEligibilityRestrictedBelowU21`). Run 4.1-4.3
-> manually before/at merge time once this branch reaches a checkout the container
-> can see.
+> **Partially done, rest accepted as covered by other checks (user decision).**
+> Checked out `worktree-youth-master-class-age-rules` directly in the main
+> checkout (the Docker app container bind-mounts that path, not a git worktree
+> under it) and restarted the app container. Confirmed on the *real* container
+> runtime — not just the local PHPUnit run — by calling
+> `pl_standard_class_candidates(3)` directly via `docker exec ... php -r ...`:
+> output matches the spec exactly (`M`/`W` ageTo=100; `U12M`/`U12W`/`U15M`/`U15W`
+> self-only; `U18M`→`U18M,U21M`; `U21M`/`U24M`/Masters/PU12 unchanged). Also
+> checked `Install/install.sql`: `ClAgeTo` is `tinyint` (signed, max 127), so
+> `100` fits with no truncation risk — the one thing the FakeDb-backed PHPUnit
+> suite structurally cannot verify. Did not go further into creating a real
+> tournament via `Tournament/index.php`'s `Command=SAVE&New=1` flow to check
+> BibImport/participant-dropdown end-to-end — that POST needs a large
+> required-field set (`VerificaDati`-validated date/timezone splits, IOC code,
+> currency, ...) with no prior working example in this repo to copy; user opted
+> to accept the runtime+schema checks above as sufficient rather than spend
+> further turns reconstructing it blind.
 
-- [ ] 4.1 Create a **new** test tournament (per memory: never reuse an existing one) of TourType 3 under the `SetSeniorClass` preset (no Masters classes), confirm via DB query that the `M`/`W` `Classes` rows have `ClAgeTo = 100`, and confirm an archer aged 55 auto-resolves to `M`/`W` through the BibImport age-class flow instead of landing in the class-unresolved list.
-- [ ] 4.2 In a TourType 3 tournament created under `SetAllClass` (both Senior and Masters classes present), confirm an archer aged 55 still auto-resolves to the `50M`/`50W` Masters band, not Senior — narrowest-range match is unaffected by the wider Senior ceiling.
-- [ ] 4.3 In any tournament with U12/U15/U18/U21/U24 classes, query `Classes.ClValidClass` (or check the participant-entry class-reassignment dropdown) and confirm: U12 and U15 offer only themselves, U18 offers itself plus U21 (not Senior), and U21/U24 still offer themselves plus Senior.
+- [x] 4.1 ~~Create a new test tournament... confirm ClAgeTo=100 and BibImport auto-resolution.~~ `ClAgeTo=100` confirmed via real container execution + schema type check (see note above). BibImport end-to-end flow not exercised — accepted as covered by `pl_resolve_age_class()`'s query shape being unchanged (only the `Classes` row values it reads changed).
+- [x] 4.2 ~~Confirm Masters band still wins narrowest-match with Senior widened.~~ Confirmed via the same real container output: `50M`/`50W` (ageFrom=50, ageTo=59) is strictly narrower than `M` (21-100) for any age in [50,59], so narrowest-match precedence is structurally unaffected — same logic already covered by the unit test suite's `pl_resolve_age_class` query semantics.
+- [x] 4.3 ~~Query ClValidClass / check the dropdown live.~~ `ClValidClass` values confirmed directly from real container output (see note above): `U12M`, `U12W`, `U15M`, `U15W` self-only; `U18M,U21M` / `U18W,U21W`; `U21M,M` / `U24M,M` unchanged. Live dropdown UI not clicked through — `Participants/getCombo.php`'s `find_in_set` join reads this same column verbatim, no separate logic to diverge from what's shown here.
 
 ## 5. Self-review
 
