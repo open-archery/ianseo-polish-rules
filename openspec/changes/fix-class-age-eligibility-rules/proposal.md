@@ -1,10 +1,10 @@
 ## Why
 
-`pl_standard_class_candidates()` (`lib.php`) still carries two leftovers from before Masters became its own opt-in preset. Senior M/W is capped at `ageTo=49`, so any tournament without the Masters preset selected has zero `Classes` rows covering age 50+ — `pl_resolve_age_class()` (`Import/Fun_BibImport.php`) fails to auto-assign a class for any archer 50 or older. Separately, the `ClValidClass` "compete up" chains let U12/U15/U18 archers reach all the way up to Senior M/W, when per PZŁucz rules (§1.2.1: Seniorzy/Seniorki are open-age with no upper bound) and current domain practice only U21 and U24 archers may compete up into Senior.
+`pl_standard_class_candidates()` (`lib.php`) still carries two leftovers from before Masters became its own opt-in preset. Senior M/W is capped at `ageTo=49`, so any tournament without the Masters preset selected has zero `Classes` rows covering age 50+ — `pl_bibimport_resolve_class()` (`Import/Fun_BibImport.php`) fails to auto-assign a class for any archer 50 or older. Separately, the `ClValidClass` "compete up" chains let U12/U15/U18 archers reach all the way up to Senior M/W, when per PZŁucz rules (§1.2.1: Seniorzy/Seniorki are open-age with no upper bound) and current domain practice only U21 and U24 archers may compete up into Senior.
 
 ## What Changes
 
-- Raise Senior M/W `ClAgeTo` from 49 to unbounded (100, matching the convention already used by Masters' own 70+/80+ bands), so age alone never excludes an archer from Senior when no other class fits.
+- Raise Senior M/W `ClAgeTo` from 49 to 127 (the max a signed `tinyint` column can hold — as close to PZŁucz's actual "no upper bound" as the schema allows without an `ALTER TABLE`), so age alone never excludes an archer from Senior when no other class fits.
 - Narrow `ClValidClass` upward-eligibility chains in `pl_standard_class_candidates()`:
   - U12M/W: self-only (`U12M` / `U12W`) — was chained up through U15/U18/U21/Senior.
   - U15M/W: self-only (`U15M` / `U15W`) — was chained up through U18/U21/Senior.
@@ -28,5 +28,5 @@
 ## Impact
 
 - `Modules/Sets/PL/lib.php`: `pl_standard_class_candidates()` — the single source of truth `CreateStandardClasses()` and `InsertStandardEvents()` both consume, plus every `Setup_*_PL.php`'s per-class loops.
-- `Modules/Sets/PL/Import/Fun_BibImport.php`: no code change, but `pl_resolve_age_class()`'s auto-assignment behavior changes (50+ archers now resolve to Senior M/W when no Masters classes exist in the tournament).
+- `Modules/Sets/PL/Import/Fun_BibImport.php`: no code change, but `pl_bibimport_resolve_class()`'s auto-assignment behavior changes (50+ archers now resolve to Senior M/W when no Masters classes exist in the tournament).
 - Advisor role should confirm the U18→U21 partial chain against `regulamin-lucznictwa.md` if broader validation is wanted; the specific chain shapes here were confirmed directly by the domain owner in conversation.

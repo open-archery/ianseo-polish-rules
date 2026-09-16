@@ -12,7 +12,7 @@ reads via `find_in_set`). See proposal.md for why both need to change.
 
 Two consumers read these columns after class creation and must keep working
 after the fix:
-- `Import/Fun_BibImport.php`'s `pl_resolve_age_class()` — narrowest
+- `Import/Fun_BibImport.php`'s `pl_bibimport_resolve_class()` — narrowest
   `ClAgeFrom <= age <= ClAgeTo` match wins.
 - ianseo core's `Participants/getCombo.php` "class" combo — offers every code
   in `ClValidClass` as an assignable class, joined by tournament (see
@@ -22,7 +22,7 @@ after the fix:
 ## Goals / Non-Goals
 
 **Goals:**
-- Senior M/W (`ageFrom=21, ageTo=100`) matches an archer of any adult age when
+- Senior M/W (`ageFrom=21, ageTo=127`) matches an archer of any adult age when
   no more specific class exists, on every TourType that has Senior (1, 3, 6, 37).
 - `ClValidClass` chains for U12/U15/U18/U21/U24 match the target shape in
   proposal.md, with no change to Masters bands or PU12 (already correct).
@@ -38,12 +38,18 @@ after the fix:
 
 ## Decisions
 
-**`ageTo=100` for Senior, not a literal "no cap" sentinel.** `ClAgeTo` is a
-plain integer column compared with `>=`; there's no NULL/unbounded
-convention in this schema. `100` matches the value Masters' own 70+/80+ bands
-already use for the same "and older" concept (`lib.php:253`, the `$bands`
-array), so this reuses an existing convention instead of inventing a second
-one (e.g. `999`) for the same idea.
+**`ageTo=127` for Senior, not a literal "no cap" sentinel.** `ClAgeTo` is a
+plain `tinyint` column (`Install/install.sql`) compared with `>=`; there's no
+NULL/unbounded convention in this schema, and 127 is the highest value a
+signed `tinyint` can hold without an `ALTER TABLE`. An earlier version of this
+change used `100` (matching the value Masters' own 70+/80+ bands use for the
+same "and older" concept, `lib.php:253`) — code review correctly pointed out
+that `100` still contradicts the requirement's own "no upper bound" wording
+(`pl_bibimport_resolve_class()`'s `ClAgeTo >= age` is literal, so an archer
+aged 101+ wouldn't resolve). `127` isn't truly unbounded either, but it's the
+schema's actual ceiling rather than an arbitrary round number, so there's no
+cheaper way to get closer to PZŁucz's real "no upper bound" rule without a
+migration. Masters' own bands keep `ageTo=100` (out of scope — see below).
 
 **U18's chain becomes `'U18M,U21M'` (drop the trailing `,M`), not self-only.**
 The domain owner confirmed in conversation that U18 may still opt up to U21
@@ -69,10 +75,15 @@ were already redesigned correctly in the prior change.
 
 - **[Risk]** Widening Senior's age range could theoretically let a very old
   archer match Senior instead of a Masters band if band boundaries had gaps.
-  → **Mitigation:** verified band coverage is contiguous from 40 upward
+  → **Mitigation:** verified band coverage is contiguous from 40 through 100
   (40-49, 50-59, 60-69, 70-100, 80-100 — deliberately overlapping at the top,
   per `lib.php:249-252`'s own comment) — no gap exists between 21 and 100 for
-  any age to fall through to a wider Senior match by accident.
+  any age to fall through to a wider Senior match by accident. Ages 101-127
+  have no Masters coverage at all (Masters bands keep their pre-existing
+  `ageTo=100` cap, out of scope here) and fall through to Senior — this is a
+  pre-existing Masters-band limitation, not something this change introduces,
+  and resolving to Senior is strictly better than the prior behavior (no class
+  at all above the old Senior/Masters ceiling).
 - **[Risk]** A currently-live tournament (created before this fix) still has
   the old `ageTo=49`/wide chains baked into its `Classes` rows — this change
   only affects tournaments created afterward. → **Mitigation:** explicitly

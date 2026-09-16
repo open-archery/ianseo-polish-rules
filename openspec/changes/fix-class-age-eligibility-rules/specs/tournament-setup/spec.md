@@ -1,25 +1,32 @@
 ## ADDED Requirements
 
-### Requirement: Senior class age range has no upper bound
+### Requirement: Senior class age range covers every adult age up to the schema's ceiling
 
-The system SHALL create Senior M/W classes (`M`, `W`) with an open-ended upper
-age bound on every TourType that offers them (1, 3, 6, 37), so that an archer
-aged 50 or older still resolves to a class even in a tournament where no
-Masters classes were created (Masters is an opt-in `SetMasterClass` preset,
-TourType 3 only). Widening Senior's age ceiling SHALL NOT change which class a
-narrowest-range match picks when Masters classes are present in the same
-tournament — every Masters band remains narrower than Senior's range and wins
-on its own age window.
+The system SHALL create Senior M/W classes (`M`, `W`) with an upper age bound
+of 127 (the highest value `Classes.ClAgeTo`'s `tinyint` column can hold) on
+every TourType that offers them (1, 3, 6, 37), so that an archer aged 50 or
+older still resolves to a class even in a tournament where no Masters classes
+were created (Masters is an opt-in `SetMasterClass` preset, TourType 3 only).
+This is not a literal "no upper bound" — PZŁucz rules impose none — but 127 is
+the closest the current schema allows without a migration. Widening Senior's
+age ceiling SHALL NOT change which class a narrowest-range match picks when
+Masters classes are present in the same tournament — every Masters band
+remains narrower than Senior's range and wins on its own age window.
 
 #### Scenario: 50+ archer resolves to Senior when no Masters classes exist
 
-- **WHEN** an archer aged 55 is auto-resolved to a class (`pl_resolve_age_class`) in a tournament created without the `SetMasterClass` preset (e.g. TourType 1, TourType 6, or TourType 3 under `SetSeniorClass`/`SetAllClass` without Masters)
+- **WHEN** an archer aged 55 is auto-resolved to a class (`pl_bibimport_resolve_class`) in a tournament created without the `SetMasterClass` preset (e.g. TourType 1, TourType 6, or TourType 3 under `SetSeniorClass`/`SetAllClass` without Masters)
 - **THEN** the archer resolves to Senior M/W, not "no class found"
 
 #### Scenario: Masters band still wins when Masters classes exist
 
 - **WHEN** an archer aged 55 is auto-resolved to a class in a TourType 3 tournament created under `SetMasterClass` (both Senior and the `50M`/`50W` Masters band exist)
 - **THEN** the archer resolves to the `50M`/`50W` Masters band, not Senior — the narrowest matching age range still wins
+
+#### Scenario: Archer older than Masters' own ceiling still resolves to Senior
+
+- **WHEN** an archer aged 110 is auto-resolved to a class in a TourType 3 tournament created under `SetAllClass` (Masters' own bands cap at `ageTo=100`, unchanged by this requirement)
+- **THEN** the archer resolves to Senior M/W (the only class whose range still covers age 110), not "no class found"
 
 ### Requirement: Upward class eligibility is restricted below U21
 

@@ -194,7 +194,7 @@ final class LibTest extends \PlTestCase
     {
         // Senior M/W must resolve age-class for any adult age even in a
         // tournament with no Masters classes (Masters is opt-in, TourType 3
-        // only) — see Import/Fun_BibImport.php's pl_resolve_age_class().
+        // only) — see Import/Fun_BibImport.php's pl_bibimport_resolve_class().
         foreach ([1, 3, 6, 37] as $tourType) {
             \CallLog::reset();
             \CreateStandardClasses(7, $tourType);
@@ -202,7 +202,7 @@ final class LibTest extends \PlTestCase
             $senior = \CallLog::callsMatching('CreateClass', fn ($a) => $a[5] === 'M' || $a[5] === 'W');
             $this->assertCount(2, $senior, "TourType {$tourType} must create M and W");
             foreach ($senior as $call) {
-                $this->assertSame(100, $call[3], "{$call[5]} on TourType {$tourType} must have ageTo=100");
+                $this->assertSame(127, $call[3], "{$call[5]} on TourType {$tourType} must have ageTo=127 (max signed tinyint)");
             }
         }
     }

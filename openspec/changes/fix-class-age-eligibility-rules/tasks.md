@@ -33,8 +33,8 @@
 > to accept the runtime+schema checks above as sufficient rather than spend
 > further turns reconstructing it blind.
 
-- [x] 4.1 ~~Create a new test tournament... confirm ClAgeTo=100 and BibImport auto-resolution.~~ `ClAgeTo=100` confirmed via real container execution + schema type check (see note above). BibImport end-to-end flow not exercised — accepted as covered by `pl_resolve_age_class()`'s query shape being unchanged (only the `Classes` row values it reads changed).
-- [x] 4.2 ~~Confirm Masters band still wins narrowest-match with Senior widened.~~ Confirmed via the same real container output: `50M`/`50W` (ageFrom=50, ageTo=59) is strictly narrower than `M` (21-100) for any age in [50,59], so narrowest-match precedence is structurally unaffected — same logic already covered by the unit test suite's `pl_resolve_age_class` query semantics.
+- [x] 4.1 ~~Create a new test tournament... confirm ClAgeTo=100 and BibImport auto-resolution.~~ `ClAgeTo=100` confirmed via real container execution + schema type check (see note above). BibImport end-to-end flow not exercised — accepted as covered by `pl_bibimport_resolve_class()`'s query shape being unchanged (only the `Classes` row values it reads changed).
+- [x] 4.2 ~~Confirm Masters band still wins narrowest-match with Senior widened.~~ Confirmed via the same real container output: `50M`/`50W` (ageFrom=50, ageTo=59) is strictly narrower than `M` (21-100) for any age in [50,59], so narrowest-match precedence is structurally unaffected — same logic already covered by the unit test suite's `pl_bibimport_resolve_class` query semantics.
 - [x] 4.3 ~~Query ClValidClass / check the dropdown live.~~ `ClValidClass` values confirmed directly from real container output (see note above): `U12M`, `U12W`, `U15M`, `U15W` self-only; `U18M,U21M` / `U18W,U21W`; `U21M,M` / `U24M,M` unchanged. Live dropdown UI not clicked through — `Participants/getCombo.php`'s `find_in_set` join reads this same column verbatim, no separate logic to diverge from what's shown here.
 
 ## 5. Self-review
@@ -55,3 +55,8 @@
   for by the reviewer checklist's "research update" item (that's for newly
   discovered API behavior, not our own data changes). Manual verification
   (4.1-4.3) deferred by user decision this session — see note in §4.
+
+## 6. Code review follow-up (PR #55, CodeRabbit)
+
+- [x] 6.1 Fix wrong function name throughout the OpenSpec artifacts: `pl_resolve_age_class()` doesn't exist — the real function is `pl_bibimport_resolve_class()` (`Import/Fun_BibImport.php:72`, called at line 286). Corrected in `proposal.md` (×2), `design.md` (×1), `specs/tournament-setup/spec.md` (×1), and this file (×2) — CodeRabbit's review only caught 3 of the 6 occurrences.
+- [x] 6.2 Senior M/W's `ageTo=100` still contradicted the requirement's own "no upper bound" wording — `pl_bibimport_resolve_class()`'s `ClAgeTo >= age` is literal, so age 101+ wouldn't resolve. Raised to `127` (max signed `tinyint`, `Classes.ClAgeTo`'s real ceiling) in `lib.php`, updated `LibTest.php`'s assertion, and reworded the spec/design/proposal to stop claiming true unboundedness (127 is the schema's practical ceiling, not infinite). Re-ran the full PHPUnit suite to confirm still green.

@@ -224,8 +224,11 @@ function pl_standard_class_candidates($TourType) {
     $hasMasters  = ($TourType == 3);
 
     $c = array();
-    $c[] = array('code' => 'M',    'ageFrom' => 21, 'ageTo' => 100, 'sex' => 0, 'valid' => 'M',                        'name' => 'Seniorzy',              'div' => array('R', 'C', 'B'));
-    $c[] = array('code' => 'W',    'ageFrom' => 21, 'ageTo' => 100, 'sex' => 1, 'valid' => 'W',                        'name' => 'Seniorki',              'div' => array('R', 'C', 'B'));
+    // ageTo=127 is the max a signed tinyint (Classes.ClAgeTo) can hold — as
+    // close to PZŁucz's actual "no upper bound" as the schema allows without
+    // an ALTER TABLE.
+    $c[] = array('code' => 'M',    'ageFrom' => 21, 'ageTo' => 127, 'sex' => 0, 'valid' => 'M',                        'name' => 'Seniorzy',              'div' => array('R', 'C', 'B'));
+    $c[] = array('code' => 'W',    'ageFrom' => 21, 'ageTo' => 127, 'sex' => 1, 'valid' => 'W',                        'name' => 'Seniorki',              'div' => array('R', 'C', 'B'));
     $c[] = array('code' => 'U24M', 'ageFrom' => 21, 'ageTo' => 23,  'sex' => 0, 'valid' => 'U24M,M',                   'name' => 'Młodzieżowiec',         'div' => array('R'));
     $c[] = array('code' => 'U24W', 'ageFrom' => 21, 'ageTo' => 23,  'sex' => 1, 'valid' => 'U24W,W',                   'name' => 'Młodzieżowniczka',      'div' => array('R'));
     $c[] = array('code' => 'U21M', 'ageFrom' => 18, 'ageTo' => 20,  'sex' => 0, 'valid' => 'U21M,M',                   'name' => 'Junior',                'div' => array('R', 'C', 'B'));
