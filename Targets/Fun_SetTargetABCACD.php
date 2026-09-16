@@ -367,15 +367,32 @@ function pl_abc_acd_target_view_slots(int $tourId, int $sesOrder): array
 {
     $atSql = createAvailableTargetSQL($sesOrder, $tourId);
 
+    // Qualifications carries no tournament column of its own and QuId
+    // (=Entries.EnId) is a globally unique PK, so joining it to the slot
+    // list by QuSession/QuTarget/QuLetter alone (with the tournament filter
+    // applied only afterwards, on Entries) would fan out across every past
+    // tournament in the install that happens to reuse the same small
+    // session/target/letter values. Scoping Entries+Qualifications to this
+    // tournament first, in their own derived table — the same
+    // "FROM Entries ... WHERE EnTournament=..." shape pl_abc_acd_load_athletes()
+    // uses above — keeps the outer join to the full slot list a plain 1:1
+    // match per occupied slot. The Divisions/Classes athlete-type filter
+    // lives here too, as real INNER JOINs, so DivAthlete=1/ClAthlete=1
+    // actually excludes non-athlete rows instead of being a no-op on a
+    // LEFT JOIN.
     $q = safe_r_sql(
-        "SELECT at.FullTgtTarget AS Target, at.FullTgtLetter AS Letter,"
-        . " CONCAT(TRIM(EnDivision), TRIM(EnClass)) AS Label"
+        "SELECT at.FullTgtTarget AS Target, at.FullTgtLetter AS Letter, occ.Label AS Label"
         . " FROM (" . $atSql . ") at"
-        . " LEFT JOIN Qualifications ON QuSession=at.FullTgtSession"
-        . "   AND QuTarget=at.FullTgtTarget AND QuLetter=at.FullTgtLetter"
-        . " LEFT JOIN Entries ON EnId=QuId AND EnTournament=" . StrSafe_DB($tourId)
-        . " LEFT JOIN Divisions ON EnDivision=DivId AND EnTournament=DivTournament AND DivAthlete=1"
-        . " LEFT JOIN Classes   ON EnClass=ClId    AND EnTournament=ClTournament  AND ClAthlete=1"
+        . " LEFT JOIN ("
+        . "     SELECT QuSession, QuTarget, QuLetter,"
+        . "            CONCAT(TRIM(EnDivision), TRIM(EnClass)) AS Label"
+        . "     FROM Entries"
+        . "     INNER JOIN Qualifications ON EnId=QuId"
+        . "     INNER JOIN Divisions ON EnDivision=DivId AND EnTournament=DivTournament AND DivAthlete=1"
+        . "     INNER JOIN Classes   ON EnClass=ClId    AND EnTournament=ClTournament  AND ClAthlete=1"
+        . "     WHERE EnTournament=" . StrSafe_DB($tourId)
+        . " ) occ ON occ.QuSession=at.FullTgtSession"
+        . "   AND occ.QuTarget=at.FullTgtTarget AND occ.QuLetter=at.FullTgtLetter"
         . " ORDER BY at.FullTgtTarget, at.FullTgtLetter"
     );
 
