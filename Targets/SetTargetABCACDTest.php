@@ -546,6 +546,169 @@ final class SetTargetABCACDTest extends \PlTestCase
         $this->assertSame($savedTally['AZS'], $mergedTally['AZS']);
     }
 
+    // --- pl_abc_acd_target_view_slots ------------------------------------------
+
+    public function testTargetViewSlotsMapsStubbedRowsToPerSlotLabels(): void
+    {
+        \FakeDb::on('/FullTgtTarget AS Target/', [
+            ['Target' => 1, 'Letter' => 'A', 'Label' => 'RU15'],
+            ['Target' => 1, 'Letter' => 'B', 'Label' => null],
+            ['Target' => 1, 'Letter' => 'C', 'Label' => null],
+            ['Target' => 1, 'Letter' => 'D', 'Label' => null],
+            ['Target' => 2, 'Letter' => 'A', 'Label' => 'RU18'],
+            ['Target' => 2, 'Letter' => 'B', 'Label' => null],
+            ['Target' => 2, 'Letter' => 'C', 'Label' => null],
+            ['Target' => 2, 'Letter' => 'D', 'Label' => null],
+        ]);
+
+        $slots = \pl_abc_acd_target_view_slots(7, 3);
+
+        $this->assertSame(
+            [
+                ['target' => 1, 'letter' => 'A', 'label' => 'RU15'],
+                ['target' => 1, 'letter' => 'B', 'label' => null],
+                ['target' => 1, 'letter' => 'C', 'label' => null],
+                ['target' => 1, 'letter' => 'D', 'label' => null],
+                ['target' => 2, 'letter' => 'A', 'label' => 'RU18'],
+                ['target' => 2, 'letter' => 'B', 'label' => null],
+                ['target' => 2, 'letter' => 'C', 'label' => null],
+                ['target' => 2, 'letter' => 'D', 'label' => null],
+            ],
+            $slots
+        );
+    }
+
+    public function testTargetViewSlotsQueryFiltersByTournament(): void
+    {
+        \pl_abc_acd_target_view_slots(7, 3);
+
+        $this->assertCount(1, \FakeDb::executed("/EnTournament='7'/"));
+    }
+
+    public function testTargetViewSlotsAllFreeWhenSessionHasNoAssignedRows(): void
+    {
+        \FakeDb::on('/FullTgtTarget AS Target/', [
+            ['Target' => 1, 'Letter' => 'A', 'Label' => null],
+            ['Target' => 1, 'Letter' => 'B', 'Label' => null],
+            ['Target' => 2, 'Letter' => 'A', 'Label' => null],
+            ['Target' => 2, 'Letter' => 'B', 'Label' => null],
+        ]);
+
+        $slots      = \pl_abc_acd_target_view_slots(7, 3);
+        $bossLabels = \pl_abc_acd_target_view_boss_labels($slots);
+
+        $this->assertSame(['label' => 'Wolne', 'free' => true, 'mixed' => false], $bossLabels[1]);
+        $this->assertSame(['label' => 'Wolne', 'free' => true, 'mixed' => false], $bossLabels[2]);
+    }
+
+    // --- pl_abc_acd_target_view_boss_labels ------------------------------------
+
+    public function testBossLabelsFreeWhenNoOccupiedLetters(): void
+    {
+        $slots = [
+            ['target' => 1, 'letter' => 'A', 'label' => null],
+            ['target' => 1, 'letter' => 'B', 'label' => null],
+        ];
+
+        $bossLabels = \pl_abc_acd_target_view_boss_labels($slots);
+
+        $this->assertSame(['label' => 'Wolne', 'free' => true, 'mixed' => false], $bossLabels[1]);
+    }
+
+    public function testBossLabelsSingleClassWhenAllOccupiedLettersMatch(): void
+    {
+        $slots = [
+            ['target' => 1, 'letter' => 'A', 'label' => 'RU15'],
+            ['target' => 1, 'letter' => 'B', 'label' => 'RU15'],
+        ];
+
+        $bossLabels = \pl_abc_acd_target_view_boss_labels($slots);
+
+        $this->assertSame(['label' => 'RU15', 'free' => false, 'mixed' => false], $bossLabels[1]);
+    }
+
+    public function testBossLabelsMixedWhenOccupiedLettersSpanTwoClasses(): void
+    {
+        $slots = [
+            ['target' => 1, 'letter' => 'A', 'label' => 'RU15'],
+            ['target' => 1, 'letter' => 'B', 'label' => 'RU15'],
+            ['target' => 1, 'letter' => 'C', 'label' => 'RU18'],
+            ['target' => 1, 'letter' => 'D', 'label' => 'RU18'],
+        ];
+
+        $bossLabels = \pl_abc_acd_target_view_boss_labels($slots);
+
+        $this->assertSame(['label' => 'RU15+RU18', 'free' => false, 'mixed' => true], $bossLabels[1]);
+    }
+
+    public function testBossLabelsPartiallyFilledSingleClassIsNotMixed(): void
+    {
+        // Only letter A is filled (by RU15); B/C/D are still empty (null).
+        // This must resolve to plain "RU15", not mixed.
+        $slots = [
+            ['target' => 1, 'letter' => 'A', 'label' => 'RU15'],
+            ['target' => 1, 'letter' => 'B', 'label' => null],
+            ['target' => 1, 'letter' => 'C', 'label' => null],
+            ['target' => 1, 'letter' => 'D', 'label' => null],
+        ];
+
+        $bossLabels = \pl_abc_acd_target_view_boss_labels($slots);
+
+        $this->assertSame(['label' => 'RU15', 'free' => false, 'mixed' => false], $bossLabels[1]);
+    }
+
+    // --- pl_abc_acd_target_view_ranges ------------------------------------------
+
+    public function testTargetViewRangesMergesConsecutiveIdenticalLabels(): void
+    {
+        $bossLabels = [
+            1 => ['label' => 'RU15',  'free' => false, 'mixed' => false],
+            2 => ['label' => 'RU15',  'free' => false, 'mixed' => false],
+            3 => ['label' => 'RU18',  'free' => false, 'mixed' => false],
+            4 => ['label' => 'Wolne', 'free' => true,  'mixed' => false],
+            5 => ['label' => 'Wolne', 'free' => true,  'mixed' => false],
+        ];
+
+        $ranges = \pl_abc_acd_target_view_ranges($bossLabels);
+
+        $this->assertSame(
+            [
+                ['label' => 'RU15',  'free' => false, 'mixed' => false, 'from' => 1, 'to' => 2, 'colspan' => 2],
+                ['label' => 'RU18',  'free' => false, 'mixed' => false, 'from' => 3, 'to' => 3, 'colspan' => 1],
+                ['label' => 'Wolne', 'free' => true,  'mixed' => false, 'from' => 4, 'to' => 5, 'colspan' => 2],
+            ],
+            $ranges
+        );
+    }
+
+    public function testTargetViewRangesNeverMergesDifferentAdjacentLabels(): void
+    {
+        $bossLabels = [
+            20 => ['label' => 'RU15', 'free' => false, 'mixed' => false],
+            21 => ['label' => 'RU18', 'free' => false, 'mixed' => false],
+        ];
+
+        $ranges = \pl_abc_acd_target_view_ranges($bossLabels);
+
+        $this->assertCount(2, $ranges);
+    }
+
+    public function testTargetViewRangesNeverMergesMixedBossesEvenWithMatchingLabel(): void
+    {
+        // Both bosses compute the identical combined label string, but a
+        // mixed boss must never merge with a neighbor -- coincidental or not.
+        $bossLabels = [
+            1 => ['label' => 'RU15+RU18', 'free' => false, 'mixed' => true],
+            2 => ['label' => 'RU15+RU18', 'free' => false, 'mixed' => true],
+        ];
+
+        $ranges = \pl_abc_acd_target_view_ranges($bossLabels);
+
+        $this->assertCount(2, $ranges);
+        $this->assertSame(1, $ranges[0]['colspan']);
+        $this->assertSame(1, $ranges[1]['colspan']);
+    }
+
     // --- pl_abc_acd_erase -----------------------------------------------------
 
     public function testEraseClearsTargetLetterAndBacknoScopedToClassAndSession(): void

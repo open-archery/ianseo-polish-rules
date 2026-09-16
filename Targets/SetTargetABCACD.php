@@ -47,7 +47,7 @@ include('Common/Templates/head.php');
 </tr>
 <tr>
   <td class="Center">
-    <select name="Session">
+    <select name="Session" onchange="location.href='?Session='+encodeURIComponent(this.value)">
       <option value="">---</option>
       <?php foreach ($sessions as $s): ?>
       <option value="<?= (int)$s->SesOrder ?>"
@@ -94,6 +94,75 @@ $event    = (isset($_REQUEST['Event']) && preg_match('/^[0-9A-Z%_]+$/i', $_REQUE
             ? $_REQUEST['Event'] : '';
 $tgtFrom  = isset($_REQUEST['TgtFrom']) ? (int)$_REQUEST['TgtFrom'] : 0;
 $tgtTo    = isset($_REQUEST['TgtTo'])   ? (int)$_REQUEST['TgtTo']   : 0;
+
+// A $sesOrder with no matching row in $sessions (stale URL/bookmark, or a
+// tournament switch since the value was picked) makes core's
+// createAvailableTargetSQL() build a malformed "FROM () AS A" subquery — it
+// only ever emits UNION ALL branches for Session rows it actually finds, so
+// zero matches means zero branches. Guard on real session existence instead
+// of just $sesOrder >= 1.
+$sessionExists = false;
+foreach ($sessions as $s) {
+    if ((int)$s->SesOrder === $sesOrder) {
+        $sessionExists = true;
+        break;
+    }
+}
+
+// ─── Session-wide target occupancy grid ("field of play" view) ─────────────
+// Shown as soon as a session is selected, independent of Event/TgtFrom/TgtTo
+// and driven by the session's real capacity (core's createAvailableTargetSQL()),
+// not by the typed range above.
+if ($sesOrder >= 1 && $sessionExists) {
+    $viewSlots  = pl_abc_acd_target_view_slots($tourId, $sesOrder);
+    $bossLabels = pl_abc_acd_target_view_boss_labels($viewSlots);
+
+    if (!empty($bossLabels)) {
+        $ranges = pl_abc_acd_target_view_ranges($bossLabels);
+
+        // Distinct from the per-club $palette below — this one is keyed by
+        // division+class label, not club code.
+        $labelPalette = [
+            '#ffb3ba', '#bae1ff', '#baffc9', '#ffffba', '#e2baff', '#baffe8',
+            '#ffcfba', '#c9baff', '#ffdfba', '#baf0ff', '#f0ffba', '#ffbae2',
+            '#c4ffb3', '#b3d9ff', '#ffdab3', '#d9b3ff', '#b3ffea', '#ffb3d9',
+        ];
+        $freeColor  = '#eeeeee';
+        $mixedStyle = 'background:repeating-linear-gradient(45deg,#ffb3b3,#ffb3b3 6px,#ffe0e0 6px,#ffe0e0 12px)';
+
+        $labelColors   = [];
+        $labelColorIdx = 0;
+        $bossCount     = count($bossLabels);
+
+        echo '<table class="Tabella" style="margin-top:1em; margin-left:0; margin-right:auto;">';
+        echo '<tr><th class="Title" colspan="' . $bossCount . '">Obłożenie tarcz w sesji</th></tr>';
+
+        echo '<tr>';
+        foreach (array_keys($bossLabels) as $target) {
+            echo '<td class="Center">' . (int)$target . '</td>';
+        }
+        echo '</tr>';
+
+        echo '<tr>';
+        foreach ($ranges as $range) {
+            if ($range['free']) {
+                $style = 'background-color:' . $freeColor;
+            } elseif ($range['mixed']) {
+                $style = $mixedStyle;
+            } else {
+                if (!isset($labelColors[$range['label']])) {
+                    $labelColors[$range['label']] = $labelPalette[$labelColorIdx % count($labelPalette)];
+                    $labelColorIdx++;
+                }
+                $style = 'background-color:' . $labelColors[$range['label']];
+            }
+            echo '<td class="Center" colspan="' . $range['colspan'] . '" style="' . $style . '">'
+               . htmlspecialchars($range['label']) . '</td>';
+        }
+        echo '</tr>';
+        echo '</table>';
+    }
+}
 
 if ($sesOrder >= 1 && $event !== '' && $tgtFrom >= 1 && $tgtTo >= $tgtFrom) {
 

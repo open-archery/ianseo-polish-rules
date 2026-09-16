@@ -180,6 +180,20 @@ commit as the fix. Terse is fine; the goal is "don't step on this rake again," n
   verified with a live tournament create + `Events LEFT JOIN EventClass` orphan check (zero
   orphans after adding the guard everywhere `CreateEventNew()` is called per-class).
 
+- **`createAvailableTargetSQL($Session, $TourId)` (core, `Common/Globals.inc.php`) builds
+  malformed SQL — `FROM () AS A` — when `$Session` matches zero rows in the `Session`
+  table**, e.g. a stale `Session` value left over from a different tournament, or any other
+  caller-supplied session id that doesn't actually exist for `$TourId`. The function only
+  ever emits a `UNION ALL` branch per `Session` row it *finds*; zero matches means zero
+  branches, and `implode(' UNION ALL ', [])` is `''`, so the returned subquery is
+  `FROM () AS A` — a MySQL 1064 syntax error, not an empty result set. Any module code that
+  calls this (directly or via a helper) must confirm the session actually exists for the
+  current tournament *before* calling it — a `$sesOrder >= 1` check alone isn't enough, the
+  id also has to appear in `GetSessions('Q')` (or equivalent) for this tournament. Caught
+  live while manually verifying `SetTargetABCACD.php`'s target-occupancy grid: a session
+  picked from a since-changed/deleted state 500'd the whole page instead of just skipping
+  the grid.
+
 ## Docker / this repo's dev environment
 
 - **Apache's `error.log`/`access.log` inside the app container are symlinks to
