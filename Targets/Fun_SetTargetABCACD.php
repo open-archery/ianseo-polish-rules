@@ -354,6 +354,122 @@ function pl_abc_acd_session_wave_tally(int $tourId, int $sesOrder, string $exclu
 }
 
 /**
+ * Loads the full target-occupancy slot list for a session, using core's
+ * createAvailableTargetSQL() as the source of "which slots exist" — the same
+ * function ianseo core itself uses for free-target lookups elsewhere — so
+ * this view can never drift out of sync with core's own notion of session
+ * capacity. Every valid (Target, Letter) slot appears once; an occupied slot
+ * carries its CONCAT(EnDivision,EnClass) label, an empty slot is null.
+ *
+ * @return array list of ['target' => int, 'letter' => string, 'label' => ?string]
+ */
+function pl_abc_acd_target_view_slots(int $tourId, int $sesOrder): array
+{
+    $atSql = createAvailableTargetSQL($sesOrder, $tourId);
+
+    $q = safe_r_sql(
+        "SELECT at.FullTgtTarget AS Target, at.FullTgtLetter AS Letter,"
+        . " CONCAT(TRIM(EnDivision), TRIM(EnClass)) AS Label"
+        . " FROM (" . $atSql . ") at"
+        . " LEFT JOIN Qualifications ON QuSession=at.FullTgtSession"
+        . "   AND QuTarget=at.FullTgtTarget AND QuLetter=at.FullTgtLetter"
+        . " LEFT JOIN Entries ON EnId=QuId AND EnTournament=" . StrSafe_DB($tourId)
+        . " LEFT JOIN Divisions ON EnDivision=DivId AND EnTournament=DivTournament AND DivAthlete=1"
+        . " LEFT JOIN Classes   ON EnClass=ClId    AND EnTournament=ClTournament  AND ClAthlete=1"
+        . " ORDER BY at.FullTgtTarget, at.FullTgtLetter"
+    );
+
+    $slots = [];
+    while ($r = safe_fetch($q)) {
+        $slots[] = [
+            'target' => (int)$r->Target,
+            'letter' => (string)$r->Letter,
+            'label'  => $r->Label !== null ? (string)$r->Label : null,
+        ];
+    }
+    safe_free_result($q);
+
+    return $slots;
+}
+
+/**
+ * Aggregates per-slot labels (pl_abc_acd_target_view_slots()) into one label
+ * per boss: zero distinct labels among its occupied letters -> free
+ * ("Wolne"); one distinct label -> that division+class (a partially-filled
+ * single-class boss is normal, not mixed — unfilled letters carry a null
+ * label and are ignored here); more than one distinct label -> mixed,
+ * combined with "+".
+ *
+ * @param  array $slots from pl_abc_acd_target_view_slots()
+ * @return array target => ['label' => string, 'free' => bool, 'mixed' => bool], ordered by target
+ */
+function pl_abc_acd_target_view_boss_labels(array $slots): array
+{
+    $byBoss = [];
+    foreach ($slots as $slot) {
+        $byBoss[$slot['target']][] = $slot['label'];
+    }
+
+    $bosses = [];
+    foreach ($byBoss as $target => $labels) {
+        $distinct = array_values(array_unique(array_filter(
+            $labels,
+            fn($label) => $label !== null
+        )));
+
+        if (count($distinct) === 0) {
+            $bosses[$target] = ['label' => 'Wolne', 'free' => true, 'mixed' => false];
+        } elseif (count($distinct) === 1) {
+            $bosses[$target] = ['label' => $distinct[0], 'free' => false, 'mixed' => false];
+        } else {
+            $bosses[$target] = ['label' => implode('+', $distinct), 'free' => false, 'mixed' => true];
+        }
+    }
+
+    ksort($bosses);
+    return $bosses;
+}
+
+/**
+ * Run-length encodes per-boss labels (pl_abc_acd_target_view_boss_labels())
+ * into colspan groups for rendering: consecutive bosses sharing the
+ * identical label merge into one group — except a mixed boss is always its
+ * own singleton group, even when a neighbor happens to compute an identical
+ * combined label string, so every anomaly stays individually visible rather
+ * than occasionally hidden by a coincidental string match.
+ *
+ * @param  array $bossLabels target => ['label', 'free', 'mixed'], ordered by target
+ * @return array list of ['label' => string, 'free' => bool, 'mixed' => bool, 'from' => int, 'to' => int, 'colspan' => int]
+ */
+function pl_abc_acd_target_view_ranges(array $bossLabels): array
+{
+    $ranges = [];
+    foreach ($bossLabels as $target => $info) {
+        $lastIdx = count($ranges) - 1;
+        if ($lastIdx >= 0
+            && !$info['mixed']
+            && !$ranges[$lastIdx]['mixed']
+            && $ranges[$lastIdx]['label'] === $info['label']
+            && $ranges[$lastIdx]['to'] === $target - 1
+        ) {
+            $ranges[$lastIdx]['to'] = $target;
+            $ranges[$lastIdx]['colspan']++;
+        } else {
+            $ranges[] = [
+                'label'   => $info['label'],
+                'free'    => $info['free'],
+                'mixed'   => $info['mixed'],
+                'from'    => $target,
+                'to'      => $target,
+                'colspan' => 1,
+            ];
+        }
+    }
+
+    return $ranges;
+}
+
+/**
  * Erases existing target assignments (QuTarget, QuLetter, QuBacknoPrinted)
  * for the given class+session, touching Entries timestamps for affected rows.
  */

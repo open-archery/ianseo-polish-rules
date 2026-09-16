@@ -99,6 +99,40 @@ if (!function_exists('StrSafe_DB')) {
     }
 }
 
+if (!function_exists('createAvailableTargetSQL')) {
+    // Mirrors Common/Globals.inc.php's createAvailableTargetSQL(): builds a SQL
+    // string (a UNION-ALL subquery) enumerating every valid (Session, Target,
+    // Letter) slot. Module code only calls this core function, never defines
+    // it — same pattern as the other shims in this file. It reads the
+    // `Session` table through safe_r_sql like the real one, so a test that
+    // cares about the enumerated slots can stub that query; tests that only
+    // care about the outer query built around this subquery's text can leave
+    // it unstubbed (FakeDb's default empty result still yields a syntactically
+    // harmless string, since nothing here executes real SQL).
+    function createAvailableTargetSQL($Session = 0, $TourId = 0)
+    {
+        if (!$TourId) {
+            $TourId = $_SESSION['TourId'];
+        }
+        $aSub = [];
+        $Sql = "SELECT `SesOrder`, `SesTar4Session`, `SesAth4Target`, `SesFirstTarget`
+            FROM `Session`
+            WHERE `SesTournament`=$TourId AND `SesType`='Q'" . ($Session ? " AND `SesOrder`=$Session" : "");
+        $q = safe_r_sql($Sql);
+        while ($r = safe_fetch($q)) {
+            foreach (range($r->SesFirstTarget, $r->SesFirstTarget + $r->SesTar4Session - 1) as $target) {
+                $tmp = "SELECT $r->SesOrder as `Session`, $target as `Target`,";
+                foreach (range('A', chr(64 + $r->SesAth4Target)) as $letter) {
+                    $aSub[] = $tmp . " '$letter' as `Letter`";
+                }
+            }
+        }
+        return "SELECT `A`.`Session` as `FullTgtSession`, `A`.`Target` AS `FullTgtTarget`, `A`.`Letter` as `FullTgtLetter`
+            FROM (" . implode(' UNION ALL ', $aSub) . ") AS `A`
+            ORDER BY `FullTgtSession`, `FullTgtTarget`, `FullTgtLetter`";
+    }
+}
+
 if (!function_exists('get_text')) {
     // No return type: real ianseo get_text passes non-string input through
     // unchanged (e.g. numeric column values), it doesn't force a string cast.
