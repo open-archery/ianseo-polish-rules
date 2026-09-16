@@ -22,3 +22,4 @@ research/*.pdf
 
 ## LLMs
 .claude/settings.local.json
+.claude/worktrees/
