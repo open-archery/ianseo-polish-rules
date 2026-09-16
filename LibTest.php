@@ -190,6 +190,50 @@ final class LibTest extends \PlTestCase
         $this->assertSame('R', $u24[0][9]);
     }
 
+    public function testCreateStandardClassesSeniorAgeToIsOpenEnded(): void
+    {
+        // Senior M/W must resolve age-class for any adult age even in a
+        // tournament with no Masters classes (Masters is opt-in, TourType 3
+        // only) — see Import/Fun_BibImport.php's pl_bibimport_resolve_class().
+        foreach ([1, 3, 6, 37] as $tourType) {
+            \CallLog::reset();
+            \CreateStandardClasses(7, $tourType);
+
+            $senior = \CallLog::callsMatching('CreateClass', fn ($a) => $a[5] === 'M' || $a[5] === 'W');
+            $this->assertCount(2, $senior, "TourType {$tourType} must create M and W");
+            foreach ($senior as $call) {
+                $this->assertSame(127, $call[3], "{$call[5]} on TourType {$tourType} must have ageTo=127 (max signed tinyint)");
+            }
+        }
+    }
+
+    public function testCreateStandardClassesUpwardEligibilityRestrictedBelowU21(): void
+    {
+        \CreateStandardClasses(7, 3);
+
+        $validClassOf = function (string $id) {
+            $calls = \CallLog::callsMatching('CreateClass', fn ($a) => $a[5] === $id);
+            $this->assertCount(1, $calls, "expected exactly one CreateClass call for {$id}");
+            return $calls[0][6];
+        };
+
+        // U12/U15 are a parallel track like Masters/PU12 — no upward chain at all.
+        $this->assertSame('U12M', $validClassOf('U12M'));
+        $this->assertSame('U12W', $validClassOf('U12W'));
+        $this->assertSame('U15M', $validClassOf('U15M'));
+        $this->assertSame('U15W', $validClassOf('U15W'));
+
+        // U18 may opt up to U21 only, never straight to Senior.
+        $this->assertSame('U18M,U21M', $validClassOf('U18M'));
+        $this->assertSame('U18W,U21W', $validClassOf('U18W'));
+
+        // U21/U24 remain the only classes that reach Senior — unchanged.
+        $this->assertSame('U21M,M', $validClassOf('U21M'));
+        $this->assertSame('U21W,W', $validClassOf('U21W'));
+        $this->assertSame('U24M,M', $validClassOf('U24M'));
+        $this->assertSame('U24W,W', $validClassOf('U24W'));
+    }
+
     public function testCreateStandardClassesIndicesAreSequential(): void
     {
         \CreateStandardClasses(7, 1);
