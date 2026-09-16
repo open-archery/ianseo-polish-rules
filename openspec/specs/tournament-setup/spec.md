@@ -507,6 +507,16 @@ Age is calculated **by year of birth**: age = competition year − birth year, i
 
 Master classes reach every division (R, C, B) — this is new: the flat Master class Barebow never included, but the five age-band Masters classes (TourType 3 only) shoot Barebow at every band.
 
+**Senior age ceiling:** Senior (`M`/`W`) has no PZŁucz-mandated upper age bound. In the schema, `Classes.ClAgeTo` is a `tinyint` column, so the practical ceiling is 127 rather than literal infinity. This guarantees an archer of any age resolves to Senior when no narrower age-band class exists in the tournament (e.g. TourType 1 or 6, or TourType 3 without the Masters preset). When Masters age-band classes are present in the same tournament, every Masters band is still narrower than Senior's range and is matched first — widening Senior's ceiling does not change which class a narrowest-range match picks.
+
+### Upward Class Eligibility (Event Reassignment)
+
+Beyond the age-category assignment above, an archer's entry may be voluntarily reassigned to an older class for event participation (`ClValidClass`). This upward chain is restricted below U21:
+
+- U21 and U24 may still opt up to Senior (`M`/`W`).
+- U18 may opt up to U21 only — never directly to Senior.
+- U12 and U15 are self-only, with no upward eligibility — the same pattern already used by Masters bands and łuk popularny (PU12), which are parallel tracks rather than steps in the main age progression.
+
 ### Post-Elimination Placement (§2.6.5)
 
 PZŁucz regulations require **unique individual places** for all athletes after elimination rounds. This differs from the default ianseo behaviour, which assigns the same rank to all losers of the same round (e.g., all four 1/4-final losers share 5th place).
@@ -593,6 +603,9 @@ The following are explicitly **not** covered by these scripts:
 16. Create `Setup_37_PL.php` — verify every shared class's §2 session structure is doubled exactly (e.g. U15 = 40m, 40m, 20m, 20m), `tourDetNumDist = 4`, elimination/finals/mixed-team configuration identical to type 3; confirm U12/PU12/Masters are never created
 17. Create `Setup_16_PL.php` — verify only U12M/U12W classes exist (no senior/U24/U21/U18/Master/PU12, no C or B division), distances are 25m/20m/15m/10m with 122/122/80/80cm faces, 3-arrow ends, and no elimination configuration
 18. Select each registered sub-rule on the tournament-creation form and confirm the category list matches this document's Category Presets table, with no leftover distance, target-face or event row for a class the preset didn't create
+19. Confirm a 55-year-old archer resolves to Senior M/W when auto-assigned in a tournament without Masters classes (TourType 1, 6, or TourType 3 without `SetMasterClass`)
+20. Confirm a 55-year-old archer in a TourType 3 tournament with `SetMasterClass` resolves to the `50M`/`50W` Masters band, not Senior — and a 110-year-old resolves to Senior (older than every Masters band's own ceiling)
+21. Confirm `ClValidClass` assignable-class options: U12/U15 self-only; U18 can opt up to U21 only (not directly to Senior); U21/U24 unchanged, can still opt up to Senior
 
 ## Decisions
 
@@ -602,3 +615,5 @@ The following are explicitly **not** covered by these scripts:
 - U24 and U12 must be created as custom classes (no equivalent in the WA/FITA standard); łuk popularny (PU12) likewise has no WA/FITA equivalent
 - Category presets (sub-rules) are a fixed list defined in the module, per TourType — there is no runtime editing; adding a preset is a code change
 - The flat "Master 50+" class does not reflect how PZŁucz Masters competitions are actually run — replaced by five age-band classes (40-49/50-59/60-69/70+/80+), TourType 3 only; 70+ and 80+ are both open-ended and deliberately overlap (an 80-or-older archer may choose either band)
+- Senior's `ClAgeTo` is capped at 127 (the `tinyint` column's real ceiling), not a literal unbounded value — PZŁucz rules impose no upper bound but the schema does
+- `ClValidClass` upward reassignment stops short below U21: U12/U15 are self-only and U18 tops out at U21, matching the self-only pattern Masters bands and PU12 already use, rather than letting every class eventually reach Senior
