@@ -21,7 +21,7 @@ _(none)_
 
 ## Impact
 
-- Modified files: `Modules/Sets/PL/Targets/SetTargetABCACD.php`, `Modules/Sets/PL/Targets/Fun_SetTargetABCACD.php`, `Modules/Sets/PL/Targets/SetTargetABCACDTest.php`.
+- Modified files: `Targets/SetTargetABCACD.php`, `Targets/Fun_SetTargetABCACD.php`, `Targets/SetTargetABCACDTest.php`.
 - No new DB tables/columns; reuses `Divisions.DivViewOrder`/`Classes.ClViewOrder` (existing core columns, not yet read by this module).
 - Spec produced by: Advisor agent → `openspec/specs/abc-acd-target-assignment/spec.md` (delta). Design produced by: Developer agent → this change's `design.md`.
 

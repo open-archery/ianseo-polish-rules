@@ -340,23 +340,19 @@ final class SetTargetABCACDTest extends \PlTestCase
     {
         \pl_abc_acd_session_wave_tally(7, 2, 'RMO');
 
-        $this->assertCount(1, \FakeDb::executed("/CONCAT\\(TRIM\\(EnDivision\\),TRIM\\(EnClass\\)\\) != 'RMO'/"));
+        $this->assertCount(1, \FakeDb::executed("/CONCAT\\(TRIM\\(EnDivision\\),TRIM\\(EnClass\\)\\) NOT LIKE 'RMO'/"));
     }
 
-    public function testSessionWaveTallyExcludesOnlyExactClassWhenEventHasWildcards(): void
+    public function testSessionWaveTallyExcludesEveryClassMatchingAWildcardEvent(): void
     {
-        // Event values may contain SQL LIKE wildcards (%, _) since the page
-        // permits them for matching. The exclusion must compare the value
-        // literally so a wildcard-bearing event doesn't accidentally exclude
-        // every class and silently empty the tally.
-        \FakeDb::on('/SELECT CoCode EnCountry, QuLetter/', [
-            ['EnCountry' => 'AZS', 'QuLetter' => 'A'],
-        ]);
+        // $excludeEvent may itself be a LIKE pattern (a group-separation run
+        // reassigns several classes matched by one wildcard Event filter in
+        // one request). The exclusion must use LIKE too, so re-running the
+        // same wildcard filter after saving doesn't pick up its own rows as
+        // "other classes" and self-bias.
+        \pl_abc_acd_session_wave_tally(7, 2, 'R%');
 
-        $tally = \pl_abc_acd_session_wave_tally(7, 2, 'R%');
-
-        $this->assertCount(1, \FakeDb::executed("/CONCAT\\(TRIM\\(EnDivision\\),TRIM\\(EnClass\\)\\) != 'R%'/"));
-        $this->assertSame(['wave1' => 1, 'wave2' => 0], $tally['AZS']);
+        $this->assertCount(1, \FakeDb::executed("/CONCAT\\(TRIM\\(EnDivision\\),TRIM\\(EnClass\\)\\) NOT LIKE 'R%'/"));
     }
 
     public function testSessionWaveTallyFiltersByTournamentAndSession(): void

@@ -309,9 +309,14 @@ function pl_abc_acd_merge_tally(array $tally, array $assignments): array
 }
 
 /**
- * Tallies saved wave assignments per club for a session, excluding the class
- * currently being assigned: letters A/B count as wave1, C/D as wave2. Only
- * committed rows (QuTarget!=0) count — unsaved previews are invisible here.
+ * Tallies saved wave assignments per club for a session, excluding every
+ * class matching $excludeEvent (a LIKE pattern, same shape as the page's
+ * Event filter — a group-separation run may reassign several classes
+ * matched by one wildcard pattern in a single request, and all of them must
+ * be excluded from their own tally, not just an exact literal match):
+ * letters A/B count as wave1, C/D as wave2. Only committed rows
+ * (QuTarget!=0) count — unsaved previews from a different request are
+ * invisible here.
  *
  * @return array club_code => ['wave1' => int, 'wave2' => int]
  */
@@ -327,7 +332,7 @@ function pl_abc_acd_session_wave_tally(int $tourId, int $sesOrder, string $exclu
         . " WHERE EnTournament=" . StrSafe_DB($tourId)
         . "   AND QuSession=" . StrSafe_DB($sesOrder)
         . "   AND QuTarget!=0"
-        . "   AND CONCAT(TRIM(EnDivision),TRIM(EnClass)) != " . StrSafe_DB($excludeEvent)
+        . "   AND CONCAT(TRIM(EnDivision),TRIM(EnClass)) NOT LIKE " . StrSafe_DB($excludeEvent)
     );
 
     $tally = [];
