@@ -36,20 +36,20 @@ Sub-rule values reuse ianseo's own translated `Install.php` vocabulary wherever 
 | 1 | `Poland-RU24` | Recurve only, U24 |
 | 1 | `Poland-RU21` | Recurve only, U21 |
 | 1 | `Poland-RU18` | Recurve only, U18 |
-| 3 | `SetAllClass` | everything (R/C/B, all classes incl. U12/PU12) |
+| 3 | `SetAllClass` | everything (R/C/B, all classes incl. U12/U10) |
 | 3 | `SetSeniorClass` | R/C/B, M/W |
 | 3 | `Poland-RU24U21U18` | Recurve only, U24+U21+U18 |
 | 3 | `SetYouthClass` | Recurve only, U24+U21 |
 | 3 | `Poland-RU18` | Recurve only, U18 |
 | 3 | `Poland-RU15` | Recurve only, U15 |
 | 3 | `SetMasterClass` | Masters (R/C/B, 5 bands) — TourType 3 exclusive |
-| 37 | `SetAllClass` | everything (R/C/B, all classes — no U12/PU12/Masters) |
+| 37 | `SetAllClass` | everything (R/C/B, all classes — no U12/U10/Masters) |
 | 37 | `SetSeniorClass` | R/C/B, M/W |
 | 37 | `Poland-RU24U21U18` | Recurve only, U24+U21+U18 |
 | 37 | `SetYouthClass` | Recurve only, U24+U21 |
 | 37 | `Poland-RU18` | Recurve only, U18 |
 | 37 | `Poland-RU15` | Recurve only, U15 |
-| 6 | `SetAllClass` | everything (incl. PU12) |
+| 6 | `SetAllClass` | everything (incl. U10) |
 | 6 | `SetSeniorClass` | R/C/B, M/W |
 | 6 | `SetYouthClass` | Recurve only, U24+U21 |
 | 6 | `Poland-RU18` | Recurve only, U18 |
@@ -86,7 +86,7 @@ Used at the Polish Championships and regional competitions.
 
 | Polish class name                 | Code        | Age range           | Sex     |
 | ---------------------------------- | ----------- | -------------------- | ------- |
-| Seniorzy / Seniorki                | M / W       | Open (21 and over)   | M and W |
+| Seniorzy / Seniorki                | M / W       | Open (24 and over)   | M and W |
 | Młodzieżowiec / Młodzieżowniczka   | U24M / U24W | 21–23 years          | M and W |
 | Junior / Juniorka                  | U21M / U21W | 18–20 years          | M and W |
 | Junior młodszy / Juniorka młodsza  | U18M / U18W | 15–17 years          | M and W |
@@ -155,7 +155,7 @@ The script handles **several category variants**:
 - **Variant A — 70m / 60m Round (Recurve, Compound, Barebow):** one distance per session, appropriate for the category
 - **Variant B — 40m+20m Round (Młodzicy U15):** alternating 40 m and 20 m sessions
 - **Variant C — 15m Round (Dziecko U12):** one distance per session, Recurve only
-- **Variant D — 10m Round (łuk popularny / PU12):** one distance per session, Recurve only
+- **Variant D — 10m Round (łuk popularny / U10):** one distance per session, Recurve only
 - **Variant E — Masters bands:** one distance per session, varying by age band, Recurve/Compound/Barebow
 
 The Double Round variant of this format — every class shooting the same session structure twice, 144 arrows in 4 sessions — used to be offered here as a `Poland-4x70m` sub-rule; it is now its own script and TourType, `Setup_37_PL.php` (§4 Double Round), since a `Poland-4x70m` tournament was reporting four qualification sessions on a tournament type ianseo itself believes has two. A tournament created earlier under `Poland-4x70m` keeps that value on its `ToTypeSubRule` column, but the module no longer registers or supports it — re-running setup on such a tournament is unsupported; recreate it as `Setup_37_PL.php` if its setup needs rebuilding.
@@ -167,8 +167,8 @@ Same as the 1440 Round (R, C), **plus Łuk barebow (B)** — Barebow exists on t
 Additionally active on this format:
 
 - **Młodzicy (U15M/U15W)**
-- **Dziecko (U12M/U12W)** — new to this TourType (previously indoor- and Children's-Round-only)
-- **Łuk popularny (PU12M/PU12W)** — simplified-recurve equipment category, same 9–12 age bracket as U12 but a distinct class, Recurve only
+- **Dziecko (U12M/U12W)** — new to this TourType (previously indoor- and Children's-Round-only); age 11–12
+- **Łuk popularny (U10M/U10W)** — simplified-recurve equipment category, distinct from U12 with its own non-overlapping age bracket (5–10), Recurve only
 - **Master age bands (`40M`/`40W`…`80M`/`80W`)** — Recurve, Compound and Barebow, TourType 3 exclusive (own sub-rule, `SetMasterClass`)
 
 ### Shooting Distances by Category
@@ -184,7 +184,7 @@ Additionally active on this format:
 | Młodzik M (U15M)          | **40 m + 20 m** | 36 + 36 |
 | Młodziczka K (U15W)       | **40 m + 20 m** | 36 + 36 |
 | Dziecko (U12M/U12W)       | 15 m            | 72      |
-| Łuk popularny (PU12M/PU12W) | 10 m          | 72      |
+| Łuk popularny (U10M/U10W) | 10 m          | 72      |
 | Master 40-49 / 50-59 (`40M/W`, `50M/W`) | 70 m | 72 |
 | Master 60-69 (`60M/W`)    | 60 m            | 72      |
 | Master 70+ / 80+ (`70M/W`, `80M/W`) | 50 m  | 72      |
@@ -196,7 +196,7 @@ Additionally active on this format:
 | Senior, U21, Junior młodszy, Młodzik (M/W/U21M/U21W/U18M/U18W/U15M/U15W) | 50 m     | 72     |
 | Master, all 5 bands (`40M/W`…`80M/W`)      | 50 m     | 72     |
 
-U12 and PU12 do not shoot Compound — Recurve only.
+U12 and U10 do not shoot Compound — Recurve only.
 
 **Łuk barebow (B):**
 
@@ -222,14 +222,14 @@ Master Barebow is new — previously Barebow's oldest eligible class was Senior;
 
 ### Ends and Arrows
 
-**Standard (adult classes, U12, PU12, Masters):** 2 sessions × (6 ends × 6 arrows) = 72 arrows total.
+**Standard (adult classes, U12, U10, Masters):** 2 sessions × (6 ends × 6 arrows) = 72 arrows total.
 
 **40m+20m Round (U15 only):**
 
 - 40 m session: 12 ends × 3 arrows = 36 arrows
 - 20 m session: 12 ends × 3 arrows = 36 arrows
 
-> The Double Round (§4, `Setup_37_PL.php`) shoots every session above twice — 144 arrows total for the classes it offers (U15: 40m, 40m, 20m, 20m). U12, PU12 and Masters are not offered on the Double Round at all (see §4).
+> The Double Round (§4, `Setup_37_PL.php`) shoots every session above twice — 144 arrows total for the classes it offers (U15: 40m, 40m, 20m, 20m). U12, U10 and Masters are not offered on the Double Round at all (see §4).
 
 ### Tiebreaking
 
@@ -256,7 +256,7 @@ After qualification, **the top 104 archers** in each category advance to matches
 
 > Elimination structure (cut counts, set/cumulative match format) is identical on the Double Round (§4) — doubling only affects the qualification round.
 
-> **U15, U12 and PU12 have no elimination phase** — the qualification score is the final result. Masters classes *do* have an elimination phase (unlike U15/U12/PU12), following the same rules as the corresponding adult class.
+> **U15, U12 and U10 have no elimination phase** — the qualification score is the final result. Masters classes *do* have an elimination phase (unlike U15/U12/U10), following the same rules as the corresponding adult class.
 
 > For all categories that do have elimination, the post-elimination placement rules from §6 (Shared Rules → Post-Elimination Placement) apply — each loser receives a unique place, not a shared round-based rank.
 
@@ -283,7 +283,7 @@ Mixed teams are formed from qualification results (1 man + 1 woman from the same
 | Łuk bloczkowy (C) | CX, CU21X, CU18X, CU15X        |
 | Łuk barebow (B)   | BX, BU21X, BU18X               |
 
-**No mixed team events exist for U12, PU12 or Master classes.**
+**No mixed team events exist for U12, U10 or Master classes.**
 
 **Distances:** Same as the corresponding individual elimination distance for each division × category.
 
@@ -304,7 +304,7 @@ The Indoor Round is held indoors at a short distance. Each archer shoots **60 ar
 ### Bow Types
 
 - Łuk klasyczny (R), Łuk bloczkowy (C), Łuk barebow (B)
-- Dziecko (U12) and Łuk popularny (PU12): **Łuk klasyczny (R) only** — Compound and Barebow are not permitted
+- Dziecko (U12) and Łuk popularny (U10): **Łuk klasyczny (R) only** — Compound and Barebow are not permitted
 
 ### Age Categories
 
@@ -316,13 +316,13 @@ The Indoor Round is held indoors at a short distance. Each archer shoots **60 ar
 | Junior młodszy / Juniorka młodsza  | U18M / U18W |                               |
 | Młodzik / Młodziczka               | U15M / U15W |                               |
 | Dziecko                            | U12M / U12W | Recurve only; shoot at 15 m  |
-| Łuk popularny                      | PU12M / PU12W | Recurve only; shoot at 10 m |
+| Łuk popularny                      | U10M / U10W | Recurve only; shoot at 10 m |
 
 There is no Master category indoors — the flat "Master 50+" class that used to exist here was removed; no indoor Masters replacement is defined.
 
 ### Shooting Distance
 
-All categories: **18 metres**, except **Dzieci (U12)** who shoot at **15 metres** and **łuk popularny (PU12)** who shoot at **10 metres**.
+All categories: **18 metres**, except **Dzieci (U12)** who shoot at **15 metres** and **łuk popularny (U10)** who shoot at **10 metres**.
 
 ### Target Faces
 
@@ -335,7 +335,7 @@ All categories: **18 metres**, except **Dzieci (U12)** who shoot at **15 metres*
 | All categories                   | Łuk barebow (B)       | 18 m     | Single 40 cm full face                                |
 | Młodzik / Młodziczka (U15)       | All bow types         | 18 m     | 60 cm full face                                       |
 | Dziecko (U12)                    | Łuk klasyczny only    | 15 m     | 80 cm full face                                       |
-| Łuk popularny (PU12)             | Łuk klasyczny only    | 10 m     | 122 cm full face                                      |
+| Łuk popularny (U10)             | Łuk klasyczny only    | 10 m     | 122 cm full face                                      |
 
 > **Triple 40 cm:** Three 40 cm faces arranged vertically on one stand. Within one end, each arrow must hit a different face (prevents stacking in the same zone). Used by Seniorzy and Juniorzy — it is the precision target for experienced archers.
 
@@ -370,11 +370,11 @@ Set system and cumulative rules: **same as the outdoor round** (see Section 2).
 | All                       | Łuk barebow                  | Single 40 cm                  |
 | Młodzicy (U15)            | All                          | 60 cm                         |
 
-> U12 and PU12 have no elimination — see Ends and Arrows / Elimination note below.
+> U12 and U10 have no elimination — see Ends and Arrows / Elimination note below.
 
 > For all categories with elimination, the post-elimination placement rules from §6 (Shared Rules → Post-Elimination Placement) apply — each loser receives a unique place, not a shared round-based rank.
 
-> **U15, U12 and PU12 have no elimination phase** — the qualification score is the final result.
+> **U15, U12 and U10 have no elimination phase** — the qualification score is the final result.
 
 ### Mixed Team Events (Indoor)
 
@@ -392,7 +392,7 @@ Same mixed team formation rules as outdoor (see §6 Shared Rules → Mixed Team 
 | Łuk bloczkowy (C) | CX, CU21X, CU18X, CU15X         |
 | Łuk barebow (B)   | BX, BU21X, BU18X                |
 
-**No mixed team events exist for U12 or PU12.**
+**No mixed team events exist for U12 or U10.**
 
 **Indoor mixed team elimination target faces:** Same as indoor individual elimination — triple 40 cm for Senior/U21 R and C; single 40 cm for U18 and all B; 60 cm for U15.
 
@@ -414,7 +414,7 @@ The Double Round (Podwójna runda, §2.3.1.10.7) is the Single-Distance Round (�
 
 Same as the Single-Distance Round's Senior/U24/U21/U18/U15 classes (§2), with the same age restrictions.
 
-**U12, łuk popularny (PU12) and Masters are explicitly not offered on this TourType** — this is the one place §2's roster and §4's diverge. A tournament needing U12/PU12/Masters must use TourType 3 instead.
+**U12, łuk popularny (U10) and Masters are explicitly not offered on this TourType** — this is the one place §2's roster and §4's diverge. A tournament needing U12/U10/Masters must use TourType 3 instead.
 
 ### Shooting Distances by Category
 
@@ -452,7 +452,7 @@ See "Category Presets (Sub-Rules)" above for the full list — 6 sub-rules on th
 
 The Children's Round (Runda dziecięca, §2.3.1.10.11) is a competition exclusively for Dzieci (U12), Łuk klasyczny only — no other age category or bow type is created. Runs on ianseo TourType 16 (`Type_GiochiGioventuW`), with one fixed, non-organiser-selectable configuration.
 
-**Łuk popularny (PU12) is explicitly not offered on this TourType**, even though it shares U12's 9–12 age bracket on TourType 3/6.
+**Łuk popularny (U10) is explicitly not offered on this TourType.** This format's U12 is age 11–12, the same non-overlapping bracket U12 uses on TourType 3/6 (U10's own bracket there is 5–10).
 
 Each archer shoots **18 arrows at each of four distances**, longest to shortest — **72 arrows total**, matching every other format's arrow count, just split across four shorter legs instead of two longer ones.
 
@@ -499,9 +499,9 @@ Age is calculated **by year of birth**: age = competition year − birth year, i
 
 | Bow type          | Minimum class          | Maximum class    | Notes                              |
 | ----------------- | ----------------------- | ------------------ | ------------------------------------ |
-| Łuk klasyczny (R) | Dziecko (U12) / łuk popularny (PU12) | Master (all bands) | No age restrictions |
-| Łuk bloczkowy (C) | Młodzik (U15)            | Master (all bands) | No U12; no PU12; no U24              |
-| Łuk barebow (B)   | Junior młodszy (U18)     | Master (all bands) | No U12, U15, U24, PU12               |
+| Łuk klasyczny (R) | Dziecko (U12) / łuk popularny (U10) | Master (all bands) | No age restrictions |
+| Łuk bloczkowy (C) | Młodzik (U15)            | Master (all bands) | No U12; no U10; no U24              |
+| Łuk barebow (B)   | Junior młodszy (U18)     | Master (all bands) | No U12, U15, U24, U10               |
 | Tradycyjny (T)    | Senior                   | Senior              | 3D only                              |
 | Longbow (L)       | Senior                   | Senior              | 3D only                              |
 
@@ -515,7 +515,7 @@ Beyond the age-category assignment above, an archer's entry may be voluntarily r
 
 - U21 and U24 may still opt up to Senior (`M`/`W`).
 - U18 may opt up to U21 only — never directly to Senior.
-- U12 and U15 are self-only, with no upward eligibility — the same pattern already used by Masters bands and łuk popularny (PU12), which are parallel tracks rather than steps in the main age progression.
+- U12 and U15 are self-only, with no upward eligibility — the same pattern already used by Masters bands and łuk popularny (U10), which are parallel tracks rather than steps in the main age progression.
 
 ### Post-Elimination Placement (§2.6.5)
 
@@ -569,7 +569,7 @@ Mixed teams pair **1 man + 1 woman** from the same club, same division, same age
 | Sets (R/B)     | First to 5 set points    | First to 5 set points     |
 | Ends (C)       | 4 cumulative              | 4 cumulative               |
 
-No mixed team events exist for U12, PU12, or Master classes on any TourType.
+No mixed team events exist for U12, U10, or Master classes on any TourType.
 
 ### Out of Scope
 
@@ -586,22 +586,22 @@ The following are explicitly **not** covered by these scripts:
 ## Verification Checklist
 
 1. Create `Setup_1_PL.php` for a test tournament type 1 — confirm R distances vary by category; C mirrors R's per-class distances exactly; confirm no Barebow division/class/event is created
-2. Create `Setup_3_PL.php` — verify 70 m/60 m for R; 50 m for C and B; 40 m+20 m for U15 with 3-arrow ends; 15 m for U12; 10 m for łuk popularny (PU12); Masters bands at their documented per-band distances
+2. Create `Setup_3_PL.php` — verify 70 m/60 m for R; 50 m for C and B; 40 m+20 m for U15 with 3-arrow ends; 15 m for U12; 10 m for łuk popularny (U10); Masters bands at their documented per-band distances
 3. Create `Setup_6_PL.php` — verify triple 40 cm for Senior/U24/U21 R and C; single 40 cm for U18/B; 60 cm for U15; 80 cm for U12 at 15 m; 122 cm for łuk popularny at 10 m
 4. Confirm U24 only appears under Łuk klasyczny (R), not C or B, on every TourType including the 1440 Round
 5. Confirm U12 appears in indoor (type 6), the Single-Distance Round (type 3, new), and the Children's Round (type 16, U12-only) — Łuk klasyczny only in all three — never in type 1 or 37
-6. Confirm łuk popularny (PU12) appears only on types 3 and 6, never on 1, 16 or 37
+6. Confirm łuk popularny (U10) appears only on types 3 and 6, never on 1, 16 or 37
 7. Confirm the flat Master class (`50M`/`50W`) is never created on any TourType; confirm the five age-band Masters classes are created only when the `SetMasterClass` sub-rule is selected on TourType 3
-8. Confirm Masters classes have an elimination phase; confirm U12, PU12 and U15 do not
+8. Confirm Masters classes have an elimination phase; confirm U12, U10 and U15 do not
 9. Confirm U15 has no elimination configuration in type 3
 10. Verify post-elimination placement: losers of the same round receive unique places (sub-ranked by match score, then qualification rank) — not shared ranks
 11. Confirm sub-ranking applies to both individual and team brackets
-12. Verify mixed team events are created for R, C, B with correct event codes (suffix `X`); confirm no mixed team events exist for U12, PU12, or Masters
+12. Verify mixed team events are created for R, C, B with correct event codes (suffix `X`); confirm no mixed team events exist for U12, U10, or Masters
 13. Confirm mixed team events use 2-person teams (`EvMaxTeamPerson = 2`), 4 arrows per end, 2-arrow shoot-off
 14. Confirm `EvMixedTeam = 1` is set on all mixed team events
 15. Confirm U15 mixed teams have no elimination (`EvFinalFirstPhase = 0`)
-16. Create `Setup_37_PL.php` — verify every shared class's §2 session structure is doubled exactly (e.g. U15 = 40m, 40m, 20m, 20m), `tourDetNumDist = 4`, elimination/finals/mixed-team configuration identical to type 3; confirm U12/PU12/Masters are never created
-17. Create `Setup_16_PL.php` — verify only U12M/U12W classes exist (no senior/U24/U21/U18/Master/PU12, no C or B division), distances are 25m/20m/15m/10m with 122/122/80/80cm faces, 3-arrow ends, and no elimination configuration
+16. Create `Setup_37_PL.php` — verify every shared class's §2 session structure is doubled exactly (e.g. U15 = 40m, 40m, 20m, 20m), `tourDetNumDist = 4`, elimination/finals/mixed-team configuration identical to type 3; confirm U12/U10/Masters are never created
+17. Create `Setup_16_PL.php` — verify only U12M/U12W classes exist (no senior/U24/U21/U18/Master/U10, no C or B division), distances are 25m/20m/15m/10m with 122/122/80/80cm faces, 3-arrow ends, and no elimination configuration
 18. Select each registered sub-rule on the tournament-creation form and confirm the category list matches this document's Category Presets table, with no leftover distance, target-face or event row for a class the preset didn't create
 19. Confirm a 55-year-old archer resolves to Senior M/W when auto-assigned in a tournament without Masters classes (TourType 1, 6, or TourType 3 without `SetMasterClass`)
 20. Confirm a 55-year-old archer in a TourType 3 tournament with `SetMasterClass` resolves to the `50M`/`50W` Masters band, not Senior — and a 110-year-old resolves to Senior (older than every Masters band's own ceiling)
@@ -612,8 +612,11 @@ The following are explicitly **not** covered by these scripts:
 - Requirements written in English; Polish names kept for age class names only (e.g. "Junior młodszy", "Młodzik", "Dziecko")
 - Every target face label the setup scripts create uses this module's established Polish division vocabulary (`Łuk klasyczny`/`Łuk bloczkowy`/`Łuk barebow`), not the English bow-type words some labels used before this module's category-presets rework
 - Para-archery, field, 3D out of scope for this delivery
-- U24 and U12 must be created as custom classes (no equivalent in the WA/FITA standard); łuk popularny (PU12) likewise has no WA/FITA equivalent
+- U24 and U12 must be created as custom classes (no equivalent in the WA/FITA standard); łuk popularny (U10) likewise has no WA/FITA equivalent
 - Category presets (sub-rules) are a fixed list defined in the module, per TourType — there is no runtime editing; adding a preset is a code change
 - The flat "Master 50+" class does not reflect how PZŁucz Masters competitions are actually run — replaced by five age-band classes (40-49/50-59/60-69/70+/80+), TourType 3 only; 70+ and 80+ are both open-ended and deliberately overlap (an 80-or-older archer may choose either band)
 - Senior's `ClAgeTo` is capped at 127 (the `tinyint` column's real ceiling), not a literal unbounded value — PZŁucz rules impose no upper bound but the schema does
-- `ClValidClass` upward reassignment stops short below U21: U12/U15 are self-only and U18 tops out at U21, matching the self-only pattern Masters bands and PU12 already use, rather than letting every class eventually reach Senior
+- `ClValidClass` upward reassignment stops short below U21: U12/U15 are self-only and U18 tops out at U21, matching the self-only pattern Masters bands and U10 already use, rather than letting every class eventually reach Senior
+- Senior's `ClAgeFrom` is 24, not 21 — 21 overlapped U24 (21–23), which could ambiguously resolve an archer aged 21–23 to either class; Senior now starts immediately after U24 ends
+- U12 (age 11–12) and U10 (age 5–10) have distinct, non-overlapping age ranges — they previously both shipped with the same 9–12 bracket (a copy-paste bug caught only by inspecting a live tournament's `Classes` rows, not by any spec or test)
+- Łuk popularny's class code was renamed `PU12` → `U10` once its age band became 5–10 — a code containing "12" no longer described the class it named; already-created tournaments keep their existing `PU12M`/`PU12W` `Classes` rows (this is a code-level rename for tournaments created going forward, not a retrofit — same non-retrofit stance as every other age-range fix in this section)

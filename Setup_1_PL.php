@@ -3,7 +3,7 @@
  * PZŁucz — Setup: Runda 1440 / WA FITA (Type 1)
  *
  * 4 distances, kwalifikacje bez fazy eliminacji.
- * Klasy: Senior, U24 (tylko R), U21, U18. Brak U15, U12, PU12 i Master.
+ * Klasy: Senior, U24 (tylko R), U21, U18. Brak U15, U12, U10 i Master.
  * Łuk barebow nie istnieje w tej rundzie.
  *
  * Odległości:
