@@ -43,8 +43,8 @@ $PL_CLASS_NAMES = array(
     'U15W' => 'Młodziczka',
     'U12M' => 'Dziecko chłopcy',
     'U12W' => 'Dziecko dziewczęta',
-    'PU12M' => 'Dziecko chłopcy - łuk popularny',
-    'PU12W' => 'Dziecko dziewczęta - łuk popularny',
+    'U10M' => 'Dziecko chłopcy - łuk popularny',
+    'U10W' => 'Dziecko dziewczęta - łuk popularny',
     '40M'  => 'Master 40-49 mężczyźni',
     '40W'  => 'Master 40-49 kobiety',
     '50M'  => 'Master 50-59 mężczyźni',
@@ -194,17 +194,17 @@ function CreateStandardDivisions($TourId, $TourType, $preset = array()) {
 // to bind to.
 //
 // ClDivisionsAllowed enforces bow-type restrictions per class:
-//   U24, U12, PU12 -> Recurve only
+//   U24, U12, U10 -> Recurve only
 //   U15            -> Recurve + Compound (no Barebow)
 //   Masters        -> Recurve + Compound + Barebow (all five bands)
 //   All others     -> all divisions the TourType itself has (R,C,B; R,C on
 //                     TourType 1, which has no Barebow — see
 //                     CreateStandardDivisions())
 //
-// Type 1 (1440): Senior/U24/U21/U18 only. No U15, U12, PU12 or Masters.
-// Type 3 (70m):  adds U15, U12, PU12; Masters (5 bands x R/C/B) exclusive.
-// Type 6 (18m):  adds U15, U12, PU12 (no Masters).
-// Type 37 (double 70m): same as type 3 minus U12/PU12/Masters.
+// Type 1 (1440): Senior/U24/U21/U18 only. No U15, U12, U10 or Masters.
+// Type 3 (70m):  adds U15, U12, U10; Masters (5 bands x R/C/B) exclusive.
+// Type 6 (18m):  adds U15, U12, U10 (no Masters).
+// Type 37 (double 70m): same as type 3 minus U12/U10/Masters.
 // Type 16 (children's round): U12 only, self-only ClValidClass — no other
 //   class exists in this tournament to chain upward into (see gotchas.md,
 //   "ClValidClass ... must only name classes that actually exist in that
@@ -213,22 +213,24 @@ function CreateStandardDivisions($TourId, $TourType, $preset = array()) {
 function pl_standard_class_candidates($TourType) {
     if ($TourType == 16) {
         return array(
-            array('code' => 'U12M', 'ageFrom' => 9, 'ageTo' => 12, 'sex' => 0, 'valid' => 'U12M', 'name' => 'Dziecko chłopcy',        'div' => array('R')),
-            array('code' => 'U12W', 'ageFrom' => 9, 'ageTo' => 12, 'sex' => 1, 'valid' => 'U12W', 'name' => 'Dziecko dziewczęta',        'div' => array('R')),
+            array('code' => 'U12M', 'ageFrom' => 11, 'ageTo' => 12, 'sex' => 0, 'valid' => 'U12M', 'name' => 'Dziecko chłopcy',        'div' => array('R')),
+            array('code' => 'U12W', 'ageFrom' => 11, 'ageTo' => 12, 'sex' => 1, 'valid' => 'U12W', 'name' => 'Dziecko dziewczęta',        'div' => array('R')),
         );
     }
 
     $hasU15      = in_array($TourType, array(3, 6, 37));
     $hasU12      = in_array($TourType, array(3, 6));
-    $hasPU12     = in_array($TourType, array(3, 6));
+    $hasU10     = in_array($TourType, array(3, 6));
     $hasMasters  = ($TourType == 3);
 
     $c = array();
     // ageTo=127 is the max a signed tinyint (Classes.ClAgeTo) can hold — as
     // close to PZŁucz's actual "no upper bound" as the schema allows without
     // an ALTER TABLE.
-    $c[] = array('code' => 'M',    'ageFrom' => 21, 'ageTo' => 127, 'sex' => 0, 'valid' => 'M',                        'name' => 'Seniorzy',              'div' => array('R', 'C', 'B'));
-    $c[] = array('code' => 'W',    'ageFrom' => 21, 'ageTo' => 127, 'sex' => 1, 'valid' => 'W',                        'name' => 'Seniorki',              'div' => array('R', 'C', 'B'));
+    // ageFrom=24 (not 21) keeps Senior from overlapping U24 (21-23) — an
+    // archer aged 21-23 must resolve to U24 only, not ambiguously to either.
+    $c[] = array('code' => 'M',    'ageFrom' => 24, 'ageTo' => 127, 'sex' => 0, 'valid' => 'M',                        'name' => 'Seniorzy',              'div' => array('R', 'C', 'B'));
+    $c[] = array('code' => 'W',    'ageFrom' => 24, 'ageTo' => 127, 'sex' => 1, 'valid' => 'W',                        'name' => 'Seniorki',              'div' => array('R', 'C', 'B'));
     $c[] = array('code' => 'U24M', 'ageFrom' => 21, 'ageTo' => 23,  'sex' => 0, 'valid' => 'U24M,M',                   'name' => 'Młodzieżowiec',         'div' => array('R'));
     $c[] = array('code' => 'U24W', 'ageFrom' => 21, 'ageTo' => 23,  'sex' => 1, 'valid' => 'U24W,W',                   'name' => 'Młodzieżowniczka',      'div' => array('R'));
     $c[] = array('code' => 'U21M', 'ageFrom' => 18, 'ageTo' => 20,  'sex' => 0, 'valid' => 'U21M,M',                   'name' => 'Junior',                'div' => array('R', 'C', 'B'));
@@ -241,12 +243,12 @@ function pl_standard_class_candidates($TourType) {
         $c[] = array('code' => 'U15W', 'ageFrom' => 13, 'ageTo' => 14, 'sex' => 1, 'valid' => 'U15W', 'name' => 'Młodziczka', 'div' => array('R', 'C'));
     }
     if ($hasU12) {
-        $c[] = array('code' => 'U12M', 'ageFrom' => 9, 'ageTo' => 12, 'sex' => 0, 'valid' => 'U12M', 'name' => 'Dziecko chłopcy',        'div' => array('R'));
-        $c[] = array('code' => 'U12W', 'ageFrom' => 9, 'ageTo' => 12, 'sex' => 1, 'valid' => 'U12W', 'name' => 'Dziecko dziewczęta',        'div' => array('R'));
+        $c[] = array('code' => 'U12M', 'ageFrom' => 11, 'ageTo' => 12, 'sex' => 0, 'valid' => 'U12M', 'name' => 'Dziecko chłopcy',        'div' => array('R'));
+        $c[] = array('code' => 'U12W', 'ageFrom' => 11, 'ageTo' => 12, 'sex' => 1, 'valid' => 'U12W', 'name' => 'Dziecko dziewczęta',        'div' => array('R'));
     }
-    if ($hasPU12) {
-        $c[] = array('code' => 'PU12M', 'ageFrom' => 9, 'ageTo' => 12, 'sex' => 0, 'valid' => 'PU12M', 'name' => 'Dziecko chłopcy - łuk popularny',        'div' => array('R'));
-        $c[] = array('code' => 'PU12W', 'ageFrom' => 9, 'ageTo' => 12, 'sex' => 1, 'valid' => 'PU12W', 'name' => 'Dziecko dziewczęta - łuk popularny',        'div' => array('R'));
+    if ($hasU10) {
+        $c[] = array('code' => 'U10M', 'ageFrom' => 5, 'ageTo' => 10, 'sex' => 0, 'valid' => 'U10M', 'name' => 'Dziecko chłopcy - łuk popularny',        'div' => array('R'));
+        $c[] = array('code' => 'U10W', 'ageFrom' => 5, 'ageTo' => 10, 'sex' => 1, 'valid' => 'U10W', 'name' => 'Dziecko dziewczęta - łuk popularny',        'div' => array('R'));
     }
     if ($hasMasters) {
         // '70' and '80' are both genuinely open-ended ("70 and older" /
@@ -287,10 +289,10 @@ function CreateStandardClasses($TourId, $TourType, $preset = array()) {
 }
 
 // ---------------------------------------------------------------------------
-// Bind division+class pairs to their events. U15/U12/PU12/Masters follow the
+// Bind division+class pairs to their events. U15/U12/U10/Masters follow the
 // same TourType/preset rules as CreateStandardClasses() (single source of
 // truth: pl_standard_class_candidates()). No mixed-team events exist for
-// U12, PU12 or Masters (see design.md).
+// U12, U10 or Masters (see design.md).
 // ---------------------------------------------------------------------------
 function InsertStandardEvents($TourId, $TourType, $preset = array()) {
     $candidates = pl_standard_class_candidates($TourType);
@@ -321,7 +323,7 @@ function InsertStandardEvents($TourId, $TourType, $preset = array()) {
 
     // Mixed Team (Team=1 binds W class; Team=2 binds M class; Number=1).
     // InsertClassEvent silently skips if the event was never created (e.g.
-    // type 1, which has no mixed team events at all). No U12/PU12/Masters
+    // type 1, which has no mixed team events at all). No U12/U10/Masters
     // mixed ages exist — deliberately absent from these lists.
     $rMixedAges = array('', 'U24', 'U21', 'U18');
     $cMixedAges = array('', 'U21', 'U18');
@@ -382,8 +384,8 @@ function pl_double_legs($legs, $isDouble) {
 // also never global-declared) are not real globals and would not be visible
 // to a function via `global`. See design.md, "Scope trap".
 //
-// U12/PU12/Masters only apply when $TourType == 3 (Masters) or 3/6 (U12,
-// PU12) — $TourType == 37 (double round) explicitly excludes all three, so
+// U12/U10/Masters only apply when $TourType == 3 (Masters) or 3/6 (U12,
+// U10) — $TourType == 37 (double round) explicitly excludes all three, so
 // pl_standard_class_candidates() already omits them for 37 and no extra
 // guard is needed here beyond the preset filter every per-class loop applies.
 // ---------------------------------------------------------------------------
@@ -430,7 +432,7 @@ function pl_setup_70m_family($TourId, $TourType, $Multiplier, $PL_CLASS_NAMES, $
         CreateDistanceNew($TourId, $TourType, "R{$cl}", pl_double_legs(array(array('40m', 40), array('20m', 20)), $isDouble));
     }
 
-    // Recurve — U12: 2 × 15 m (4 × 15 m when doubled); PU12: 2 × 10 m —
+    // Recurve — U12: 2 × 15 m (4 × 15 m when doubled); U10: 2 × 10 m —
     // TourType 3 only, never 37 (pl_class_in_preset() only checks the
     // preset axis, not TourType eligibility — this guard is load-bearing,
     // not redundant with pl_standard_class_candidates() excluding these
@@ -440,7 +442,7 @@ function pl_setup_70m_family($TourId, $TourType, $Multiplier, $PL_CLASS_NAMES, $
             if (!pl_class_in_preset($cl, 'R', $preset)) continue;
             CreateDistanceNew($TourId, $TourType, "R{$cl}", pl_double_legs(array(array('15m-1', 15), array('15m-2', 15)), $isDouble));
         }
-        foreach (array('PU12M', 'PU12W') as $cl) {
+        foreach (array('U10M', 'U10W') as $cl) {
             if (!pl_class_in_preset($cl, 'R', $preset)) continue;
             CreateDistanceNew($TourId, $TourType, "R{$cl}", pl_double_legs(array(array('10m-1', 10), array('10m-2', 10)), $isDouble));
         }
@@ -464,7 +466,7 @@ function pl_setup_70m_family($TourId, $TourType, $Multiplier, $PL_CLASS_NAMES, $
         }
     }
 
-    // ---- Individual Events (with elimination, except U15/U12/PU12) ----------------
+    // ---- Individual Events (with elimination, except U15/U12/U10) ----------------
     $indFirstPhase  = 48;  // top 104
     $teamFirstPhase = 12;  // top 24
     $i = 1;
@@ -493,7 +495,7 @@ function pl_setup_70m_family($TourId, $TourType, $Multiplier, $PL_CLASS_NAMES, $
         CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]}", $i++, $optR);
     }
 
-    // U15/U12/PU12 — no elimination
+    // U15/U12/U10 — no elimination
     $optRU15 = $optR;
     $optRU15['EvFinalFirstPhase'] = 0;
     $optRU15['EvDistance']        = 40;
@@ -512,13 +514,13 @@ function pl_setup_70m_family($TourId, $TourType, $Multiplier, $PL_CLASS_NAMES, $
             if (!pl_class_in_preset($cl, 'R', $preset)) continue;
             CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]}", $i++, $optRU12);
         }
-        $optRPU12 = $optR;
-        $optRPU12['EvFinalFirstPhase'] = 0;
-        $optRPU12['EvDistance']        = 10;
-        $optRPU12['EvTargetSize']      = 122;
-        foreach (array('PU12M', 'PU12W') as $cl) {
+        $optRU10 = $optR;
+        $optRU10['EvFinalFirstPhase'] = 0;
+        $optRU10['EvDistance']        = 10;
+        $optRU10['EvTargetSize']      = 122;
+        foreach (array('U10M', 'U10W') as $cl) {
             if (!pl_class_in_preset($cl, 'R', $preset)) continue;
-            CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]}", $i++, $optRPU12);
+            CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]}", $i++, $optRU10);
         }
     }
 
@@ -625,7 +627,7 @@ function pl_setup_70m_family($TourId, $TourType, $Multiplier, $PL_CLASS_NAMES, $
         if (!pl_class_in_preset($cl, 'R', $preset)) continue;
         CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]} zespoły", $i++, $optRT);
     }
-    // U15/U12/PU12 Recurve team — no elimination
+    // U15/U12/U10 Recurve team — no elimination
     $optRTU15 = $optRT;
     $optRTU15['EvFinalFirstPhase'] = 0;
     $optRTU15['EvDistance']        = 40;
@@ -642,11 +644,11 @@ function pl_setup_70m_family($TourId, $TourType, $Multiplier, $PL_CLASS_NAMES, $
             if (!pl_class_in_preset($cl, 'R', $preset)) continue;
             CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]} zespoły", $i++, $optRTU12);
         }
-        $optRTPU12 = $optRTU15;
-        $optRTPU12['EvDistance'] = 10;
-        foreach (array('PU12M', 'PU12W') as $cl) {
+        $optRTU10 = $optRTU15;
+        $optRTU10['EvDistance'] = 10;
+        foreach (array('U10M', 'U10W') as $cl) {
             if (!pl_class_in_preset($cl, 'R', $preset)) continue;
-            CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]} zespoły", $i++, $optRTPU12);
+            CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]} zespoły", $i++, $optRTU10);
         }
     }
 
@@ -727,7 +729,7 @@ function pl_setup_70m_family($TourId, $TourType, $Multiplier, $PL_CLASS_NAMES, $
     }
 
     // ---- Mixed Team Events -----------------------------------------------------
-    // No U12/PU12/Masters mixed-team events (see design.md).
+    // No U12/U10/Masters mixed-team events (see design.md).
     $mixFirstPhase = 12;  // top 24 (1/12 finału)
     $i = 1;
 
@@ -829,8 +831,17 @@ function pl_setup_70m_family($TourId, $TourType, $Multiplier, $PL_CLASS_NAMES, $
     // use it — same "no orphaned config" reasoning as the distances above.
     $i = 1;
     // Recurve (incl. Barebow): 122 cm full face
+    // Excludes U12/U10 explicitly (rather than matching every R/B class)
+    // because both would otherwise carry the exact same 122/122 values as
+    // the U12/U10-specific face below — two '1'-default, regex-matched
+    // TargetFaces rows tied on every ORDER BY key Fun_Targets.php's query
+    // uses (core has no TfId/insertion-order tiebreak), so which one an
+    // Entries row resolves to is undefined and can split M/W (or any two
+    // entries) across two differently-named rows with identical scoring,
+    // as seen live on a real tournament. No lookahead/lookaround (see U15
+    // comment below) — enumerate the other prefixes instead.
     if (pl_division_has_classes($TourType, 'R', $preset) || pl_division_has_classes($TourType, 'B', $preset)) {
-        CreateTargetFace($TourId, $i++, 'Łuk klasyczny/barebow domyślna', 'REG-^[RB]', '1',
+        CreateTargetFace($TourId, $i++, 'Łuk klasyczny/barebow domyślna', 'REG-^R(M|W|U24|U21|U18|U15|[4-8]0)|^B', '1',
             TGT_OUT_FULL, 122, TGT_OUT_FULL, 122);
     }
     // Compound: 80 cm 6-ring face (broad default; Masters 70+/80+ narrows
@@ -847,10 +858,10 @@ function pl_setup_70m_family($TourId, $TourType, $Multiplier, $PL_CLASS_NAMES, $
         CreateTargetFace($TourId, $i++, 'Łuk klasyczny Młodzik (40 m / 20 m)', 'RU15%', '1',
             TGT_OUT_FULL, 122, TGT_OUT_FULL, 80);
     }
-    // Recurve U12 / PU12: 122 cm full face
+    // Recurve U12 / U10: 122 cm full face
     if ($TourType == 3 && (pl_class_in_preset('U12M', 'R', $preset) || pl_class_in_preset('U12W', 'R', $preset)
-        || pl_class_in_preset('PU12M', 'R', $preset) || pl_class_in_preset('PU12W', 'R', $preset))) {
-        CreateTargetFace($TourId, $i++, 'Łuk klasyczny Dziecko (U12/łuk popularny)', 'REG-^R(P?U12)', '1',
+        || pl_class_in_preset('U10M', 'R', $preset) || pl_class_in_preset('U10W', 'R', $preset))) {
+        CreateTargetFace($TourId, $i++, 'Łuk klasyczny Dziecko (U12/łuk popularny)', 'REG-^R(U10|U12)', '1',
             TGT_OUT_FULL, 122, TGT_OUT_FULL, 122);
     }
     // Compound Masters 70+/80+: 80 cm full face (not the 6-ring face) —
@@ -942,7 +953,7 @@ function pl_setup_kids_round($TourId, $TourType, $PL_CLASS_NAMES) {
 }
 
 // ---------------------------------------------------------------------------
-// Shared body for the 1440 Round (TourType 1). No U15/U12/PU12/Masters, no
+// Shared body for the 1440 Round (TourType 1). No U15/U12/U10/Masters, no
 // Barebow division (see pl_standard_class_candidates()/CreateStandardDivisions()
 // — both already exclude B for TourType 1) and no mixed team events (this
 // round never had any). Compound's qualification distances mirror Recurve's
@@ -1078,7 +1089,7 @@ function pl_setup_1440($TourId, $TourType, $PL_CLASS_NAMES, $preset = array()) {
 // ---------------------------------------------------------------------------
 // Shared body for the Indoor Round (TourType 6). $TourId/$PL_CLASS_NAMES/
 // $PL_MIXED_CLASS_NAMES are explicit parameters for the same scope reason as
-// pl_setup_70m_family() above. U12 shoots at 15 m (80 cm face); PU12 shoots
+// pl_setup_70m_family() above. U12 shoots at 15 m (80 cm face); U10 shoots
 // at 10 m (122 cm face) — both Recurve only, no elimination, no mixed team.
 // ---------------------------------------------------------------------------
 function pl_setup_indoor($TourId, $TourType, $PL_CLASS_NAMES, $PL_MIXED_CLASS_NAMES, $preset = array()) {
@@ -1100,7 +1111,7 @@ function pl_setup_indoor($TourId, $TourType, $PL_CLASS_NAMES, $PL_MIXED_CLASS_NA
         if (!pl_class_in_preset($cl, 'R', $preset)) continue;
         CreateDistanceNew($TourId, $TourType, "R{$cl}", array(array('15m-1', 15), array('15m-2', 15)));
     }
-    foreach (array('PU12M', 'PU12W') as $cl) {
+    foreach (array('U10M', 'U10W') as $cl) {
         if (!pl_class_in_preset($cl, 'R', $preset)) continue;
         CreateDistanceNew($TourId, $TourType, "R{$cl}", array(array('10m-1', 10), array('10m-2', 10)));
     }
@@ -1161,15 +1172,15 @@ function pl_setup_indoor($TourId, $TourType, $PL_CLASS_NAMES, $PL_MIXED_CLASS_NA
         CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]}", $i++, $optRU12);
     }
 
-    // PU12 — Recurve only, 10 m, 122 cm full face, no elimination
-    $optRPU12 = $optR;
-    $optRPU12['EvFinalFirstPhase'] = 0;
-    $optRPU12['EvFinalTargetType'] = TGT_OUT_FULL;
-    $optRPU12['EvTargetSize']      = 122;
-    $optRPU12['EvDistance']        = 10;
-    foreach (array('PU12M', 'PU12W') as $cl) {
+    // U10 — Recurve only, 10 m, 122 cm full face, no elimination
+    $optRU10 = $optR;
+    $optRU10['EvFinalFirstPhase'] = 0;
+    $optRU10['EvFinalTargetType'] = TGT_OUT_FULL;
+    $optRU10['EvTargetSize']      = 122;
+    $optRU10['EvDistance']        = 10;
+    foreach (array('U10M', 'U10W') as $cl) {
         if (!pl_class_in_preset($cl, 'R', $preset)) continue;
-        CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]}", $i++, $optRPU12);
+        CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]}", $i++, $optRU10);
     }
 
     // --- Compound individual (cumulative) ---
@@ -1263,13 +1274,13 @@ function pl_setup_indoor($TourId, $TourType, $PL_CLASS_NAMES, $PL_MIXED_CLASS_NA
         if (!pl_class_in_preset($cl, 'R', $preset)) continue;
         CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]} zespoły", $i++, $optRTU12);
     }
-    $optRTPU12 = $optRTU15;
-    $optRTPU12['EvFinalTargetType'] = TGT_OUT_FULL;
-    $optRTPU12['EvTargetSize']      = 122;
-    $optRTPU12['EvDistance']        = 10;
-    foreach (array('PU12M', 'PU12W') as $cl) {
+    $optRTU10 = $optRTU15;
+    $optRTU10['EvFinalTargetType'] = TGT_OUT_FULL;
+    $optRTU10['EvTargetSize']      = 122;
+    $optRTU10['EvDistance']        = 10;
+    foreach (array('U10M', 'U10W') as $cl) {
         if (!pl_class_in_preset($cl, 'R', $preset)) continue;
-        CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]} zespoły", $i++, $optRTPU12);
+        CreateEventNew($TourId, "R{$cl}", "Łuk klasyczny - {$PL_CLASS_NAMES[$cl]} zespoły", $i++, $optRTU10);
     }
 
     $optCT = array(
@@ -1315,7 +1326,7 @@ function pl_setup_indoor($TourId, $TourType, $PL_CLASS_NAMES, $PL_MIXED_CLASS_NA
     }
 
     // ---- Mixed Team Events -----------------------------------------------------
-    // No U12/PU12 mixed team events.
+    // No U12/U10 mixed team events.
     $mixFirstPhase = 12;  // top 24 (1/12 finału)
     $i = 1;
 
@@ -1432,9 +1443,9 @@ function pl_setup_indoor($TourId, $TourType, $PL_CLASS_NAMES, $PL_MIXED_CLASS_NA
             'RU12%', '1',
             TGT_IND_1_big10, 80, TGT_IND_1_big10, 80);
     }
-    if (pl_class_in_preset('PU12M', 'R', $preset) || pl_class_in_preset('PU12W', 'R', $preset)) {
+    if (pl_class_in_preset('U10M', 'R', $preset) || pl_class_in_preset('U10W', 'R', $preset)) {
         CreateTargetFace($TourId, $i++, 'Łuk klasyczny 122 cm (łuk popularny)',
-            'RPU12%', '1',
+            'RU10%', '1',
             TGT_OUT_FULL, 122, TGT_OUT_FULL, 122);
     }
     if (pl_class_in_preset('M', 'C', $preset) || pl_class_in_preset('W', 'C', $preset)

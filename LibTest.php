@@ -117,19 +117,19 @@ final class LibTest extends \PlTestCase
         }
     }
 
-    public function testCreateStandardClassesType3HasU15U12PU12AndMasters(): void
+    public function testCreateStandardClassesType3HasU15U12U10AndMasters(): void
     {
         \CreateStandardClasses(7, 3);
 
-        // 8 base + U15(2) + U12(2) + PU12(2) + Masters(10) = 24
+        // 8 base + U15(2) + U12(2) + U10(2) + Masters(10) = 24
         $this->assertCount(24, \CallLog::calls('CreateClass'));
         $this->assertCount(2, \CallLog::callsMatching('CreateClass', fn ($a) => str_starts_with($a[5], 'U15')));
         $this->assertCount(2, \CallLog::callsMatching('CreateClass', fn ($a) => $a[5] === 'U12M' || $a[5] === 'U12W'));
-        $this->assertCount(2, \CallLog::callsMatching('CreateClass', fn ($a) => str_starts_with($a[5], 'PU12')));
+        $this->assertCount(2, \CallLog::callsMatching('CreateClass', fn ($a) => str_starts_with($a[5], 'U10')));
         $this->assertCount(10, \CallLog::callsMatching('CreateClass', fn ($a) => preg_match('/^(40|50|60|70|80)[MW]$/', $a[5])));
     }
 
-    public function testCreateStandardClassesType37HasU15OnlyNoU12PU12OrMasters(): void
+    public function testCreateStandardClassesType37HasU15OnlyNoU12U10OrMasters(): void
     {
         \CreateStandardClasses(7, 37);
 
@@ -140,15 +140,15 @@ final class LibTest extends \PlTestCase
         $this->assertCount(0, \CallLog::callsMatching('CreateClass', fn ($a) => preg_match('/^(40|50|60|70|80)[MW]$/', $a[5])));
     }
 
-    public function testCreateStandardClassesType6HasU15U12AndPU12NoMasters(): void
+    public function testCreateStandardClassesType6HasU15U12AndU10NoMasters(): void
     {
         \CreateStandardClasses(7, 6);
 
-        // 8 base + U15(2) + U12(2) + PU12(2) = 14
+        // 8 base + U15(2) + U12(2) + U10(2) = 14
         $this->assertCount(14, \CallLog::calls('CreateClass'));
         $this->assertCount(2, \CallLog::callsMatching('CreateClass', fn ($a) => str_starts_with($a[5], 'U15')));
         $this->assertCount(2, \CallLog::callsMatching('CreateClass', fn ($a) => $a[5] === 'U12M' || $a[5] === 'U12W'));
-        $this->assertCount(2, \CallLog::callsMatching('CreateClass', fn ($a) => str_starts_with($a[5], 'PU12')));
+        $this->assertCount(2, \CallLog::callsMatching('CreateClass', fn ($a) => str_starts_with($a[5], 'U10')));
         $this->assertCount(0, \CallLog::callsMatching('CreateClass', fn ($a) => preg_match('/^(40|50|60|70|80)[MW]$/', $a[5])));
     }
 
@@ -167,6 +167,57 @@ final class LibTest extends \PlTestCase
         // don't exist as classes in a TourType 16 tournament.
         $this->assertSame('U12M', $calls[0][6]);
         $this->assertSame('U12W', $calls[1][6]);
+    }
+
+    public function testCreateStandardClassesU12AndU10AgeRangesDoNotOverlap(): void
+    {
+        // Regression: U12 and U10 used to share the exact same ageFrom/ageTo
+        // (9-12) on both TourType 3 and 6 — a copy-paste bug that let a live
+        // tournament's Classes rows contradict PZŁucz's actual split (U12
+        // 11-12, U10 5-10, confirmed by the domain owner).
+        foreach ([3, 6] as $tourType) {
+            \CallLog::reset();
+            \CreateStandardClasses(7, $tourType);
+
+            foreach (['U12M', 'U12W'] as $code) {
+                $calls = \CallLog::callsMatching('CreateClass', fn ($a) => $a[5] === $code);
+                $this->assertCount(1, $calls, "expected exactly one CreateClass call for {$code} on TourType {$tourType}");
+                $this->assertSame(11, $calls[0][2], "{$code} on TourType {$tourType} must have ageFrom=11");
+                $this->assertSame(12, $calls[0][3], "{$code} on TourType {$tourType} must have ageTo=12");
+            }
+            foreach (['U10M', 'U10W'] as $code) {
+                $calls = \CallLog::callsMatching('CreateClass', fn ($a) => $a[5] === $code);
+                $this->assertCount(1, $calls, "expected exactly one CreateClass call for {$code} on TourType {$tourType}");
+                $this->assertSame(5, $calls[0][2], "{$code} on TourType {$tourType} must have ageFrom=5");
+                $this->assertSame(10, $calls[0][3], "{$code} on TourType {$tourType} must have ageTo=10");
+            }
+        }
+    }
+
+    public function testCreateStandardClassesType16U12AgeRangeMatchesGeneralU12(): void
+    {
+        \CreateStandardClasses(7, 16);
+
+        foreach (\CallLog::calls('CreateClass') as $call) {
+            $this->assertSame(11, $call[2], "{$call[5]} on TourType 16 must have ageFrom=11");
+            $this->assertSame(12, $call[3], "{$call[5]} on TourType 16 must have ageTo=12");
+        }
+    }
+
+    public function testCreateStandardClassesSeniorAgeFromExcludesU24(): void
+    {
+        // Regression: Senior ageFrom used to be 21, overlapping U24's 21-23
+        // range — an archer aged 21-23 could ambiguously resolve to either
+        // class. Senior now starts at 24, right after U24 ends.
+        foreach ([1, 3, 6, 37] as $tourType) {
+            \CallLog::reset();
+            \CreateStandardClasses(7, $tourType);
+
+            $senior = \CallLog::callsMatching('CreateClass', fn ($a) => $a[5] === 'M' || $a[5] === 'W');
+            foreach ($senior as $call) {
+                $this->assertSame(24, $call[2], "{$call[5]} on TourType {$tourType} must have ageFrom=24");
+            }
+        }
     }
 
     public function testCreateStandardClassesType16StructuralRestrictionComposesWithPreset(): void
@@ -217,7 +268,7 @@ final class LibTest extends \PlTestCase
             return $calls[0][6];
         };
 
-        // U12/U15 are a parallel track like Masters/PU12 — no upward chain at all.
+        // U12/U15 are a parallel track like Masters/U10 — no upward chain at all.
         $this->assertSame('U12M', $validClassOf('U12M'));
         $this->assertSame('U12W', $validClassOf('U12W'));
         $this->assertSame('U15M', $validClassOf('U15M'));
@@ -273,12 +324,12 @@ final class LibTest extends \PlTestCase
         }
     }
 
-    public function testCreateStandardClassesPU12IsSelfOnlyValidClassRecurveOnly(): void
+    public function testCreateStandardClassesU10IsSelfOnlyValidClassRecurveOnly(): void
     {
         \CreateStandardClasses(7, 3);
 
-        $pu12 = \CallLog::callsMatching('CreateClass', fn ($a) => str_starts_with($a[5], 'PU12'));
-        foreach ($pu12 as $call) {
+        $u10 = \CallLog::callsMatching('CreateClass', fn ($a) => str_starts_with($a[5], 'U10'));
+        foreach ($u10 as $call) {
             $this->assertSame($call[5], $call[6]);
             $this->assertSame('R', $call[9]);
         }
@@ -311,17 +362,17 @@ final class LibTest extends \PlTestCase
         $this->assertCount(0, \CallLog::callsMatching('InsertClassEvent', fn ($a) => $a[3] === 'BU15M'));
     }
 
-    public function testInsertStandardEventsType3BindsU12AndPU12RecurveOnly(): void
+    public function testInsertStandardEventsType3BindsU12AndU10RecurveOnly(): void
     {
         \InsertStandardEvents(7, 3);
 
         $u12 = \CallLog::callsMatching('InsertClassEvent', fn ($a) => $a[3] === 'RU12M' || $a[3] === 'RU12W');
         $this->assertCount(4, $u12); // individual + team, M + W
 
-        $pu12 = \CallLog::callsMatching('InsertClassEvent', fn ($a) => $a[3] === 'RPU12M' || $a[3] === 'RPU12W');
-        $this->assertCount(4, $pu12);
+        $u10 = \CallLog::callsMatching('InsertClassEvent', fn ($a) => $a[3] === 'RU10M' || $a[3] === 'RU10W');
+        $this->assertCount(4, $u10);
 
-        $this->assertCount(0, \CallLog::callsMatching('InsertClassEvent', fn ($a) => $a[4] !== 'R' && str_contains($a[3], 'U12')));
+        $this->assertCount(0, \CallLog::callsMatching('InsertClassEvent', fn ($a) => $a[4] !== 'R' && (str_contains($a[3], 'U12') || str_contains($a[3], 'U10'))));
     }
 
     public function testInsertStandardEventsType6AddsU12ForRecurveOnly(): void
@@ -424,7 +475,7 @@ final class LibTest extends \PlTestCase
             'U18M' => 'Test-U18M', 'U18W' => 'Test-U18W',
             'U15M' => 'Test-U15M', 'U15W' => 'Test-U15W',
             'U12M' => 'Test-U12M', 'U12W' => 'Test-U12W',
-            'PU12M' => 'Test-PU12M', 'PU12W' => 'Test-PU12W',
+            'U10M' => 'Test-U10M', 'U10W' => 'Test-U10W',
             '40M' => 'Test-40M', '40W' => 'Test-40W',
             '50M' => 'Test-50M', '50W' => 'Test-50W',
             '60M' => 'Test-60M', '60W' => 'Test-60W',
@@ -479,7 +530,7 @@ final class LibTest extends \PlTestCase
         $this->assertSame([[6, 6], [6, 6], [6, 6], [6, 6]], $di[0][1]);
     }
 
-    public function testPlSetup70mFamilyType37ExcludesU12PU12AndMasters(): void
+    public function testPlSetup70mFamilyType37ExcludesU12U10AndMasters(): void
     {
         \pl_setup_70m_family(7, 3, 1, $this->plClassNames(), $this->plMixedClassNames());
         $type3Classes = \CallLog::calls('CreateClass');
@@ -494,11 +545,11 @@ final class LibTest extends \PlTestCase
 
         $type37Codes = array_column($type37Classes, 5);
         $this->assertNotContains('U12M', $type37Codes);
-        $this->assertNotContains('PU12M', $type37Codes);
+        $this->assertNotContains('U10M', $type37Codes);
         $this->assertCount(0, array_filter($type37Codes, fn ($c) => preg_match('/^(40|50|60|70|80)[MW]$/', $c)));
     }
 
-    public function testPlSetup70mFamilyType37CreatesNoU12PU12OrMastersEventsOrDistances(): void
+    public function testPlSetup70mFamilyType37CreatesNoU12U10OrMastersEventsOrDistances(): void
     {
         // Regression: pl_class_in_preset() only checks the preset axis, not
         // TourType eligibility — a per-class CreateEventNew()/CreateDistanceNew()
@@ -509,12 +560,12 @@ final class LibTest extends \PlTestCase
         \pl_setup_70m_family(7, 37, 2, $this->plClassNames(), $this->plMixedClassNames());
 
         $eventCodes = array_column(\CallLog::calls('CreateEventNew'), 1);
-        $this->assertCount(0, array_filter($eventCodes, fn ($c) => str_contains($c, 'U12') || preg_match('/^R(40|50|60|70|80)[MW]$/', $c)),
-            'no U12/PU12/Masters event should be created on TourType 37');
+        $this->assertCount(0, array_filter($eventCodes, fn ($c) => str_contains($c, 'U12') || str_contains($c, 'U10') || preg_match('/^R(40|50|60|70|80)[MW]$/', $c)),
+            'no U12/U10/Masters event should be created on TourType 37');
 
         $distanceClasses = array_column(\CallLog::calls('CreateDistanceNew'), 2);
-        $this->assertCount(0, array_filter($distanceClasses, fn ($c) => str_contains($c, 'U12') || preg_match('/^R(40|50|60|70|80)[MW]$/', $c)),
-            'no U12/PU12/Masters distance should be created on TourType 37');
+        $this->assertCount(0, array_filter($distanceClasses, fn ($c) => str_contains($c, 'U12') || str_contains($c, 'U10') || preg_match('/^R(40|50|60|70|80)[MW]$/', $c)),
+            'no U12/U10/Masters distance should be created on TourType 37');
     }
 
     public function testPlSetup70mFamilyMastersOnlyOnType3(): void
@@ -562,7 +613,7 @@ final class LibTest extends \PlTestCase
 
         // Regression: distances and target faces used to be created
         // unconditionally regardless of preset — a Recurve-only, U21-only
-        // preset must not leave RM/RU24M/RU18M/RU15M/RU12M/RPU12M/R40M-R80M
+        // preset must not leave RM/RU24M/RU18M/RU15M/RU12M/RU10M/R40M-R80M
         // distances, C%/B% wildcard distances, or any Compound/Barebow
         // target face lying around unused.
         $distanceClasses = array_column(\CallLog::calls('CreateDistanceNew'), 2);
@@ -576,7 +627,7 @@ final class LibTest extends \PlTestCase
     public function testPlSetup70mFamilySeniorOnlyPresetLeavesNoOrphanedDistancesOrFaces(): void
     {
         // Regression: SetSeniorClass (no division restriction, classes M/W
-        // only) must not leave U12/PU12/Masters/U15/U18/U21/U24 distances or
+        // only) must not leave U12/U10/Masters/U15/U18/U21/U24 distances or
         // faces behind, and must still create the shared C%/B% distances
         // (M/W exist in every division).
         \pl_setup_70m_family(7, 3, 1, $this->plClassNames(), $this->plMixedClassNames(),
@@ -589,17 +640,51 @@ final class LibTest extends \PlTestCase
         $this->assertCount(0, array_filter($distanceClasses, fn ($c) => str_contains($c, 'U12') || preg_match('/^R(40|50|60|70|80)[MW]$/', $c)));
     }
 
-    public function testPlSetup70mFamilyMasterPresetLeavesNoU12OrPU12Distances(): void
+    public function testPlSetup70mFamilyMasterPresetLeavesNoU12OrU10Distances(): void
     {
         // Regression: SetMasterClass (classes = the 10 band codes, no
-        // division restriction) must not leave RU12M/RU12W/RPU12M/RPU12W
+        // division restriction) must not leave RU12M/RU12W/RU10M/RU10W
         // distances behind — CreateStandardClasses() never creates those
         // classes under this preset.
         \pl_setup_70m_family(7, 3, 1, $this->plClassNames(), $this->plMixedClassNames(),
             \pl_resolve_preset(3, 'SetMasterClass'));
 
         $distanceClasses = array_column(\CallLog::calls('CreateDistanceNew'), 2);
-        $this->assertCount(0, array_filter($distanceClasses, fn ($c) => str_contains($c, 'U12')));
+        $this->assertCount(0, array_filter($distanceClasses, fn ($c) => str_contains($c, 'U12') || str_contains($c, 'U10')));
+    }
+
+    public function testPlSetup70mFamilyGenericFaceDoesNotOverlapU12U10Face(): void
+    {
+        // Regression: the generic Recurve/Barebow default face ('^[RB]') used
+        // to also match RU12M/RU12W/RU10M/RU10W with the exact same 122/122
+        // values as the dedicated U12/U10 face below — two '1'-default,
+        // regex-matched TargetFaces rows tied on every ORDER BY key core's
+        // Fun_Targets.php query uses, so which row a real Entries.EnTargetFace
+        // resolved to was undefined (confirmed live: M and W entries in the
+        // same class split across the two rows). The generic face's regex
+        // must no longer match U12/U10 codes, while still matching every
+        // other Recurve/Barebow class and the dedicated U12/U10 face must
+        // still match them.
+        \pl_setup_70m_family(7, 3, 1, $this->plClassNames(), $this->plMixedClassNames());
+
+        $faces = \CallLog::calls('CreateTargetFace');
+        $generic = array_values(array_filter($faces, fn ($f) => $f[2] === 'Łuk klasyczny/barebow domyślna'));
+        $this->assertCount(1, $generic);
+        $genericRegex = '/' . str_replace('REG-', '', $generic[0][3]) . '/';
+
+        foreach (['RM', 'RW', 'RU24M', 'RU21M', 'RU18M', 'RU15M', 'R40M', 'R80W', 'BM', 'BU18W'] as $code) {
+            $this->assertSame(1, preg_match($genericRegex, $code), "generic default must still match {$code}");
+        }
+        foreach (['RU12M', 'RU12W', 'RU10M', 'RU10W'] as $code) {
+            $this->assertSame(0, preg_match($genericRegex, $code), "generic default must no longer match {$code}");
+        }
+
+        $u12u10 = array_values(array_filter($faces, fn ($f) => $f[2] === 'Łuk klasyczny Dziecko (U12/łuk popularny)'));
+        $this->assertCount(1, $u12u10);
+        $specificRegex = '/' . str_replace('REG-', '', $u12u10[0][3]) . '/';
+        foreach (['RU12M', 'RU12W', 'RU10M', 'RU10W'] as $code) {
+            $this->assertSame(1, preg_match($specificRegex, $code), "U12/U10 face must still match {$code}");
+        }
     }
 
     public function testPlSetup1440MastersClassNamesAreGenderedAndDistinct(): void
@@ -685,11 +770,11 @@ final class LibTest extends \PlTestCase
         $this->assertSame($eventCodes, $bindingCodes);
     }
 
-    public function testPlSetupKidsRoundPU12NeverCreated(): void
+    public function testPlSetupKidsRoundU10NeverCreated(): void
     {
         \pl_setup_kids_round(7, 16, $this->plKidsClassNames());
 
-        $this->assertCount(0, \CallLog::callsMatching('CreateEventNew', fn ($a) => str_contains($a[1], 'PU12')));
+        $this->assertCount(0, \CallLog::callsMatching('CreateEventNew', fn ($a) => str_contains($a[1], 'U10')));
     }
 
     // --- pl_setup_1440 (Setup_1_PL.php) -----------------------------------------
@@ -755,7 +840,7 @@ final class LibTest extends \PlTestCase
 
     // --- pl_setup_indoor (Setup_6_PL.php) ---------------------------------------
 
-    public function testPlSetupIndoorU12AndPU12DistinctDistancesNoElimination(): void
+    public function testPlSetupIndoorU12AndU10DistinctDistancesNoElimination(): void
     {
         \pl_setup_indoor(7, 6, $this->plClassNames(), $this->plMixedClassNames());
 
@@ -763,11 +848,11 @@ final class LibTest extends \PlTestCase
         $this->assertCount(1, $u12);
         $this->assertSame([['15m-1', 15], ['15m-2', 15]], $u12[0][3]);
 
-        $pu12 = \CallLog::callsMatching('CreateDistanceNew', fn ($a) => $a[2] === 'RPU12M');
-        $this->assertCount(1, $pu12);
-        $this->assertSame([['10m-1', 10], ['10m-2', 10]], $pu12[0][3]);
+        $u10 = \CallLog::callsMatching('CreateDistanceNew', fn ($a) => $a[2] === 'RU10M');
+        $this->assertCount(1, $u10);
+        $this->assertSame([['10m-1', 10], ['10m-2', 10]], $u10[0][3]);
 
-        foreach (\CallLog::callsMatching('CreateEventNew', fn ($a) => str_contains($a[1], 'U12')) as $ev) {
+        foreach (\CallLog::callsMatching('CreateEventNew', fn ($a) => str_contains($a[1], 'U12') || str_contains($a[1], 'U10')) as $ev) {
             $this->assertSame(0, $ev[4]['EvFinalFirstPhase']);
         }
     }
@@ -791,18 +876,18 @@ final class LibTest extends \PlTestCase
         $this->assertSame(80, $team['EvTargetSize']);
     }
 
-    public function testPlSetupIndoorPU12RecurveOnly(): void
+    public function testPlSetupIndoorU10RecurveOnly(): void
     {
         \pl_setup_indoor(7, 6, $this->plClassNames(), $this->plMixedClassNames());
 
-        $this->assertCount(0, \CallLog::callsMatching('CreateEventNew', fn ($a) => str_starts_with($a[1], 'C') && str_contains($a[1], 'PU12')));
-        $this->assertCount(0, \CallLog::callsMatching('CreateEventNew', fn ($a) => str_starts_with($a[1], 'B') && str_contains($a[1], 'PU12')));
+        $this->assertCount(0, \CallLog::callsMatching('CreateEventNew', fn ($a) => str_starts_with($a[1], 'C') && str_contains($a[1], 'U10')));
+        $this->assertCount(0, \CallLog::callsMatching('CreateEventNew', fn ($a) => str_starts_with($a[1], 'B') && str_contains($a[1], 'U10')));
     }
 
-    public function testPlSetupIndoorNoU12OrPU12MixedTeam(): void
+    public function testPlSetupIndoorNoU12OrU10MixedTeam(): void
     {
         \pl_setup_indoor(7, 6, $this->plClassNames(), $this->plMixedClassNames());
 
-        $this->assertCount(0, \CallLog::callsMatching('CreateEventNew', fn ($a) => str_contains($a[1], 'U12') && ($a[4]['EvMixedTeam'] ?? 0) === 1));
+        $this->assertCount(0, \CallLog::callsMatching('CreateEventNew', fn ($a) => (str_contains($a[1], 'U12') || str_contains($a[1], 'U10')) && ($a[4]['EvMixedTeam'] ?? 0) === 1));
     }
 }

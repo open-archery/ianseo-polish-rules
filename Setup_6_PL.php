@@ -4,8 +4,8 @@
  *
  * 2 sesje strzeleckie po 10 serii × 3 strzały (= 30 strzał / sesja, 300 pkt maks).
  * Faza eliminacyjna: top 32 (ind.), top 16 (zespoły).
- * U15, U12 i PU12 bez eliminacji.
- * U12 strzela na 15 m, PU12 (łuk popularny) na 10 m — pozostałe 18 m.
+ * U15, U12 i U10 bez eliminacji.
+ * U12 strzela na 15 m, U10 (łuk popularny) na 10 m — pozostałe 18 m.
  *
  * Podrundy (sub-rules): SetAllClass (wszystko), SetSeniorClass (tylko M/W),
  * SetYouthClass (łuk klasyczny, U24+U21), Poland-RU18, Poland-RU15 —

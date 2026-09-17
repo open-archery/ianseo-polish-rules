@@ -61,6 +61,48 @@ commit as the fix. Terse is fine; the goal is "don't step on this rake again," n
   "zero the worst place" logic must filter those sentinels out *before* taking `max()`,
   or a single DSQ entrant in a category silently defeats the cutoff for everyone else.
 
+## This module's class/target-face config (`pl_standard_class_candidates()`, `pl_setup_70m_family()`)
+
+- **A hardcoded age range duplicated across two `$c[]`/candidate-array literals will
+  silently drift apart from reality — nothing type-checks that U12 and the simplified-bow
+  class next to it are supposed to be different.** `U12M`/`U12W` and (then still named
+  `PU12M`/`PU12W`) both shipped with `ageFrom => 9, ageTo => 12` (copy-paste from one to the
+  other) even though PZŁucz splits them into two non-overlapping bands (U12: 11-12,
+  simplified-bow: 5-10, confirmed by the domain owner) — caught only by manually inspecting a
+  live tournament's `Classes` rows, not by any test, since no test asserted the actual
+  numeric bounds (only `ageTo=127` for Senior was ever checked). `TourType 16`'s own copy of
+  the U12 candidate (`pl_standard_class_candidates()`'s early `return` branch) is a **third**,
+  fully separate literal for the same class — it does not derive from the `hasU12` branch
+  below, so fixing one does not fix the other. **The class code itself was then renamed
+  `PU12M`/`PU12W` → `U10M`/`U10W`** in the same session — once the age band became 5-10, a
+  code containing "12" was actively misleading. The rename is a plain substring replace
+  everywhere *except* `pl_setup_70m_family()`'s combined U12/simplified-bow `TargetFaces`
+  regex, which used `P?U12` (optional-`P` alternation) specifically so one row's pattern
+  covered both codes — that one needs its alternation rewritten (`U10|U12`), not
+  substring-replaced, or the rename silently drops that regex's second half.
+- **Two `CreateTargetFace()` calls with overlapping `REG-` regexes and identical `Default`
+  ('1') are not automatically prioritized by "more specific wins" — core has no tiebreak for
+  that.** `Fun_Targets.php`'s (core, read-only) query orders candidates by `TfDefault desc,
+  TfRegExp>'' desc, concat(...)=TfClasses desc, ...` — every one of those keys is computed
+  from `TfClasses` (the `LIKE`-pattern column), which is empty for any `REG-`-based row, so
+  two regex rows that both match the same class tie on *every* key with no `TfId`/insertion-
+  order fallback. Which row a given `Entries.EnTargetFace` resolves to (via
+  `Fun_Partecipants.local.inc.php`'s `reset($DefTargets[Div][Class])` on first render) is
+  therefore undefined between ties — confirmed live: a real tournament's `U12M`/`PU12M`
+  entries resolved to one `TargetFaces` row while `U12W`/`PU12W` resolved to a *different*
+  one, even though both rows had byte-identical `TfT*/TfW*` values (122/122) and existed
+  only for a nicer label. Once `EnTargetFace` is set (even to the "wrong" tied row), core
+  never re-resolves it — it's treated as valid indefinitely, so the split doesn't self-heal.
+  Fixed for U12 and the simplified-bow class (`PU12` at the time, renamed to `U10` in the
+  same session — see the rename note above) by narrowing the generic `'REG-^[RB]'` default (`pl_setup_70m_family()`)
+  to explicitly exclude them via alternation (`^R(M|W|U24|U21|U18|U15|[4-8]0)|^B` — no
+  lookahead/lookaround available, per the existing U15 comment, so exclusion must enumerate
+  what *should* match rather than negate what shouldn't). **`U15`'s own override (`'RU15%'`,
+  122/80 legs) has this exact same tie against the same generic default and was not touched
+  by this fix** — it's pre-existing, unverified, and higher-stakes if it ever ties the wrong
+  way (a real face-size mismatch, not just a label), not a new regression — check it before
+  trusting the "narrower face overrides broader one" comment at that call site.
+
 ## ianseo core paths
 
 - **`Modules/config.php` is a proxy shim**, not the real `config.php`. It exists so that a
