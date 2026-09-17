@@ -372,7 +372,7 @@ final class LibTest extends \PlTestCase
         $u10 = \CallLog::callsMatching('InsertClassEvent', fn ($a) => $a[3] === 'RU10M' || $a[3] === 'RU10W');
         $this->assertCount(4, $u10);
 
-        $this->assertCount(0, \CallLog::callsMatching('InsertClassEvent', fn ($a) => $a[4] !== 'R' && str_contains($a[3], 'U12')));
+        $this->assertCount(0, \CallLog::callsMatching('InsertClassEvent', fn ($a) => $a[4] !== 'R' && (str_contains($a[3], 'U12') || str_contains($a[3], 'U10'))));
     }
 
     public function testInsertStandardEventsType6AddsU12ForRecurveOnly(): void
@@ -560,11 +560,11 @@ final class LibTest extends \PlTestCase
         \pl_setup_70m_family(7, 37, 2, $this->plClassNames(), $this->plMixedClassNames());
 
         $eventCodes = array_column(\CallLog::calls('CreateEventNew'), 1);
-        $this->assertCount(0, array_filter($eventCodes, fn ($c) => str_contains($c, 'U12') || preg_match('/^R(40|50|60|70|80)[MW]$/', $c)),
+        $this->assertCount(0, array_filter($eventCodes, fn ($c) => str_contains($c, 'U12') || str_contains($c, 'U10') || preg_match('/^R(40|50|60|70|80)[MW]$/', $c)),
             'no U12/U10/Masters event should be created on TourType 37');
 
         $distanceClasses = array_column(\CallLog::calls('CreateDistanceNew'), 2);
-        $this->assertCount(0, array_filter($distanceClasses, fn ($c) => str_contains($c, 'U12') || preg_match('/^R(40|50|60|70|80)[MW]$/', $c)),
+        $this->assertCount(0, array_filter($distanceClasses, fn ($c) => str_contains($c, 'U12') || str_contains($c, 'U10') || preg_match('/^R(40|50|60|70|80)[MW]$/', $c)),
             'no U12/U10/Masters distance should be created on TourType 37');
     }
 
@@ -650,7 +650,7 @@ final class LibTest extends \PlTestCase
             \pl_resolve_preset(3, 'SetMasterClass'));
 
         $distanceClasses = array_column(\CallLog::calls('CreateDistanceNew'), 2);
-        $this->assertCount(0, array_filter($distanceClasses, fn ($c) => str_contains($c, 'U12')));
+        $this->assertCount(0, array_filter($distanceClasses, fn ($c) => str_contains($c, 'U12') || str_contains($c, 'U10')));
     }
 
     public function testPlSetup70mFamilyGenericFaceDoesNotOverlapU12U10Face(): void
@@ -852,7 +852,7 @@ final class LibTest extends \PlTestCase
         $this->assertCount(1, $u10);
         $this->assertSame([['10m-1', 10], ['10m-2', 10]], $u10[0][3]);
 
-        foreach (\CallLog::callsMatching('CreateEventNew', fn ($a) => str_contains($a[1], 'U12')) as $ev) {
+        foreach (\CallLog::callsMatching('CreateEventNew', fn ($a) => str_contains($a[1], 'U12') || str_contains($a[1], 'U10')) as $ev) {
             $this->assertSame(0, $ev[4]['EvFinalFirstPhase']);
         }
     }
@@ -888,6 +888,6 @@ final class LibTest extends \PlTestCase
     {
         \pl_setup_indoor(7, 6, $this->plClassNames(), $this->plMixedClassNames());
 
-        $this->assertCount(0, \CallLog::callsMatching('CreateEventNew', fn ($a) => str_contains($a[1], 'U12') && ($a[4]['EvMixedTeam'] ?? 0) === 1));
+        $this->assertCount(0, \CallLog::callsMatching('CreateEventNew', fn ($a) => (str_contains($a[1], 'U12') || str_contains($a[1], 'U10')) && ($a[4]['EvMixedTeam'] ?? 0) === 1));
     }
 }
