@@ -276,6 +276,36 @@ commit as the fix. Terse is fine; the goal is "don't step on this rake again," n
   *new* row actually appeared before trusting the DB state you're about to inspect — don't
   assume distinct cookie jars bought you distinct tournaments.
 
+## Rank/Obj_Rank_*_calc.php testing
+
+- **A PL `Rank/Obj_Rank_*_calc.php` file extends a core class (`Obj_Rank_FinalInd`)
+  it never `require_once`s itself** — something else (a factory, loaded only at
+  runtime) is expected to have pulled the real core parent in first. Requiring
+  the real core parent directly from a test doesn't work either: core's own
+  `Obj_Rank_FinalInd.php` does `require_once('Common/Fun_Phases.inc.php')` with
+  a *bare* path, which PHP resolves against the include path / CWD, not
+  `__FILE__` — the same class of trap as the `Setup_{Type}_{Lang}.php` entry
+  below, just one file deeper. This suite's CWD is `Modules/Sets/PL`, so that
+  require 404s. Don't fight it: define a minimal stand-in parent class in the
+  test file itself (just the properties/constructor the subclass actually
+  reads, e.g. `$this->tournament`), guarded by `class_exists()`, and skip
+  instantiating the real hierarchy entirely. The free functions the subclass
+  calls (`namePhase()`, `numMatchesByPhase()`, ...) live in
+  `Common/Lib/Fun_Phases.inc.php`, which *is* safe to `require_once` straight
+  from a test by an absolute `dirname(__DIR__, N)` path — that file has zero
+  requires of its own, unlike the class file that normally loads it.
+- **A `FakeDb::on()` pattern missing a table-alias prefix silently no-ops
+  instead of erroring.** Stubbing a query built as `f.FinScore=0 AND
+  f.FinSetScore=0` with the pattern `/FinScore=0 AND FinSetScore=0/` (no `f.`
+  before the second column) never matches — the literal substring isn't
+  present in the real SQL — so `FakeDb::query()` falls through to its default
+  empty-result handler. The calling code doesn't crash; it just silently takes
+  its "zero rows" branch, which can *look* like a reproduced bug (or a passing
+  test for the wrong reason) instead of a bad regex. When a stubbed query
+  isn't matching, dump `FakeDb::$queries` (temporarily, via
+  `fwrite(STDERR, ...)`) and diff it character-for-character against the
+  pattern before assuming the production code is at fault.
+
 ## Testing (`tests/Support/FakeDb.php`)
 
 - **Handler registration order = match precedence, and it's easy to get backwards.**

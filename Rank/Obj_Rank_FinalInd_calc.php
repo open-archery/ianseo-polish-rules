@@ -7,6 +7,8 @@
  *
  *  1. No-bronze-match detection: when the bronze match result is 0-0 (not shot),
  *     both semifinal losers are awarded shared 3rd place instead of 3rd/4th.
+ *     If a bye elsewhere in the bracket means only one real semifinal loser
+ *     ever reaches the bronze phase, that lone loser gets 3rd outright.
  *  2. Unique sequential positions for ALL phases >= 4 (quarterfinals and below),
  *     not just the quarterfinals as in the default engine.
  *  3. Tiebreaking within a phase uses three criteria (§2.6.6.2):
@@ -458,15 +460,20 @@
 							AND f.FinScore=0 AND f.FinSetScore=0
 					";
 					$rsDetect = safe_r_sql($qDetect);
-					if ($rsDetect && safe_num_rows($rsDetect) == 2)
+					if ($rsDetect && safe_num_rows($rsDetect) >= 1)
 					{
-						// Bronze match not shot — both semifinal losers share 3rd place.
-						$row1 = safe_fetch($rsDetect);
-						$row2 = safe_fetch($rsDetect);
+						// Bronze match not shot — award shared 3rd to whichever semifinal
+						// loser(s) landed in this phase. Normally that's both semifinal
+						// losers, but a bye elsewhere in the bracket (e.g. 3 entrants total)
+						// means the other semifinal was never played, so only one real
+						// loser exists here — they still get 3rd outright, just alone.
+						$rows = array();
+						while ($row = safe_fetch($rsDetect))
+							$rows[] = $row;
 
 						// Resolve parent-event chain (same logic as the rows > 0 branch)
 						$EventToUse = $event;
-						$ParentCode = $row1->EvCodeParent;
+						$ParentCode = $rows[0]->EvCodeParent;
 						while ($ParentCode)
 						{
 							$EventToUse = $ParentCode;
@@ -477,13 +484,13 @@
 								$ParentCode = '';
 						}
 
-						$sharedRank = $row1->EvWinnerFinalRank + 2; // shared 3rd when EvWinnerFinalRank=1
-						$x = $this->writeRow($row1->AthId, $EventToUse, $sharedRank);
-						if ($x === false)
-							return false;
-						$x = $this->writeRow($row2->AthId, $EventToUse, $sharedRank);
-						if ($x === false)
-							return false;
+						$sharedRank = $rows[0]->EvWinnerFinalRank + 2; // shared 3rd when EvWinnerFinalRank=1
+						foreach ($rows as $row)
+						{
+							$x = $this->writeRow($row->AthId, $EventToUse, $sharedRank);
+							if ($x === false)
+								return false;
+						}
 					}
 				}
 			}
