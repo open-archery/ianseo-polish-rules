@@ -3,18 +3,14 @@
 /**
  * calcFromPhase() bronze-phase tests.
  *
- * Real ianseo core (Common/Rank/Obj_Rank*.php) can't be require_once'd here —
- * its own requires use bare paths ('Common/Fun_Phases.inc.php') resolved
- * against a CWD this suite doesn't run from (see gotchas.md's
- * Setup_{Type}_{Lang}.php entry for the same class of problem). A minimal
- * stand-in for the abstract parent gives calcFromPhase() the $tournament
- * property it reads, without pulling in the real DB-backed constructor.
- * namePhase() itself is real core (Common/Lib/Fun_Phases.inc.php) — that file
- * has no requires of its own, so it's safe to pull in directly by absolute
- * path.
+ * This repo's own checkout (what CI clones) has no Common/ core tree at all
+ * — it only exists on a developer's co-located local ianseo install — so the
+ * real core parent (Common/Rank/Obj_Rank_FinalInd.php) can't be require_once'd
+ * here under any path. A minimal stand-in gives calcFromPhase() the
+ * $tournament property it reads, without pulling in the real DB-backed
+ * constructor. namePhase() is shimmed in tests/bootstrap.php for the same
+ * reason.
  */
-
-require_once dirname(__DIR__, 4) . '/Common/Lib/Fun_Phases.inc.php';
 
 if (!class_exists('Obj_Rank_FinalInd')) {
     abstract class Obj_Rank_FinalInd

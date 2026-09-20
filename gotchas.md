@@ -278,22 +278,24 @@ commit as the fix. Terse is fine; the goal is "don't step on this rake again," n
 
 ## Rank/Obj_Rank_*_calc.php testing
 
-- **A PL `Rank/Obj_Rank_*_calc.php` file extends a core class (`Obj_Rank_FinalInd`)
-  it never `require_once`s itself** — something else (a factory, loaded only at
-  runtime) is expected to have pulled the real core parent in first. Requiring
-  the real core parent directly from a test doesn't work either: core's own
-  `Obj_Rank_FinalInd.php` does `require_once('Common/Fun_Phases.inc.php')` with
-  a *bare* path, which PHP resolves against the include path / CWD, not
-  `__FILE__` — the same class of trap as the `Setup_{Type}_{Lang}.php` entry
-  below, just one file deeper. This suite's CWD is `Modules/Sets/PL`, so that
-  require 404s. Don't fight it: define a minimal stand-in parent class in the
-  test file itself (just the properties/constructor the subclass actually
-  reads, e.g. `$this->tournament`), guarded by `class_exists()`, and skip
-  instantiating the real hierarchy entirely. The free functions the subclass
-  calls (`namePhase()`, `numMatchesByPhase()`, ...) live in
-  `Common/Lib/Fun_Phases.inc.php`, which *is* safe to `require_once` straight
-  from a test by an absolute `dirname(__DIR__, N)` path — that file has zero
-  requires of its own, unlike the class file that normally loads it.
+- **This repo's own checkout has no `Common/` core tree at all — not even in
+  CI.** It only exists because a developer's local machine happens to have a
+  full ianseo install with this module's git repo checked out *inside* it
+  (`.../htdocs/Modules/Sets/PL`), so `Common/` is reachable on disk two levels
+  up. CI's `actions/checkout` clones only this repo, with no such parent tree
+  — a test that does `require_once dirname(__DIR__, N) . '/Common/...'` (or
+  any other path reaching outside this repo) passes locally and 500s/errors
+  in CI with "Failed to open stream", since the assumption only holds on a
+  machine set up like the local dev one. A PL `Rank/Obj_Rank_*_calc.php` file
+  extends a core class (`Obj_Rank_FinalInd`) it never `require_once`s itself
+  (something else, loaded only at runtime, is expected to pull the real core
+  parent in first) — for a test, don't reach for `Common/` at all: define a
+  minimal stand-in parent class in the test file (just the
+  properties/constructor the subclass actually reads, e.g. `$this->tournament`),
+  guarded by `class_exists()`, and shim any free core functions the subclass
+  calls (e.g. `namePhase()`) in `tests/bootstrap.php`, the same way `get_text()`
+  and `CheckTourSession()` are already shimmed there — never require a real
+  `Common/*` file from a test, even by absolute path.
 - **A `FakeDb::on()` pattern missing a table-alias prefix silently no-ops
   instead of erroring.** Stubbing a query built as `f.FinScore=0 AND
   f.FinSetScore=0` with the pattern `/FinScore=0 AND FinSetScore=0/` (no `f.`
