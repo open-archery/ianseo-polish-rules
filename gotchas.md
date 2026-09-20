@@ -276,6 +276,38 @@ commit as the fix. Terse is fine; the goal is "don't step on this rake again," n
   *new* row actually appeared before trusting the DB state you're about to inspect — don't
   assume distinct cookie jars bought you distinct tournaments.
 
+## Rank/Obj_Rank_*_calc.php testing
+
+- **This repo's own checkout has no `Common/` core tree at all — not even in
+  CI.** It only exists because a developer's local machine happens to have a
+  full ianseo install with this module's git repo checked out *inside* it
+  (`.../htdocs/Modules/Sets/PL`), so `Common/` is reachable on disk two levels
+  up. CI's `actions/checkout` clones only this repo, with no such parent tree
+  — a test that does `require_once dirname(__DIR__, N) . '/Common/...'` (or
+  any other path reaching outside this repo) passes locally and 500s/errors
+  in CI with "Failed to open stream", since the assumption only holds on a
+  machine set up like the local dev one. A PL `Rank/Obj_Rank_*_calc.php` file
+  extends a core class (`Obj_Rank_FinalInd`) it never `require_once`s itself
+  (something else, loaded only at runtime, is expected to pull the real core
+  parent in first) — for a test, don't reach for `Common/` at all: define a
+  minimal stand-in parent class in the test file (just the
+  properties/constructor the subclass actually reads, e.g. `$this->tournament`),
+  guarded by `class_exists()`, and shim any free core functions the subclass
+  calls (e.g. `namePhase()`) in `tests/bootstrap.php`, the same way `get_text()`
+  and `CheckTourSession()` are already shimmed there — never require a real
+  `Common/*` file from a test, even by absolute path.
+- **A `FakeDb::on()` pattern missing a table-alias prefix silently no-ops
+  instead of erroring.** Stubbing a query built as `f.FinScore=0 AND
+  f.FinSetScore=0` with the pattern `/FinScore=0 AND FinSetScore=0/` (no `f.`
+  before the second column) never matches — the literal substring isn't
+  present in the real SQL — so `FakeDb::query()` falls through to its default
+  empty-result handler. The calling code doesn't crash; it just silently takes
+  its "zero rows" branch, which can *look* like a reproduced bug (or a passing
+  test for the wrong reason) instead of a bad regex. When a stubbed query
+  isn't matching, dump `FakeDb::$queries` (temporarily, via
+  `fwrite(STDERR, ...)`) and diff it character-for-character against the
+  pattern before assuming the production code is at fault.
+
 ## Testing (`tests/Support/FakeDb.php`)
 
 - **Handler registration order = match precedence, and it's easy to get backwards.**

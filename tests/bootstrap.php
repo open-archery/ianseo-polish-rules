@@ -149,6 +149,27 @@ if (!function_exists('CheckTourSession')) {
     }
 }
 
+if (!function_exists('namePhase')) {
+    // Mirrors Common/Lib/Fun_Phases.inc.php's namePhase(): normalises a raw
+    // Grids.GrPhase value into the phase identifier a non-standard bracket
+    // size (1/12, 1/14, 1/24, 1/48, ...) uses for lookups/comparisons. Pure
+    // logic, no DB — safe to shim rather than require (this repo's CI
+    // checkout has no Common/ core tree to require it from at all, only a
+    // developer's co-located local ianseo install does).
+    function namePhase($startPhase, $curPhase)
+    {
+        switch (true) {
+            case ($startPhase == 48 && $curPhase == 64): return 48;
+            case (($startPhase == 48 || $startPhase == 24) && $curPhase == 32): return 24;
+            case ($startPhase == 14 && $curPhase == 16): return 14;
+            case ($startPhase == 12 && $curPhase == 16): return 12;
+            case ($startPhase == 7 && $curPhase == 8): return 7;
+            case ($curPhase == 6): return 8;
+        }
+        return $curPhase;
+    }
+}
+
 // Recording shims for Modules/Sets/lib.php builder functions used by this
 // module's Setup_*_PL.php / lib.php orchestration logic.
 if (!function_exists('CreateDivision')) {
