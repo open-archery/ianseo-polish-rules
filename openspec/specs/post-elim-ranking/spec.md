@@ -4,6 +4,15 @@
 > **Source:** PZŁucz regulations §2.6.5–§2.6.6 (Post-Elimination Classification)
 > **Scope:** Individual and team elimination brackets, target archery and indoor formats (Field/3D excluded for now)
 
+## Purpose
+
+Assigns every athlete and team a unique final place after PZŁucz elimination
+rounds, replacing ianseo's default behaviour of sharing one rank across all
+losers of the same round. Same-round losers are sub-ranked by average arrow
+value in the match, then shoot-off average, then qualification score; the
+special case of an unplayed bronze-medal match is also handled, giving both
+semifinal losers a shared 3rd place instead of the usual 3rd/4th split.
+
 ---
 
 ## 1. Competition Format Summary
@@ -286,3 +295,63 @@ must:
 10. Mixed-team brackets follow the same sub-ranking logic
 11. Feature works across target archery and indoor PL tournament types
     (1440, 70m, Indoor — Field/3D excluded for now)
+
+## Requirements
+
+### Requirement: Unique sub-ranking of same-round losers
+All athletes or teams eliminated in the same round SHALL receive unique individual places, sub-ranked in order by: (1) average arrow value in the last match (total match score ÷ arrows shot, shoot-off excluded — higher is better), (2) average arrow value in the shoot-off (shoot-off total ÷ shoot-off arrows, 0 if no shoot-off — higher is better), (3) qualification score (higher is better). Athletes SHALL share a position only when all three criteria are identical.
+
+#### Scenario: Quarterfinal losers get unique places
+- **WHEN** four archers lose in the same 1/4-final round
+- **THEN** they receive four unique places (5, 6, 7, 8), ordered by average match arrow value, then shoot-off average, then qualification score — not all placed 5th
+
+#### Scenario: Criteria tie exhausted results in a shared place
+- **WHEN** two same-round losers have identical average match arrow value, identical shoot-off average, and identical qualification score
+- **THEN** they share the same place
+
+### Requirement: Position range by bracket size
+The range of final positions assigned to losers of a given round SHALL depend on the bracket size they were eliminated from: 1/4 → 5–8, 1/8 → 9–16, 1/16 → 17–32, 1/24 → 33–56, 1/48 → 57–104, 1/32 → 33–64, 1/64 → 65–128. Within each range, athletes SHALL be placed sequentially using the sub-ranking criteria.
+
+#### Scenario: Outdoor 104-archer bracket position ranges
+- **WHEN** an outdoor elimination with a 104-archer bracket completes
+- **THEN** 1/4-final losers occupy places 5–8, 1/8-final losers 9–16, 1/16-final losers 17–32, 1/24-final losers 33–56, and 1/48-final losers 57–104
+
+#### Scenario: Indoor 32-archer bracket position ranges
+- **WHEN** an indoor elimination with a 32-archer bracket completes
+- **THEN** 1/4-final losers occupy places 5–8, 1/8-final losers 9–16, and 1/16-final losers 17–32
+
+### Requirement: No-bronze-medal-match handling
+When the bronze-medal match result is a 0-0 tie (both athletes or teams have score 0 and set points 0, i.e. the match was not shot), the system SHALL award both semifinal losers a shared 3rd place, assign no 4th place, and continue unique sub-ranking from 5th downward. When the bronze match is played normally, the system SHALL award 3rd and 4th place per the match result as usual.
+
+#### Scenario: Unplayed bronze match shares 3rd place
+- **WHEN** the bronze-medal match result is 0-0
+- **THEN** both semifinal losers are placed 3rd (shared), no athlete is placed 4th, and 1/4-final losers still occupy places 5, 6, 7, 8
+
+#### Scenario: Played bronze match assigns 3rd and 4th normally
+- **WHEN** the bronze-medal match has a non-0-0 result
+- **THEN** the bronze match winner is placed 3rd and the loser 4th
+
+### Requirement: Individual match tiebreak computation
+For individual brackets, the system SHALL compute criterion 1 as `FinScore` (the cumulative arrow total, all arrows summed) divided by the number of arrows actually shot in the match (shoot-off excluded), and criterion 2 as the shoot-off total (`FinTie`) divided by shoot-off arrows (`FinTiebreak`), using the same formula for both set-system (R, B) and cumulative-system (C) events.
+
+#### Scenario: Set-system and cumulative-system use the same average formula
+- **WHEN** the system computes criterion 1 for a set-system (R/B) match and a cumulative-system (C) match
+- **THEN** both use `FinScore` ÷ arrows shot, not set points, regardless of match format
+
+### Requirement: Team match tiebreak computation
+For team brackets (standard and mixed teams), the system SHALL apply the same three-criteria sub-ranking using team cumulative match score and team shoot-off score from `TeamFinals`, and team qualification score (`TeScore`) from `Teams`.
+
+#### Scenario: Team brackets sub-rank using team scores
+- **WHEN** teams are eliminated in the same round
+- **THEN** they are sub-ranked using `TeamFinals` match/shoot-off scores and `Teams.TeScore`, following the same three-criteria order as individual brackets
+
+### Requirement: Scope of sub-ranking applicability
+Unique sub-ranking SHALL apply to individual elimination brackets, standard team brackets (3/4-member), and mixed-team brackets (2-member), across outdoor and indoor PL tournament types. Field and 3D elimination brackets SHALL be excluded from this feature.
+
+#### Scenario: Mixed teams follow the same rules
+- **WHEN** a mixed-team bracket completes elimination
+- **THEN** same-round losers are sub-ranked using the same three criteria as standard teams
+
+#### Scenario: Field and 3D are unaffected
+- **WHEN** a Field or 3D tournament's elimination bracket completes
+- **THEN** this feature's sub-ranking does not apply

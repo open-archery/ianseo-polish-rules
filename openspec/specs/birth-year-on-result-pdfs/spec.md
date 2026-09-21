@@ -1,3 +1,13 @@
+# Birth Year on Result PDFs Specification
+
+## Purpose
+
+Prints each athlete's year of birth as a "Rok ur." column on the PL
+Individual Qualification and Individual Finals ranking PDFs, next to the
+licence column, so age-category eligibility can be checked at a glance.
+
+## Requirements
+
 ### Requirement: Birth year column on Individual Qualification PDF
 The Individual Qualification ranking PDF for PL tournaments SHALL display the athlete's year of birth as a dedicated 10mm column labelled "Rok ur.", positioned immediately after the "Nr lic." column. The year SHALL be derived from `EnDob` (format `YYYY-MM-DD`). The cell SHALL render blank when `EnDob` is `0` (unknown) or when the year portion equals `1900` (placeholder).
 

@@ -540,7 +540,7 @@ PZŁucz regulations require **unique individual places** for all athletes after 
 
 > This sub-ranking applies to **both individual and team** elimination brackets.
 
-> **⚠ CUSTOM NEEDED:** ianseo does not support sub-ranking of same-round losers out of the box. A custom ranking override is required — likely `Rank/Obj_Rank_GridInd_calc.php` (individual) and `Rank/Obj_Rank_GridTeam_calc.php` (team) — to re-sort losers within each phase by match score then qualification rank.
+> **⚠ CUSTOM NEEDED:** ianseo does not support sub-ranking of same-round losers out of the box. A custom ranking override is required — likely `Rank/Obj_Rank_GridInd_calc.php` (individual) and `Rank/Obj_Rank_GridTeam_calc.php` (team) — to re-sort losers within each phase by match score then qualification rank. (See Requirements → Post-elimination unique placement.)
 
 ### Team Competitions
 
@@ -620,3 +620,162 @@ The following are explicitly **not** covered by these scripts:
 - Senior's `ClAgeFrom` is 24, not 21 — 21 overlapped U24 (21–23), which could ambiguously resolve an archer aged 21–23 to either class; Senior now starts immediately after U24 ends
 - U12 (age 11–12) and U10 (age 5–10) have distinct, non-overlapping age ranges — they previously both shipped with the same 9–12 bracket (a copy-paste bug caught only by inspecting a live tournament's `Classes` rows, not by any spec or test)
 - Łuk popularny's class code was renamed `PU12` → `U10` once its age band became 5–10 — a code containing "12" no longer described the class it named; already-created tournaments keep their existing `PU12M`/`PU12W` `Classes` rows (this is a code-level rename for tournaments created going forward, not a retrofit — same non-retrofit stance as every other age-range fix in this section)
+
+## Requirements
+
+### Requirement: Category preset filtering
+When a category preset (sub-rule) is selected, the setup script SHALL create only the divisions and/or classes the preset names, only in the divisions those classes are eligible for, and only the individual/team events those surviving division×class combinations compete in. The unfiltered default SHALL create the full set exactly as an unfiltered setup would. A preset SHALL NOT change distances, target faces, end structure, elimination cut counts, or finals configuration for the categories it does create.
+
+#### Scenario: Preset restricts the created category set
+- **WHEN** an organiser selects a registered sub-rule (e.g. `SetSeniorClass` on TourType 1)
+- **THEN** the tournament's divisions, classes, and events match this document's Category Presets table exactly, with no leftover distance, target-face, or event row for a class the preset didn't create
+
+#### Scenario: Unfiltered default creates the full set
+- **WHEN** no preset (or the unfiltered default) is selected
+- **THEN** the setup script creates every division and class documented for that TourType
+
+### Requirement: Setup_1_PL distance and division configuration
+`Setup_1_PL.php` SHALL create only Recurve (R) and Compound (C) divisions — no Barebow — and SHALL configure Compound's per-class distances to mirror Recurve's per-class distance table exactly, while keeping Compound's target face at the 80cm 6-ring face regardless of distance.
+
+#### Scenario: 1440 Round has no Barebow
+- **WHEN** `Setup_1_PL.php` runs for a TourType-1 tournament
+- **THEN** no Barebow division, class, or event is created
+
+#### Scenario: Compound mirrors Recurve distances
+- **WHEN** `Setup_1_PL.php` configures distances for a given class
+- **THEN** Compound's 4 distances for that class equal Recurve's 4 distances for that class, and Compound's target face remains the 80cm 6-ring face at every distance
+
+### Requirement: Setup_3_PL distance and end configuration
+`Setup_3_PL.php` SHALL configure per-class distances and end structures as documented in §2 (Shooting Distances by Category / Ends and Arrows): 70m/60m for Recurve adult and youth classes, 50m for Compound and Barebow, an alternating 40m+20m session pair with 3-arrow ends for Młodzik (U15), 15m for Dziecko (U12), 10m for łuk popularny (U10), and the documented per-band distances for Masters.
+
+#### Scenario: U15 shoots the split 40m+20m sessions
+- **WHEN** `Setup_3_PL.php` creates the Recurve Młodzik (U15) sessions
+- **THEN** one session is configured at 40m and the other at 20m, each with 12 ends × 3 arrows
+
+#### Scenario: U12 and łuk popularny distances
+- **WHEN** `Setup_3_PL.php` creates Dziecko (U12) and łuk popularny (U10) sessions
+- **THEN** U12 is configured at 15m and U10 at 10m, both Recurve only, 2 sessions × 6 ends × 6 arrows
+
+### Requirement: Setup_6_PL target face configuration
+`Setup_6_PL.php` SHALL configure target faces per §3 (Target Faces): triple 40cm for Senior/U24/U21 on Recurve and Compound, single 40cm full face for Junior młodszy (U18) and every Barebow class, 60cm full face for Młodzik (U15) on all bow types, 80cm full face for Dziecko (U12) at 15m, and 122cm full face for łuk popularny (U10) at 10m.
+
+#### Scenario: Precision classes shoot the triple face
+- **WHEN** `Setup_6_PL.php` creates Senior, U24, or Junior (U21) Recurve or Compound target assignments
+- **THEN** the triple 40cm face is configured for that class
+
+#### Scenario: U12 and U10 target faces
+- **WHEN** `Setup_6_PL.php` creates Dziecko (U12) and łuk popularny (U10) target assignments
+- **THEN** U12 is configured with the 80cm full face at 15m and U10 with the 122cm full face at 10m
+
+### Requirement: U24 is Recurve-only on every TourType
+U24 (Młodzieżowiec/Młodzieżowniczka) SHALL be created only under the Recurve (R) division, never under Compound (C) or Barebow (B), on every TourType that offers it.
+
+#### Scenario: No Compound or Barebow U24
+- **WHEN** any setup script creates the U24 class
+- **THEN** U24 exists only under Recurve, on every TourType including the 1440 Round
+
+### Requirement: U12 and łuk popularny (U10) TourType restriction
+Dziecko (U12) SHALL be created only on TourType 6 (Indoor), TourType 3 (Single-Distance Round), and TourType 16 (Children's Round), always Recurve only, and never on TourType 1 or 37. Łuk popularny (U10) SHALL be created only on TourType 3 and TourType 6, and never on TourType 1, 16, or 37.
+
+#### Scenario: U12 absent from 1440 and Double Round
+- **WHEN** `Setup_1_PL.php` or `Setup_37_PL.php` runs
+- **THEN** no U12 class is created
+
+#### Scenario: U10 absent from 1440, Children's Round, and Double Round
+- **WHEN** `Setup_1_PL.php`, `Setup_16_PL.php`, or `Setup_37_PL.php` runs
+- **THEN** no łuk popularny (U10) class is created
+
+### Requirement: Masters class creation
+The flat "Master 50+" class SHALL NOT be created on any TourType. The five age-band Masters classes (`40M`/`40W` … `80M`/`80W`) SHALL be created only on TourType 3, and only when the `SetMasterClass` sub-rule is selected.
+
+#### Scenario: Flat Master class never appears
+- **WHEN** any setup script runs on any TourType
+- **THEN** no class with the flat `50M`/`50W` Master definition is created
+
+#### Scenario: Age-band Masters require the Masters sub-rule on TourType 3
+- **WHEN** a TourType-3 tournament is created without `SetMasterClass` selected
+- **THEN** none of the five Masters age-band classes are created
+- **AND WHEN** `SetMasterClass` is selected on TourType 3
+- **THEN** all five Masters age-band classes are created across Recurve, Compound, and Barebow
+
+### Requirement: Elimination phase applicability
+Dziecko (U12), łuk popularny (U10), and Młodzik (U15) individual and mixed-team events SHALL have no elimination phase — qualification score is the final result. Masters classes SHALL have an elimination phase, following the same set/cumulative rules as the corresponding adult class.
+
+#### Scenario: No elimination for U12, U10, or U15
+- **WHEN** a setup script configures U12, U10, or U15 individual or mixed-team events
+- **THEN** no elimination bracket is created for those events (`EvFinalFirstPhase = 0` for U15 mixed teams)
+
+#### Scenario: Masters classes have elimination
+- **WHEN** `Setup_3_PL.php` configures a Masters age-band class
+- **THEN** an elimination bracket is created for that class using the same set/cumulative match format as the corresponding adult class
+
+### Requirement: Post-elimination unique placement
+After elimination rounds, losers of the same round SHALL receive unique individual places rather than a single shared rank. Same-round losers SHALL be sub-ranked by match score (higher set points for the set system, higher cumulative score for the cumulative system), then by qualification ranking if match scores are tied, and SHALL share a position only when both match score and qualification rank are identical. This sub-ranking SHALL apply to both individual and team elimination brackets.
+
+#### Scenario: Same-round losers get unique places
+- **WHEN** four archers lose in the 1/4-final of a 104-archer bracket
+- **THEN** they receive four distinct consecutive places (e.g. 7, 8, 9, 10), ordered by match score then qualification rank, instead of a single shared rank
+
+#### Scenario: True ties still share a rank
+- **WHEN** two same-round losers have identical match score and identical qualification rank
+- **THEN** they share the same place
+
+### Requirement: Mixed team event configuration
+Mixed team events SHALL be created for Recurve (R), Compound (C), and Barebow (B) with the documented event codes (suffixed `X`), using 2-person teams (`EvMaxTeamPerson = 2`), 4 arrows per end (2 per archer), and a 2-arrow shoot-off, with `EvMixedTeam = 1` set on every mixed team event. No mixed team events SHALL be created for Dziecko (U12), łuk popularny (U10), or Masters classes on any TourType.
+
+#### Scenario: Mixed team event configuration matches the standard
+- **WHEN** a setup script creates a mixed team event for R, C, or B
+- **THEN** the event uses the correct `X`-suffixed code, `EvMaxTeamPerson = 2`, `EvMixedTeam = 1`, 4 arrows per end, and a 2-arrow shoot-off
+
+#### Scenario: No mixed team events for U12, U10, or Masters
+- **WHEN** any setup script runs
+- **THEN** no mixed team event is created for U12, U10, or any Masters band
+
+### Requirement: Setup_37_PL Double Round session doubling
+`Setup_37_PL.php` SHALL double every shared class's Single-Distance Round (§2) session structure exactly — same distances, same end/arrow structure, twice — with `tourDetNumDist = 4`, and elimination, finals, and mixed-team configuration identical to TourType 3. Dziecko (U12), łuk popularny (U10), and Masters classes SHALL never be created on this TourType.
+
+#### Scenario: U15 session structure is doubled
+- **WHEN** `Setup_37_PL.php` creates Młodzik (U15) sessions
+- **THEN** 4 sessions are created in the order 40m, 40m, 20m, 20m, matching §2's session structure shot twice
+
+#### Scenario: U12, U10, and Masters are excluded
+- **WHEN** `Setup_37_PL.php` runs
+- **THEN** no U12, U10, or Masters class is created
+
+### Requirement: Setup_16_PL fixed Children's Round configuration
+`Setup_16_PL.php` SHALL create only the Dziecko (U12M/U12W) classes under Recurve, with no other division or class, at distances 25m/20m/15m/10m using 122/122/80/80cm target faces respectively, 3-arrow ends, and no elimination configuration.
+
+#### Scenario: Only U12 Recurve classes exist
+- **WHEN** `Setup_16_PL.php` runs
+- **THEN** only U12M and U12W classes are created, both Recurve only, with no Compound or Barebow division and no elimination bracket
+
+### Requirement: Age resolution and class-boundary behavior
+Age SHALL be calculated by year of birth (competition year − birth year). Senior (`M`/`W`) SHALL resolve any archer whose age does not match a narrower class in the tournament, with `ClAgeFrom = 24` and `ClAgeTo` capped at 127 (the `tinyint` column's ceiling). In a tournament with `SetMasterClass` classes present, an archer's age SHALL resolve to the matching Masters age-band in preference to Senior, since every Masters band is narrower than Senior's range; an archer older than every Masters band's own ceiling SHALL resolve to Senior.
+
+#### Scenario: Senior is the fallback without Masters classes
+- **WHEN** a 55-year-old archer is auto-assigned in a TourType 1, 6, or TourType-3-without-`SetMasterClass` tournament
+- **THEN** the archer resolves to Senior (`M`/`W`)
+
+#### Scenario: Masters band takes precedence when present
+- **WHEN** a 55-year-old archer is auto-assigned in a TourType-3 tournament with `SetMasterClass` selected
+- **THEN** the archer resolves to the `50M`/`50W` Masters band, not Senior
+- **AND WHEN** a 110-year-old archer is auto-assigned in the same tournament
+- **THEN** the archer resolves to Senior, being older than every Masters band's own ceiling
+
+### Requirement: Upward class eligibility (event reassignment)
+An archer's entry SHALL be permitted to be voluntarily reassigned to an older class for event participation via `ClValidClass`, restricted as follows: U12 and U15 are self-only with no upward eligibility; U18 SHALL be permitted to opt up to U21 only, never directly to Senior; U21 and U24 SHALL still be permitted to opt up to Senior.
+
+#### Scenario: U18 cannot skip to Senior
+- **WHEN** a U18 archer's `ClValidClass` options are computed
+- **THEN** U21 is offered as an upward option but Senior is not
+
+#### Scenario: U12 and U15 have no upward option
+- **WHEN** a U12 or U15 archer's `ClValidClass` options are computed
+- **THEN** no older class is offered
+
+### Requirement: U12 and łuk popularny (U10) have distinct non-overlapping age ranges
+Dziecko (U12) SHALL use the age range 11–12 and łuk popularny (U10) SHALL use the age range 5–10, with no overlap between the two.
+
+#### Scenario: U10 and U12 age bands do not overlap
+- **WHEN** the age eligibility for U10 and U12 classes is checked
+- **THEN** U10 covers ages 5–10 and U12 covers ages 11–12, with every age resolving to exactly one of the two, never both
