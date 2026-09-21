@@ -15,6 +15,7 @@
  */
 
 require_once __DIR__ . '/Fun_ClubName.php';
+require_once __DIR__ . '/Fun_Gender.php';
 
 // Disable PHP error display and HTML-formatted error output in this lookup proxy.
 // The script must emit only JSON for the ianseo lookup consumer.
@@ -134,30 +135,6 @@ function sz_derive_status(bool $isArchived, ?string $licenceDate): int
 }
 
 // ---------------------------------------------------------------------------
-// Gender heuristic
-// ---------------------------------------------------------------------------
-
-/**
- * Derive gender from a given name.
- * Polish female names typically end with the letter "a".
- *
- * Returns 'M' (male) or 'W' (female).
- * ianseo checks $r->Gender == 'M' for male; anything else is treated as female.
- *
- * @param string $firstName
- * @return string 'M' or 'W'
- */
-function sz_derive_gender(string $firstName): string
-{
-    $trimmed = mb_strtolower(trim($firstName), 'UTF-8');
-    if ($trimmed === '') {
-        return 'M';
-    }
-    $lastChar = mb_substr($trimmed, -1, 1, 'UTF-8');
-    return ($lastChar === 'a') ? 'W' : 'M';
-}
-
-// ---------------------------------------------------------------------------
 // Main transformation
 // ---------------------------------------------------------------------------
 
@@ -199,7 +176,7 @@ foreach ($players as $player) {
         continue;
     }
 
-    $firstName  = isset($player->firstName)  ? (string)$player->firstName  : '';
+    $firstName  = isset($player->firstName)  ? pl_first_given_name((string)$player->firstName) : '';
     $lastName   = isset($player->lastName)   ? (string)$player->lastName   : '';
     $birthYear  = isset($player->birthYear)  ? (int)$player->birthYear     : 0;
     $isArchived = isset($player->isArchived) ? (bool)$player->isArchived   : false;
@@ -226,7 +203,7 @@ foreach ($players as $player) {
         'WaId'             => $licence,
         'FamilyName'       => $lastName,
         'GivenName'        => $firstName,
-        'Gender'           => sz_derive_gender($firstName),
+        'Gender'           => pl_derive_gender($firstName),
         'Para'             => false,
         'BirthDate'        => $birthDate,
         'CountryCode'      => $countryCode,
