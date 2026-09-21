@@ -16,11 +16,18 @@
 // ---------------------------------------------------------------------------
 function pl_gender_female_exceptions(): array
 {
-    return [
+    static $list = null;
+    if ($list !== null) {
+        return $list;
+    }
+
+    $list = [
         'abigail', 'angeliki', 'ariel', 'dinah', 'elizabeth', 'kendall',
         'madeleine', 'miriam', 'nelly', 'nicole', 'nikol', 'noemi',
         'sophie', 'vivienne', 'zerin',
     ];
+
+    return $list;
 }
 
 // ---------------------------------------------------------------------------
@@ -28,10 +35,17 @@ function pl_gender_female_exceptions(): array
 // ---------------------------------------------------------------------------
 function pl_gender_male_exceptions(): array
 {
-    return [
+    static $list = null;
+    if ($list !== null) {
+        return $list;
+    }
+
+    $list = [
         'barnaba', 'bonawentura', 'ilia', 'illia', 'jarema', 'kosma',
         'kuba', 'mykyta', 'nikita',
     ];
+
+    return $list;
 }
 
 // ---------------------------------------------------------------------------
