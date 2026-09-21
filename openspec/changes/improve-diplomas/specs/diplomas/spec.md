@@ -93,36 +93,37 @@ A tournament with no saved diploma configuration SHALL default its place range t
 
 ### Requirement: Category line states competition type, category name, and bow type
 Every diploma's category line SHALL read
-`w konkurencji {typeWord}{category name}, w kategorii {bow-type phrase}`, where `{typeWord}` is
+`w konkurencji {typeWord}{category name},\nw kategorii {bow-type phrase}` — a forced line break
+before "w kategorii" rather than relying on width-based wrapping — where `{typeWord}` is
 "indywidualnej " for individual events, "zespołowej " for team events, or "mikstów" (with a
 trailing space only when followed by a category name) for mixed-team events. This composed line
 applies unless the event has a saved "Tekst na dyplomie" override, which fully replaces it as
-today.
+today (and is not subject to the forced line break).
 
 #### Scenario: Individual event, gendered Senior category
 - **WHEN** an individual diploma is generated for a Senior class event (e.g. recurve women)
-- **THEN** the category line reads "w konkurencji indywidualnej kobiet, w kategorii łuków
-  klasycznych" (or "mężczyzn" for the men's class)
+- **THEN** the category line reads "w konkurencji indywidualnej kobiet," on one line and
+  "w kategorii łuków klasycznych" on the next (or "mężczyzn" for the men's class)
 
 #### Scenario: Individual event, age-class category
 - **WHEN** an individual diploma is generated for a non-Senior age class (e.g. U21 women, barebow)
-- **THEN** the category line reads "w konkurencji indywidualnej juniorek, w kategorii łuków
-  barebow"
+- **THEN** the category line reads "w konkurencji indywidualnej juniorek," on one line and
+  "w kategorii łuków barebow" on the next
 
 #### Scenario: Team event
 - **WHEN** a team diploma is generated for a class event (e.g. recurve men)
-- **THEN** the category line reads "w konkurencji zespołowej mężczyzn, w kategorii łuków
-  klasycznych"
+- **THEN** the category line reads "w konkurencji zespołowej mężczyzn," on one line and
+  "w kategorii łuków klasycznych" on the next
 
 #### Scenario: Mixed team event, Senior
 - **WHEN** a mixed-team diploma is generated for the Senior class
-- **THEN** the category line reads "w konkurencji mikstów, w kategorii {bow-type phrase}" with no
-  category name
+- **THEN** the category line reads "w konkurencji mikstów," on one line and "w kategorii
+  {bow-type phrase}" on the next, with no category name
 
 #### Scenario: Mixed team event, non-Senior age
 - **WHEN** a mixed-team diploma is generated for a non-Senior age class (e.g. U21)
-- **THEN** the category line reads "w konkurencji mikstów juniorów, w kategorii {bow-type
-  phrase}"
+- **THEN** the category line reads "w konkurencji mikstów juniorów," on one line and "w kategorii
+  {bow-type phrase}" on the next
 
 #### Scenario: U10 class bow-type override
 - **WHEN** a diploma of any competition type is generated for a U10 class event

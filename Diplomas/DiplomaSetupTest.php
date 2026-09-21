@@ -43,6 +43,8 @@ final class DiplomaSetupTest extends \PlTestCase
         \FakeDb::on("/SHOW COLUMNS FROM PLDiplomaConfig LIKE 'PlDcTitlesEnabled'/", [['Field' => 'PlDcTitlesEnabled']]);
         \FakeDb::on("/SHOW COLUMNS FROM PLDiplomaEventText LIKE 'PlDeTitlePrefix'/", [['Field' => 'PlDeTitlePrefix']]);
         \FakeDb::on("/SHOW COLUMNS FROM PLDiplomaEventText LIKE 'PlDeTitleText'/", [['Field' => 'PlDeTitleText']]);
+        \FakeDb::on("/SHOW COLUMNS FROM PLDiplomaEventText LIKE 'PlDeCategoryName'/", [['Field' => 'PlDeCategoryName']]);
+        \FakeDb::on("/SHOW COLUMNS FROM PLDiplomaEventText LIKE 'PlDeBowPhrase'/", [['Field' => 'PlDeBowPhrase']]);
 
         \pl_diploma_ensure_tables();
 
@@ -65,6 +67,21 @@ final class DiplomaSetupTest extends \PlTestCase
         $this->assertCount(1, \FakeDb::executed('/ADD COLUMN PlDeTitleText/'));
     }
 
+    public function testEnsureTablesAddsCategoryColumnsWhenUpgrading(): void
+    {
+        \FakeDb::on("/SHOW TABLES LIKE 'PLDiplomaConfig'/", [['t' => 'PLDiplomaConfig']]);
+        \FakeDb::on("/SHOW TABLES LIKE 'PLDiplomaEventText'/", [['t' => 'PLDiplomaEventText']]);
+        \FakeDb::on("/SHOW COLUMNS FROM PLDiplomaConfig LIKE 'PlDcTitlesEnabled'/", [['Field' => 'PlDcTitlesEnabled']]);
+        \FakeDb::on("/SHOW COLUMNS FROM PLDiplomaEventText LIKE 'PlDeTitlePrefix'/", [['Field' => 'PlDeTitlePrefix']]);
+        \FakeDb::on("/SHOW COLUMNS FROM PLDiplomaEventText LIKE 'PlDeTitleText'/", [['Field' => 'PlDeTitleText']]);
+        // No handler for the category-column probes -> 0 rows -> upgrade path runs.
+
+        \pl_diploma_ensure_tables();
+
+        $this->assertCount(1, \FakeDb::executed('/ADD COLUMN PlDeCategoryName/'));
+        $this->assertCount(1, \FakeDb::executed('/ADD COLUMN PlDeBowPhrase/'));
+    }
+
     // --- pl_diploma_get_config / save_config ---------------------------------
 
     public function testGetConfigReturnsDefaultsWhenNotConfigured(): void
@@ -73,8 +90,9 @@ final class DiplomaSetupTest extends \PlTestCase
 
         $this->assertSame('', $config['CompetitionName']);
         $this->assertSame(1, $config['PlaceFrom']);
-        $this->assertSame(3, $config['PlaceTo']);
+        $this->assertSame(8, $config['PlaceTo']);
         $this->assertSame(0, $config['TitlesEnabled']);
+        $this->assertFalse($config['ConfigExists']);
     }
 
     public function testGetConfigReturnsStoredValues(): void
@@ -95,6 +113,7 @@ final class DiplomaSetupTest extends \PlTestCase
 
         $this->assertSame('Mistrzostwa Polski', $config['CompetitionName']);
         $this->assertSame(1, $config['TitlesEnabled']);
+        $this->assertTrue($config['ConfigExists']);
     }
 
     public function testSaveConfigInsertsWhenNotExists(): void
@@ -126,34 +145,38 @@ final class DiplomaSetupTest extends \PlTestCase
     public function testGetEventTextsKeyedByEventCode(): void
     {
         \FakeDb::on('/FROM PLDiplomaEventText/', [
-            ['PlDeEventCode' => 'I:RM', 'PlDeCustomText' => 'Custom', 'PlDeTitlePrefix' => '', 'PlDeTitleText' => 'Polski Seniorów'],
+            ['PlDeEventCode' => 'I:RM', 'PlDeCustomText' => 'Custom', 'PlDeTitlePrefix' => '', 'PlDeTitleText' => 'Polski Seniorów', 'PlDeCategoryName' => 'Juniorów', 'PlDeBowPhrase' => 'łuków barebow'],
         ]);
 
         $texts = \pl_diploma_get_event_texts(7);
 
         $this->assertArrayHasKey('I:RM', $texts);
         $this->assertSame('Custom', $texts['I:RM']['customText']);
+        $this->assertSame('Juniorów', $texts['I:RM']['categoryName']);
+        $this->assertSame('łuków barebow', $texts['I:RM']['bowPhrase']);
     }
 
     public function testSaveEventTextInsertsWhenNotExists(): void
     {
-        \pl_diploma_save_event_text(7, 'I:RM', 'Custom', 'Prefix', 'Text');
+        \pl_diploma_save_event_text(7, 'I:RM', 'Custom', 'Prefix', 'Text', 'Juniorów', 'łuków barebow');
 
         $writes = \FakeDb::executed('/INSERT INTO PLDiplomaEventText/');
         $this->assertCount(1, $writes);
-        $this->assertMatchesRegularExpression("/\(7, 'I:RM', 'Custom', 'Prefix', 'Text'\)/", $writes[0]);
+        $this->assertMatchesRegularExpression("/\(7, 'I:RM', 'Custom', 'Prefix', 'Text', 'Juniorów', 'łuków barebow'\)/", $writes[0]);
     }
 
     public function testSaveEventTextUpdatesWhenExists(): void
     {
         \FakeDb::on('/SELECT PlDeEventCode FROM PLDiplomaEventText/', [['PlDeEventCode' => 'I:RM']]);
 
-        \pl_diploma_save_event_text(7, 'I:RM', 'Custom', 'Prefix', 'Text');
+        \pl_diploma_save_event_text(7, 'I:RM', 'Custom', 'Prefix', 'Text', 'Juniorów', 'łuków barebow');
 
         $writes = \FakeDb::executed('/UPDATE PLDiplomaEventText/');
         $this->assertCount(1, $writes);
         $this->assertMatchesRegularExpression("/WHERE PlDeTournament = 7 AND PlDeEventCode = 'I:RM'/", $writes[0]);
         $this->assertStringContainsString("PlDeCustomText = 'Custom'", $writes[0]);
+        $this->assertStringContainsString("PlDeCategoryName = 'Juniorów'", $writes[0]);
+        $this->assertStringContainsString("PlDeBowPhrase = 'łuków barebow'", $writes[0]);
     }
 
     public function testSaveEventTextDeletesRowWhenAllFieldsBlankAndRowExists(): void
@@ -174,5 +197,12 @@ final class DiplomaSetupTest extends \PlTestCase
         $this->assertCount(0, \FakeDb::executed('/DELETE FROM PLDiplomaEventText/'));
         $this->assertCount(0, \FakeDb::executed('/INSERT INTO PLDiplomaEventText/'));
         $this->assertCount(0, \FakeDb::executed('/UPDATE PLDiplomaEventText/'));
+    }
+
+    public function testSaveEventTextKeepsRowWhenOnlyCategoryFieldsSet(): void
+    {
+        \pl_diploma_save_event_text(7, 'I:RM', '', '', '', 'Juniorów', '');
+
+        $this->assertCount(1, \FakeDb::executed('/INSERT INTO PLDiplomaEventText/'));
     }
 }

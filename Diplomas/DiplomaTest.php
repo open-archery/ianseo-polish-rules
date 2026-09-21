@@ -32,6 +32,25 @@ final class DiplomaTest extends \PlTestCase
         ];
     }
 
+    // --- pl_diploma_build_date_location_line (pure) --------------------------
+
+    #[DataProvider('dateLocationLines')]
+    public function testBuildDateLocationLine(string $location, string $dates, string $expected): void
+    {
+        $this->assertSame($expected, \pl_diploma_build_date_location_line($location, $dates));
+    }
+
+    public static function dateLocationLines(): array
+    {
+        return [
+            'both blank' => ['', '', ''],
+            'both set' => ['Warszawa', '15-17.03.2026', 'Warszawa, 15-17.03.2026'],
+            'only location' => ['Warszawa', '', 'Warszawa'],
+            'only dates' => ['', '15-17.03.2026', '15-17.03.2026'],
+            'whitespace-only counts as blank' => ['   ', '  ', ''],
+        ];
+    }
+
     // --- pl_diploma_get_title_defaults (pure) --------------------------------
 
     #[DataProvider('titleDefaults')]
@@ -55,6 +74,56 @@ final class DiplomaTest extends \PlTestCase
             'U15 individual' => ['RU15M', ['prefix' => 'Międzywojewódzkiego', 'text' => 'Młodzików']],
             'U12 individual' => ['RU12M', ['prefix' => '', 'text' => '']],
             'unknown age code falls back to empty' => ['RU99M', ['prefix' => '', 'text' => '']],
+        ];
+    }
+
+    // --- pl_diploma_get_category_defaults (pure) -----------------------------
+
+    #[DataProvider('categoryDefaults')]
+    public function testGetCategoryDefaults(string $rawEventCode, array $expected): void
+    {
+        $this->assertSame($expected, \pl_diploma_get_category_defaults($rawEventCode));
+    }
+
+    public static function categoryDefaults(): array
+    {
+        return [
+            'senior men, recurve' => ['RM', ['name' => 'mężczyzn', 'bowPhrase' => 'łuków klasycznych']],
+            'senior women, compound' => ['CW', ['name' => 'kobiet', 'bowPhrase' => 'łuków bloczkowych']],
+            'U21 men, recurve' => ['RU21M', ['name' => 'juniorów', 'bowPhrase' => 'łuków klasycznych']],
+            'U21 women, barebow' => ['BU21W', ['name' => 'juniorek', 'bowPhrase' => 'łuków barebow']],
+            'U10 men, recurve division still gets popular-bow phrase' => ['RU10M', ['name' => 'chłopców', 'bowPhrase' => 'łuków popularnych']],
+            'U10 women' => ['RU10W', ['name' => 'dziewcząt', 'bowPhrase' => 'łuków popularnych']],
+            'masters women 50, recurve' => ['R50W', ['name' => 'kobiet U50', 'bowPhrase' => 'łuków klasycznych']],
+            'masters men 70, compound' => ['C70M', ['name' => 'mężczyzn U70', 'bowPhrase' => 'łuków bloczkowych']],
+            'mixed senior omits name' => ['RX', ['name' => '', 'bowPhrase' => 'łuków klasycznych']],
+            'mixed U21' => ['RU21X', ['name' => 'juniorów', 'bowPhrase' => 'łuków klasycznych']],
+            'mixed U24, compound' => ['CU24X', ['name' => 'młodzieżowców', 'bowPhrase' => 'łuków bloczkowych']],
+            'unknown age code falls back to empty name' => ['RU99M', ['name' => '', 'bowPhrase' => 'łuków klasycznych']],
+        ];
+    }
+
+    // --- pl_diploma_resolve_category_line (pure) -----------------------------
+
+    #[DataProvider('categoryLines')]
+    public function testResolveCategoryLine(string $rawEventCode, string $evType, array $eventTextRow, string $expected): void
+    {
+        $this->assertSame($expected, \pl_diploma_resolve_category_line($rawEventCode, $evType, $eventTextRow));
+    }
+
+    public static function categoryLines(): array
+    {
+        return [
+            'individual, gendered Senior' => ['RW', 'I', [], "w konkurencji indywidualnej kobiet,\nw kategorii łuków klasycznych"],
+            'individual, age-class barebow' => ['BU21W', 'I', [], "w konkurencji indywidualnej juniorek,\nw kategorii łuków barebow"],
+            'team' => ['RM', 'T', [], "w konkurencji zespołowej mężczyzn,\nw kategorii łuków klasycznych"],
+            'mixed, Senior omits name' => ['RX', 'M', [], "w konkurencji mikstów,\nw kategorii łuków klasycznych"],
+            'mixed, non-Senior includes name' => ['RU21X', 'M', [], "w konkurencji mikstów juniorów,\nw kategorii łuków klasycznych"],
+            'U10 class overrides bow phrase regardless of division' => ['RU10M', 'I', [], "w konkurencji indywidualnej chłopców,\nw kategorii łuków popularnych"],
+            'per-event customText override wins outright' => ['RM', 'I', ['customText' => 'Mistrzostwa Specjalne'], 'w kategorii Mistrzostwa Specjalne'],
+            'saved categoryName/bowPhrase override the computed defaults' => ['RM', 'I', ['categoryName' => 'zawodniczek', 'bowPhrase' => 'łuku custom'], "w konkurencji indywidualnej zawodniczek,\nw kategorii łuku custom"],
+            'missing eventTextRow keys fall back to defaults' => ['CW', 'I', [], "w konkurencji indywidualnej kobiet,\nw kategorii łuków bloczkowych"],
+            'no event code at all prints nothing' => ['', 'I', [], ''],
         ];
     }
 
@@ -184,6 +253,7 @@ final class DiplomaTest extends \PlTestCase
         $this->assertSame(5, $athlete['EnId']);
         $this->assertSame('Kowalski Jan', $athlete['EnFullName']);
         $this->assertCount(1, \FakeDb::executed('/EnId = 5/'));
+        $this->assertCount(1, \FakeDb::executed("/CONCAT\(Entries\.EnName, ' ', Entries\.EnFirstName\)/"));
     }
 
     public function testGetAthleteReturnsNullWhenNotFound(): void
@@ -198,6 +268,7 @@ final class DiplomaTest extends \PlTestCase
         \pl_diploma_get_all_athletes();
 
         $this->assertCount(0, \FakeDb::executed('/LIKE/'));
+        $this->assertCount(1, \FakeDb::executed("/CONCAT\(Entries\.EnName, ' ', Entries\.EnFirstName\)/"));
     }
 
     public function testGetAllAthletesWithSearchAddsLikeFilter(): void
@@ -205,6 +276,7 @@ final class DiplomaTest extends \PlTestCase
         \pl_diploma_get_all_athletes('Kowal');
 
         $this->assertCount(1, \FakeDb::executed("/LIKE '%Kowal%'/"));
+        $this->assertCount(1, \FakeDb::executed("/CONCAT\(Entries\.EnName, ' ', Entries\.EnFirstName\) LIKE/"));
     }
 
     // --- pl_diploma_get_ind_qual_results (DB-wrapped) ------------------------
@@ -221,6 +293,7 @@ final class DiplomaTest extends \PlTestCase
         $this->assertSame(1, $results[0]['Rank']);
         $this->assertCount(1, \FakeDb::executed('/QuClRank >= 1/'));
         $this->assertCount(1, \FakeDb::executed('/QuClRank <= 3/'));
+        $this->assertCount(1, \FakeDb::executed("/CONCAT\(Entries\.EnName, ' ', Entries\.EnFirstName\)/"));
     }
 
     public function testGetIndQualResultsFiltersByEventCode(): void
@@ -228,6 +301,20 @@ final class DiplomaTest extends \PlTestCase
         \pl_diploma_get_ind_qual_results(['I:RM']);
 
         $this->assertCount(1, \FakeDb::executed("/IndEvent IN \('RM'\)/"));
+    }
+
+    // --- pl_diploma_get_ind_final_results (DB-wrapped) -----------------------
+
+    public function testGetIndFinalResultsUsesGivenNameFirstOrder(): void
+    {
+        \FakeDb::on('/FROM Individuals/', [
+            ['EnFullName' => 'Jan Kowalski', 'CoName' => 'Orzeł Warszawa', 'IndEvent' => 'RM', 'EvEventName' => 'Recurve Men', 'QuScore' => 650, 'FinalRank' => 1],
+        ]);
+
+        $results = \pl_diploma_get_ind_final_results();
+
+        $this->assertCount(1, $results);
+        $this->assertCount(1, \FakeDb::executed("/CONCAT\(Entries\.EnName, ' ', Entries\.EnFirstName\)/"));
     }
 
     // --- pl_diploma_get_team_qual_results (DB-wrapped grouping) --------------
@@ -251,6 +338,7 @@ final class DiplomaTest extends \PlTestCase
         $this->assertCount(2, $team['Athletes']);
         $this->assertSame('Kowalski Jan', $team['Athletes'][0]['EnFullName']);
         $this->assertSame('Nowak Piotr', $team['Athletes'][1]['EnFullName']);
+        $this->assertCount(1, \FakeDb::executed("/CONCAT\(Entries\.EnName, ' ', Entries\.EnFirstName\)/"));
     }
 
     public function testGetTeamQualResultsSeparatesDifferentTeams(): void
@@ -288,5 +376,21 @@ final class DiplomaTest extends \PlTestCase
         $teams = \pl_diploma_get_team_qual_results();
 
         $this->assertCount(3, $teams);
+    }
+
+    // --- pl_diploma_get_team_final_results (DB-wrapped) ----------------------
+
+    public function testGetTeamFinalResultsUsesGivenNameFirstOrder(): void
+    {
+        \FakeDb::on('/FROM Teams/', [
+            ['TeCoId' => 1, 'TeSubTeam' => 0, 'TeEvent' => 'RM', 'FinalRank' => 1, 'TeScore' => 1900,
+                'EvEventName' => 'Recurve Men Team', 'EvMixedTeam' => 0,
+                'EnFullName' => 'Jan Kowalski', 'CoName' => 'Orzeł Warszawa', 'QuScore' => 650, 'MemberOrder' => 1],
+        ]);
+
+        $teams = \pl_diploma_get_team_final_results();
+
+        $this->assertCount(1, $teams);
+        $this->assertCount(1, \FakeDb::executed("/CONCAT\(Entries\.EnName, ' ', Entries\.EnFirstName\)/"));
     }
 }

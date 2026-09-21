@@ -7,6 +7,7 @@
  */
 
 require_once('Common/tcpdf/tcpdf.php');
+require_once(__DIR__ . '/Fun_Diploma.php');
 
 class PLDiplomaPdf extends TCPDF {
 
@@ -27,14 +28,16 @@ class PLDiplomaPdf extends TCPDF {
 	/**
 	 * Render a single diploma page.
 	 *
-	 * Template: "{NameSurname} {Club} za zajęcie {Place} w {TourName} w kategorii {ClassText}"
+	 * Template: "{NameSurname} {Club} za zajęcie {Place} w {TourName} {CategoryLine}"
 	 * Club is rendered below the name in smaller font.
 	 * For teams: club name is shown prominently, with athlete names listed below.
 	 *
 	 * @param string $competitionName Name of the competition
 	 * @param string $dates Competition dates
 	 * @param string $location Competition location
-	 * @param string $classText Event/class text (customizable per event)
+	 * @param string $categoryLine Full, pre-built category line (e.g. from
+	 *   pl_diploma_resolve_category_line()) — printed verbatim, with no
+	 *   automatic "w kategorii "/"w konkurencji " prefix added here
 	 * @param int $rank Place/rank number
 	 * @param string $athleteName Full name of the athlete (individual) or empty for team
 	 * @param string $clubName Club/country name
@@ -44,7 +47,7 @@ class PLDiplomaPdf extends TCPDF {
 	 * @param string $organizer Name of the organizer
 	 * @param string $titleText Pre-built title phrase e.g. "i zdobywa tytuł Mistrza Polski na rok 2026" (empty = no title line)
 	 */
-	public function printDiploma($competitionName, $dates, $location, $classText, $rank, $athleteName, $clubName, $teamMembers = array(), $bodyText = '', $headJudge = '', $organizer = '', $titleText = '') {
+	public function printDiploma($competitionName, $dates, $location, $categoryLine, $rank, $athleteName, $clubName, $teamMembers = array(), $bodyText = '', $headJudge = '', $organizer = '', $titleText = '') {
 		$this->AddPage();
 
 		$pageW = $this->getPageWidth();
@@ -90,13 +93,15 @@ class PLDiplomaPdf extends TCPDF {
 
 		// "w {CompetitionName}"
 		$this->Ln(3);
-		$this->SetFont('dejavusans', '', 14);
+		$this->SetFont('dejavusans', '', 16);
 		$this->Cell($contentW, 8, 'w ' . $competitionName, 0, 1, 'C');
 
-		// "w kategorii {ClassText}"
+		// Category line (e.g. "w konkurencji indywidualnej kobiet, w kategorii łuków
+		// klasycznych") — MultiCell at a reduced size so long composed sentences wrap
+		// onto a second line instead of overflowing a single Cell().
 		$this->Ln(2);
-		$this->SetFont('dejavusans', '', 18);
-		$this->Cell($contentW, 10, mb_convert_encoding('w kategorii ' . $classText, 'UTF-8', 'UTF-8'), 0, 1, 'C');
+		$this->SetFont('dejavusans', '', 14);
+		$this->MultiCell($contentW, 7, $categoryLine, 0, 'C');
 
 		// Title line for places 1–3 (e.g. "i zdobywa tytuł Mistrza Polski Seniorów na rok 2026")
 		if (!empty($titleText)) {
@@ -146,10 +151,13 @@ class PLDiplomaPdf extends TCPDF {
 			$this->Cell($halfW, 5, $organizer, 0, 0, 'C');
 		}
 
-    $this->SetY(230);
-    // Date and location at the bottom center
-		$this->SetFont('dejavusans', '', 12);
-    $this->Cell($contentW, 8, $location . ', ' . $dates, 0, 1, 'C');
+    $dateLocationLine = pl_diploma_build_date_location_line($location, $dates);
+    if ($dateLocationLine !== '') {
+        $this->SetY(230);
+        // Date and location at the bottom center
+        $this->SetFont('dejavusans', '', 12);
+        $this->Cell($contentW, 8, $dateLocationLine, 0, 1, 'C');
+    }
 	}
 
 	/**

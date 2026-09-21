@@ -60,12 +60,9 @@ foreach ($results as $team) {
 	$isMixed = ($team['IsMixed'] == 1);
 	$evType  = $isMixed ? 'M' : 'T';
 	$compositeKey = $evType . ':' . $team['EventId'];
+	$eventTextRow = isset($eventTexts[$compositeKey]) ? $eventTexts[$compositeKey] : array();
 
-	// Determine class text: custom override or default event name
-	$classText = $team['EventName'];
-	if (isset($eventTexts[$compositeKey]) && !empty($eventTexts[$compositeKey]['customText'])) {
-		$classText = $eventTexts[$compositeKey]['customText'];
-	}
+	$categoryLine = pl_diploma_resolve_category_line($team['EventId'], $evType, $eventTextRow);
 
 	// Build title phrase if titles are enabled
 	$titleText = '';
@@ -93,7 +90,7 @@ foreach ($results as $team) {
 		$config['CompetitionName'],
 		$config['Dates'],
 		$config['Location'],
-		$classText,
+		$categoryLine,
 		$team['Rank'],
 		'',                // no individual athlete name for team
 		$team['Club'],

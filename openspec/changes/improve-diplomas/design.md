@@ -58,10 +58,10 @@ a single per-raw-code lookup.
 | Class | name | Class | name |
 |---|---|---|---|
 | M | mężczyzn | W | kobiet |
-| U24M | Młodzieżowców | U24W | Młodzieżówek |
-| U21M | Juniorów | U21W | Juniorek |
-| U18M | Juniorów młodszych | U18W | Juniorek młodszych |
-| U15M | Młodzików | U15W | Młodziczek |
+| U24M | młodzieżowców | U24W | młodzieżówek |
+| U21M | juniorów | U21W | juniorek |
+| U18M | juniorów młodszych | U18W | juniorek młodszych |
+| U15M | młodzików | U15W | młodziczek |
 | U12M | chłopców | U12W | dziewcząt |
 | U10M | chłopców | U10W | dziewcząt |
 | {NN}M (Masters, NN=40/50/60/70/80) | mężczyzn U{NN} | {NN}W | kobiet U{NN} |
@@ -72,10 +72,10 @@ mixed U12/U10 event codes exist in `lib.php`, and none are expected):
 | Age code | name |
 |---|---|
 | *(Senior, empty age code)* | *(empty — omitted from the composed line)* |
-| U24 | Młodzieżowców |
-| U21 | Juniorów |
-| U18 | Juniorów młodszych |
-| U15 | Młodzików |
+| U24 | młodzieżowców |
+| U21 | juniorów |
+| U18 | juniorów młodszych |
+| U15 | młodzików |
 
 `{bowPhrase}` — by division letter (first character of the raw code), with a class-code override
 applied first regardless of division:
@@ -93,11 +93,16 @@ typeWord = 'indywidualnej ' | 'zespołowej ' | 'mikstów'   (evType I / T / M)
 name     = '' when evType == 'M' and the resolved name is empty (Senior mixed); otherwise as resolved
 line     = customText override present?
              yes → 'w kategorii ' . customText
-             no  → 'w konkurencji ' . typeWord . name . (name != '' ? ', ' : '') ...
+             no  → 'w konkurencji ' . typeWord . name . ",\n" . 'w kategorii ' . bowPhrase
 ```
-Concretely: `w konkurencji {typeWord}{name}, w kategorii {bowPhrase}`, and when `name` is empty
-(mixed Senior only) the line collapses to `w konkurencji mikstów, w kategorii {bowPhrase}` — no
-double space, no dangling comma before an empty name.
+Concretely: `w konkurencji {typeWord}{name},\nw kategorii {bowPhrase}`, and when `name` is empty
+(mixed Senior only) the line collapses to `w konkurencji mikstów,\nw kategorii {bowPhrase}` — no
+double space, no dangling comma before an empty name. The line break before "w kategorii" is
+forced (a literal `\n`, rendered by `MultiCell()`) rather than left to width-based wrapping —
+confirmed by manual testing (task 6.2) that the composed sentence wraps onto a second line in
+every real combination anyway, so a forced break keeps that second line's start consistent
+instead of landing wherever the word-wrap happens to fall. The override-text branch (`'w kategorii
+' . customText`) is unaffected — it's a single clause, nothing to break before.
 
 ### 5. Print-time fallback to computed defaults (diverges from title-field behavior)
 `titlePrefix`/`titleText` intentionally do **not** fall back to computed defaults at print time —
@@ -144,7 +149,7 @@ selected (manual athlete entry) — no new request parameter needed.
 ## Risks / Trade-offs
 
 - **[Risk]** The composed line is noticeably longer than the old `EvEventName`/custom text
-  (e.g. "w konkurencji zespołowej Juniorów młodszych, w kategorii łuków barebow" vs. the old
+  (e.g. "w konkurencji zespołowej juniorów młodszych, w kategorii łuków barebow" vs. the old
   single-line "Łuk barebow - Junior młodszy"). `printDiploma()` currently renders this row with a
   single `Cell()` at 18pt, which does not wrap — the longest real combinations would visibly
   overflow or get clipped. → **Mitigation**: drop this line to 14pt and switch it from `Cell()` to

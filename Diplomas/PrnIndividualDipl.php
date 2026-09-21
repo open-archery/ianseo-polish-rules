@@ -58,12 +58,9 @@ $pdf = PLDiplomaPdf::createInstance('Dyplomy indywidualne');
 
 foreach ($results as $individual) {
 	$compositeKey = 'I:' . $individual['IndEvent'];
+	$eventTextRow = isset($eventTexts[$compositeKey]) ? $eventTexts[$compositeKey] : array();
 
-	// Determine class text: custom override or default event name
-	$classText = $individual['EvEventName'];
-	if (isset($eventTexts[$compositeKey]) && !empty($eventTexts[$compositeKey]['customText'])) {
-		$classText = $eventTexts[$compositeKey]['customText'];
-	}
+	$categoryLine = pl_diploma_resolve_category_line($individual['IndEvent'], 'I', $eventTextRow);
 
 	// Build title phrase if titles are enabled
 	$titleText = '';
@@ -85,7 +82,7 @@ foreach ($results as $individual) {
 		$config['CompetitionName'],
 		$config['Dates'],
 		$config['Location'],
-		$classText,
+		$categoryLine,
 		$individual['Rank'],
 		$individual['EnFullName'],
 		$individual['CoName'],

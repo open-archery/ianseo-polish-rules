@@ -20,7 +20,7 @@ function pl_diploma_ensure_tables() {
 			PlDcDates VARCHAR(100) NOT NULL DEFAULT '',
 			PlDcLocation VARCHAR(255) NOT NULL DEFAULT '',
 			PlDcPlaceFrom INT NOT NULL DEFAULT 1,
-			PlDcPlaceTo INT NOT NULL DEFAULT 3,
+			PlDcPlaceTo INT NOT NULL DEFAULT 8,
 			PlDcBodyText TEXT,
 			PlDcHeadJudge VARCHAR(255) NOT NULL DEFAULT '',
 			PlDcOrganizer VARCHAR(255) NOT NULL DEFAULT '',
@@ -46,6 +46,8 @@ function pl_diploma_ensure_tables() {
 			PlDeCustomText VARCHAR(255) NOT NULL DEFAULT '',
 			PlDeTitlePrefix VARCHAR(100) NOT NULL DEFAULT '',
 			PlDeTitleText VARCHAR(255) NOT NULL DEFAULT '',
+			PlDeCategoryName VARCHAR(100) NOT NULL DEFAULT '',
+			PlDeBowPhrase VARCHAR(100) NOT NULL DEFAULT '',
 			PRIMARY KEY (PlDeTournament, PlDeEventCode)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 	} else {
@@ -60,6 +62,17 @@ function pl_diploma_ensure_tables() {
 		$Rc = safe_r_sql("SHOW COLUMNS FROM PLDiplomaEventText LIKE 'PlDeTitleText'");
 		if (safe_num_rows($Rc) == 0) {
 			safe_w_sql("ALTER TABLE PLDiplomaEventText ADD COLUMN PlDeTitleText VARCHAR(255) NOT NULL DEFAULT ''");
+		}
+		safe_free_result($Rc);
+		// Add category-line columns if upgrading from an earlier version
+		$Rc = safe_r_sql("SHOW COLUMNS FROM PLDiplomaEventText LIKE 'PlDeCategoryName'");
+		if (safe_num_rows($Rc) == 0) {
+			safe_w_sql("ALTER TABLE PLDiplomaEventText ADD COLUMN PlDeCategoryName VARCHAR(100) NOT NULL DEFAULT ''");
+		}
+		safe_free_result($Rc);
+		$Rc = safe_r_sql("SHOW COLUMNS FROM PLDiplomaEventText LIKE 'PlDeBowPhrase'");
+		if (safe_num_rows($Rc) == 0) {
+			safe_w_sql("ALTER TABLE PLDiplomaEventText ADD COLUMN PlDeBowPhrase VARCHAR(100) NOT NULL DEFAULT ''");
 		}
 		safe_free_result($Rc);
 	}
@@ -79,11 +92,12 @@ function pl_diploma_get_config($tourId) {
 		'Dates' => '',
 		'Location' => '',
 		'PlaceFrom' => 1,
-		'PlaceTo' => 3,
+		'PlaceTo' => 8,
 		'BodyText' => '',
 		'HeadJudge' => '',
 		'Organizer' => '',
 		'TitlesEnabled' => 0,
+		'ConfigExists' => false,
 	);
 
 	$Rs = safe_r_sql("SELECT * FROM PLDiplomaConfig WHERE PlDcTournament = " . intval($tourId));
@@ -98,6 +112,7 @@ function pl_diploma_get_config($tourId) {
 		$defaults['HeadJudge'] = $row->PlDcHeadJudge;
 		$defaults['Organizer'] = $row->PlDcOrganizer;
 		$defaults['TitlesEnabled'] = intval($row->PlDcTitlesEnabled);
+		$defaults['ConfigExists'] = true;
 		safe_free_result($Rs);
 		return $defaults;
 	}
@@ -153,17 +168,20 @@ function pl_diploma_save_config($tourId, $data) {
  * Get all custom event texts for a tournament.
  *
  * @param int $tourId Tournament ID
- * @return array Associative array [EventCode => ['customText' => ..., 'titlePrefix' => ..., 'titleText' => ...]]
+ * @return array Associative array [EventCode => ['customText' => ..., 'titlePrefix' => ...,
+ *               'titleText' => ..., 'categoryName' => ..., 'bowPhrase' => ...]]
  */
 function pl_diploma_get_event_texts($tourId) {
 	$texts = array();
-	$Rs = safe_r_sql("SELECT PlDeEventCode, PlDeCustomText, PlDeTitlePrefix, PlDeTitleText FROM PLDiplomaEventText WHERE PlDeTournament = " . intval($tourId));
+	$Rs = safe_r_sql("SELECT PlDeEventCode, PlDeCustomText, PlDeTitlePrefix, PlDeTitleText, PlDeCategoryName, PlDeBowPhrase FROM PLDiplomaEventText WHERE PlDeTournament = " . intval($tourId));
 	if (safe_num_rows($Rs) > 0) {
 		while ($row = safe_fetch($Rs)) {
 			$texts[$row->PlDeEventCode] = array(
 				'customText' => $row->PlDeCustomText,
 				'titlePrefix' => $row->PlDeTitlePrefix,
 				'titleText' => $row->PlDeTitleText,
+				'categoryName' => $row->PlDeCategoryName,
+				'bowPhrase' => $row->PlDeBowPhrase,
 			);
 		}
 		safe_free_result($Rs);
@@ -172,16 +190,18 @@ function pl_diploma_get_event_texts($tourId) {
 }
 
 /**
- * Save a custom event text and title fields for a tournament (INSERT or UPDATE).
- * Deletes the row if all three fields are empty.
+ * Save a custom event text, title fields, and category-line fields for a
+ * tournament (INSERT or UPDATE). Deletes the row if all five fields are empty.
  *
  * @param int $tourId Tournament ID
  * @param string $eventCode Event code
  * @param string $text Custom display text
  * @param string $titlePrefix Title prefix (e.g. "Młodzieżowego")
  * @param string $titleText Title base text (e.g. "Polski Juniorów")
+ * @param string $categoryName Category-line name override (e.g. "Juniorów")
+ * @param string $bowPhrase Category-line bow-type phrase override (e.g. "łuków klasycznych")
  */
-function pl_diploma_save_event_text($tourId, $eventCode, $text, $titlePrefix = '', $titleText = '') {
+function pl_diploma_save_event_text($tourId, $eventCode, $text, $titlePrefix = '', $titleText = '', $categoryName = '', $bowPhrase = '') {
 	$tourId = intval($tourId);
 
 	// Check if record exists
@@ -189,7 +209,7 @@ function pl_diploma_save_event_text($tourId, $eventCode, $text, $titlePrefix = '
 	$exists = (safe_num_rows($Rs) > 0);
 	safe_free_result($Rs);
 
-	$allEmpty = (empty($text) && empty($titlePrefix) && empty($titleText));
+	$allEmpty = (empty($text) && empty($titlePrefix) && empty($titleText) && empty($categoryName) && empty($bowPhrase));
 
 	if ($allEmpty) {
 		// Remove override row entirely when everything is blank
@@ -200,16 +220,20 @@ function pl_diploma_save_event_text($tourId, $eventCode, $text, $titlePrefix = '
 		safe_w_sql("UPDATE PLDiplomaEventText SET "
 			. "PlDeCustomText = " . StrSafe_DB($text) . ", "
 			. "PlDeTitlePrefix = " . StrSafe_DB($titlePrefix) . ", "
-			. "PlDeTitleText = " . StrSafe_DB($titleText) . " "
+			. "PlDeTitleText = " . StrSafe_DB($titleText) . ", "
+			. "PlDeCategoryName = " . StrSafe_DB($categoryName) . ", "
+			. "PlDeBowPhrase = " . StrSafe_DB($bowPhrase) . " "
 			. "WHERE PlDeTournament = " . $tourId . " AND PlDeEventCode = " . StrSafe_DB($eventCode)
 		);
 	} else {
-		safe_w_sql("INSERT INTO PLDiplomaEventText (PlDeTournament, PlDeEventCode, PlDeCustomText, PlDeTitlePrefix, PlDeTitleText) VALUES ("
+		safe_w_sql("INSERT INTO PLDiplomaEventText (PlDeTournament, PlDeEventCode, PlDeCustomText, PlDeTitlePrefix, PlDeTitleText, PlDeCategoryName, PlDeBowPhrase) VALUES ("
 			. $tourId . ", "
 			. StrSafe_DB($eventCode) . ", "
 			. StrSafe_DB($text) . ", "
 			. StrSafe_DB($titlePrefix) . ", "
-			. StrSafe_DB($titleText) . ")"
+			. StrSafe_DB($titleText) . ", "
+			. StrSafe_DB($categoryName) . ", "
+			. StrSafe_DB($bowPhrase) . ")"
 		);
 	}
 }
@@ -270,6 +294,67 @@ function pl_diploma_get_title_defaults($rawEventCode) {
 		default:
 			return array('prefix' => '', 'text' => '');
 	}
+}
+
+/**
+ * Return default category name and bow-type phrase for a diploma's category
+ * line, derived purely from the raw event code (division letter plus an
+ * age/gender suffix, or a trailing X for a mixed team) — same shape as
+ * pl_diploma_get_title_defaults(), no DB access.
+ *
+ * @param string $rawEventCode Raw event code e.g. "RM", "RU21W", "BU10M", "RX", "CU21X"
+ * @return array ['name' => string, 'bowPhrase' => string]
+ */
+function pl_diploma_get_category_defaults($rawEventCode) {
+	$division = substr($rawEventCode, 0, 1); // R, C, or B
+	$rest     = substr($rawEventCode, 1);
+	$isMixed  = (substr($rest, -1) === 'X');
+	$ageGenderCode = $isMixed ? substr($rest, 0, -1) : $rest;
+
+	// Bow-type phrase: the U10 (simplified-bow) class overrides regardless of division.
+	if (strpos($ageGenderCode, 'U10') === 0) {
+		$bowPhrase = 'łuków popularnych';
+	} else {
+		$bowPhraseMap = array('R' => 'łuków klasycznych', 'C' => 'łuków bloczkowych', 'B' => 'łuków barebow');
+		$bowPhrase = isset($bowPhraseMap[$division]) ? $bowPhraseMap[$division] : '';
+	}
+
+	if ($isMixed) {
+		// Genderless table: Senior (empty age code) has no entry, so its name
+		// naturally resolves to '' and is omitted from the composed line.
+		$mixedNames = array(
+			'' => '',
+			'U24' => 'młodzieżowców',
+			'U21' => 'juniorów',
+			'U18' => 'juniorów młodszych',
+			'U15' => 'młodzików',
+		);
+		$name = isset($mixedNames[$ageGenderCode]) ? $mixedNames[$ageGenderCode] : '';
+		return array('name' => $name, 'bowPhrase' => $bowPhrase);
+	}
+
+	// Gendered table: shared by individual and team events, both of which
+	// carry an M/W-suffixed raw code.
+	$genderedNames = array(
+		'M' => 'mężczyzn', 'W' => 'kobiet',
+		'U24M' => 'młodzieżowców', 'U24W' => 'młodzieżówek',
+		'U21M' => 'juniorów', 'U21W' => 'juniorek',
+		'U18M' => 'juniorów młodszych', 'U18W' => 'juniorek młodszych',
+		'U15M' => 'młodzików', 'U15W' => 'młodziczek',
+		'U12M' => 'chłopców', 'U12W' => 'dziewcząt',
+		'U10M' => 'chłopców', 'U10W' => 'dziewcząt',
+	);
+	if (isset($genderedNames[$ageGenderCode])) {
+		return array('name' => $genderedNames[$ageGenderCode], 'bowPhrase' => $bowPhrase);
+	}
+
+	// Masters: two-digit age threshold + gender, e.g. "50W" -> "kobiet U50".
+	if (preg_match('/^(\d{2})(M|W)$/', $ageGenderCode, $m)) {
+		$name = ($m[2] === 'M' ? 'mężczyzn U' : 'kobiet U') . $m[1];
+		return array('name' => $name, 'bowPhrase' => $bowPhrase);
+	}
+
+	return array('name' => '', 'bowPhrase' => $bowPhrase);
 }
 
 /**
