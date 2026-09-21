@@ -194,10 +194,14 @@ echo '</td></tr>';
 
 // Show current config summary
 if ($configExists) {
+	$summaryCompetitionName = ($config['CompetitionName'] !== '') ? $config['CompetitionName'] : '-';
+	$summaryDates = ($config['Dates'] !== '') ? $config['Dates'] : '-';
+	$summaryLocation = ($config['Location'] !== '') ? $config['Location'] : '-';
+
 	echo '<tr><td colspan="2" style="padding:8px;">';
-	echo '<strong>Zawody:</strong> ' . htmlspecialchars($config['CompetitionName']) . ' | ';
-	echo '<strong>Data:</strong> ' . htmlspecialchars($config['Dates']) . ' | ';
-	echo '<strong>Miejsce:</strong> ' . htmlspecialchars($config['Location']) . ' | ';
+	echo '<strong>Zawody:</strong> ' . htmlspecialchars($summaryCompetitionName) . ' | ';
+	echo '<strong>Data:</strong> ' . htmlspecialchars($summaryDates) . ' | ';
+	echo '<strong>Miejsce:</strong> ' . htmlspecialchars($summaryLocation) . ' | ';
 	echo '<strong>Miejsca:</strong> ' . $config['PlaceFrom'] . ' - ' . $config['PlaceTo'];
 	echo '</td></tr>';
 }

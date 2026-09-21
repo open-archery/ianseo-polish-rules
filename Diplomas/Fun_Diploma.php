@@ -9,6 +9,8 @@
  * to distinguish individual/team/mixed events that share the same EvCode.
  */
 
+require_once(__DIR__ . '/DiplomaSetup.php');
+
 /**
  * Extract the raw EvCode from a composite event key.
  * E.g. 'I:RM' => 'RM', 'T:CU21M' => 'CU21M'
@@ -22,6 +24,81 @@ function pl_diploma_raw_event_code($compositeKey) {
 		return substr($compositeKey, 2);
 	}
 	return $compositeKey;
+}
+
+/**
+ * Build the diploma's bottom "location, date" line, omitting whichever of
+ * the two is blank and never leaving a dangling separator.
+ *
+ * @param string $location Competition location (may be empty)
+ * @param string $dates Competition dates (may be empty)
+ * @return string The composed line, or '' when both are blank
+ */
+function pl_diploma_build_date_location_line($location, $dates) {
+	$location = trim((string) $location);
+	$dates = trim((string) $dates);
+
+	if ($location !== '' && $dates !== '') {
+		return $location . ', ' . $dates;
+	}
+	return $location !== '' ? $location : $dates;
+}
+
+/**
+ * Resolve a diploma's full category line: either the per-event "Tekst na
+ * dyplomie" override verbatim (prefixed "w kategorii "), or the composed
+ * "w konkurencji {typeWord}{name},\nw kategorii {bowPhrase}" sentence (a
+ * forced line break before "w kategorii") built from saved per-event
+ * overrides falling back to computed defaults.
+ *
+ * Unlike titlePrefix/titleText (which intentionally print nothing until an
+ * admin saves something, since titles are opt-in), this line is mandatory on
+ * every diploma and always had *something* before this feature existed
+ * (EvEventName) — so it falls back to computed defaults rather than printing
+ * a blank name/bow-type phrase for a tournament whose admin hasn't opened the
+ * config page yet.
+ *
+ * @param string $rawEventCode Raw event code e.g. "RM", "RU21W", "RX"
+ * @param string $evType 'I' (individual), 'T' (team), or 'M' (mixed team)
+ * @param array $eventTextRow Row from pl_diploma_get_event_texts(), or [] when unset
+ * @return string The full category line
+ */
+function pl_diploma_resolve_category_line($rawEventCode, $evType, $eventTextRow) {
+	$customText = isset($eventTextRow['customText']) ? trim((string) $eventTextRow['customText']) : '';
+	if ($customText !== '') {
+		return 'w kategorii ' . $customText;
+	}
+
+	// No event at all (e.g. a manually-entered custom diploma with no event
+	// picked) — nothing to categorize, so print nothing rather than a
+	// dangling "w konkurencji indywidualnej, w kategorii " with empty parts.
+	if ($rawEventCode === '') {
+		return '';
+	}
+
+	$defaults = pl_diploma_get_category_defaults($rawEventCode);
+
+	$name = isset($eventTextRow['categoryName']) ? trim((string) $eventTextRow['categoryName']) : '';
+	if ($name === '') {
+		$name = $defaults['name'];
+	}
+
+	$bowPhrase = isset($eventTextRow['bowPhrase']) ? trim((string) $eventTextRow['bowPhrase']) : '';
+	if ($bowPhrase === '') {
+		$bowPhrase = $defaults['bowPhrase'];
+	}
+
+	$typeWords = array('I' => 'indywidualnej', 'T' => 'zespołowej', 'M' => 'mikstów');
+	$typeWord = isset($typeWords[$evType]) ? $typeWords[$evType] : $typeWords['I'];
+
+	$competitionPart = ($name !== '') ? ($typeWord . ' ' . $name) : $typeWord;
+
+	// Forced line break before "w kategorii" rather than relying on MultiCell's
+	// width-based wrapping — the composed sentence is long enough that it wraps
+	// onto a second line anyway, so breaking exactly here keeps that second
+	// line's start consistent across every combination instead of wherever the
+	// word-wrap happens to land.
+	return 'w konkurencji ' . $competitionPart . ",\n" . 'w kategorii ' . $bowPhrase;
 }
 
 /**
@@ -91,7 +168,7 @@ function pl_diploma_get_ind_qual_results($events = array(), $placeFrom = 1, $pla
 		$evFilter = " AND IndEvent IN (" . implode(',', $parts) . ") ";
 	}
 
-	$MySql  = "SELECT CONCAT(Entries.EnFirstName, ' ', Entries.EnName) AS EnFullName, ";
+	$MySql  = "SELECT CONCAT(Entries.EnName, ' ', Entries.EnFirstName) AS EnFullName, ";
 	$MySql .= "Countries.CoName, Individuals.IndEvent, Events.EvEventName, ";
 	$MySql .= "Qualifications.QuScore, Qualifications.QuClRank ";
 	$MySql .= "FROM Individuals ";
@@ -146,7 +223,7 @@ function pl_diploma_get_ind_final_results($events = array(), $placeFrom = 1, $pl
 		$evFilter = " AND IndEvent IN (" . implode(',', $parts) . ") ";
 	}
 
-	$MySql  = "SELECT CONCAT(Entries.EnFirstName, ' ', Entries.EnName) AS EnFullName, ";
+	$MySql  = "SELECT CONCAT(Entries.EnName, ' ', Entries.EnFirstName) AS EnFullName, ";
 	$MySql .= "Countries.CoName, Individuals.IndEvent, Events.EvEventName, ";
 	$MySql .= "Qualifications.QuScore, ";
 	$MySql .= "IF(EvShootOff+EvE1ShootOff+EvE2ShootOff=0, IndRank, ABS(IndRankFinal)) AS FinalRank ";
@@ -207,7 +284,7 @@ function pl_diploma_get_team_qual_results($events = array(), $placeFrom = 1, $pl
 
 	$MySql  = "SELECT Teams.TeCoId, Teams.TeSubTeam, Teams.TeEvent, Teams.TeRank, Teams.TeScore, ";
 	$MySql .= "Events.EvEventName, Events.EvMixedTeam, ";
-	$MySql .= "CONCAT(Entries.EnFirstName, ' ', Entries.EnName) AS EnFullName, ";
+	$MySql .= "CONCAT(Entries.EnName, ' ', Entries.EnFirstName) AS EnFullName, ";
 	$MySql .= "Countries.CoName, Qualifications.QuScore, TeamComponent.TcOrder ";
 	$MySql .= "FROM Teams ";
 	$MySql .= "INNER JOIN TeamComponent ON Teams.TeCoId = TeamComponent.TcCoId AND Teams.TeSubTeam = TeamComponent.TcSubTeam AND Teams.TeEvent = TeamComponent.TcEvent AND Teams.TeTournament = TeamComponent.TcTournament AND Teams.TeFinEvent = TeamComponent.TcFinEvent ";
@@ -275,7 +352,7 @@ function pl_diploma_get_team_final_results($events = array(), $placeFrom = 1, $p
 	$MySql  = "SELECT Teams.TeCoId, Teams.TeSubTeam, Teams.TeEvent, ";
 	$MySql .= "IF(EvFinalFirstPhase=0, Teams.TeRank, Teams.TeRankFinal) AS FinalRank, ";
 	$MySql .= "Teams.TeScore, Events.EvEventName, Events.EvMixedTeam, ";
-	$MySql .= "CONCAT(Entries.EnFirstName, ' ', Entries.EnName) AS EnFullName, ";
+	$MySql .= "CONCAT(Entries.EnName, ' ', Entries.EnFirstName) AS EnFullName, ";
 	$MySql .= "Countries.CoName, Qualifications.QuScore, TfcOrder AS MemberOrder ";
 	$MySql .= "FROM Teams ";
 	$MySql .= "INNER JOIN TeamFinComponent ON Teams.TeCoId = TeamFinComponent.TfcCoId AND Teams.TeSubTeam = TeamFinComponent.TfcSubTeam AND Teams.TeEvent = TeamFinComponent.TfcEvent AND Teams.TeTournament = TeamFinComponent.TfcTournament ";
@@ -296,7 +373,7 @@ function pl_diploma_get_team_final_results($events = array(), $placeFrom = 1, $p
 	$MySql .= "SELECT Teams.TeCoId, Teams.TeSubTeam, Teams.TeEvent, ";
 	$MySql .= "IF(EvFinalFirstPhase=0, Teams.TeRank, Teams.TeRankFinal) AS FinalRank, ";
 	$MySql .= "Teams.TeScore, Events.EvEventName, Events.EvMixedTeam, ";
-	$MySql .= "CONCAT(Entries.EnFirstName, ' ', Entries.EnName) AS EnFullName, ";
+	$MySql .= "CONCAT(Entries.EnName, ' ', Entries.EnFirstName) AS EnFullName, ";
 	$MySql .= "Countries.CoName, Qualifications.QuScore, TcOrder AS MemberOrder ";
 	$MySql .= "FROM Teams ";
 	$MySql .= "INNER JOIN TeamComponent ON Teams.TeCoId = TeamComponent.TcCoId AND Teams.TeSubTeam = TeamComponent.TcSubTeam AND Teams.TeEvent = TeamComponent.TcEvent AND Teams.TeTournament = TeamComponent.TcTournament AND Teams.TeFinEvent = TeamComponent.TcFinEvent ";
@@ -352,7 +429,7 @@ function pl_diploma_get_all_athletes($search = '') {
 	$results = array();
 	$tourId = StrSafe_DB($_SESSION['TourId']);
 
-	$MySql  = "SELECT Entries.EnId, CONCAT(Entries.EnFirstName, ' ', Entries.EnName) AS EnFullName, ";
+	$MySql  = "SELECT Entries.EnId, CONCAT(Entries.EnName, ' ', Entries.EnFirstName) AS EnFullName, ";
 	$MySql .= "Countries.CoName, Individuals.IndEvent, Events.EvEventName ";
 	$MySql .= "FROM Entries ";
 	$MySql .= "INNER JOIN Individuals ON Entries.EnId = Individuals.IndId AND Individuals.IndTournament = " . $tourId . " ";
@@ -363,7 +440,7 @@ function pl_diploma_get_all_athletes($search = '') {
 
 	if (!empty($search)) {
 		$searchSafe = StrSafe_DB('%' . $search . '%');
-		$MySql .= "AND (Entries.EnName LIKE " . $searchSafe . " OR Entries.EnFirstName LIKE " . $searchSafe . " OR CONCAT(Entries.EnFirstName, ' ', Entries.EnName) LIKE " . $searchSafe . ") ";
+		$MySql .= "AND (Entries.EnName LIKE " . $searchSafe . " OR Entries.EnFirstName LIKE " . $searchSafe . " OR CONCAT(Entries.EnName, ' ', Entries.EnFirstName) LIKE " . $searchSafe . ") ";
 	}
 
 	$MySql .= "ORDER BY Entries.EnName, Entries.EnFirstName ASC";
@@ -394,7 +471,7 @@ function pl_diploma_get_all_athletes($search = '') {
 function pl_diploma_get_athlete($enId) {
 	$tourId = StrSafe_DB($_SESSION['TourId']);
 
-	$MySql  = "SELECT Entries.EnId, CONCAT(Entries.EnFirstName, ' ', Entries.EnName) AS EnFullName, ";
+	$MySql  = "SELECT Entries.EnId, CONCAT(Entries.EnName, ' ', Entries.EnFirstName) AS EnFullName, ";
 	$MySql .= "Countries.CoName ";
 	$MySql .= "FROM Entries ";
 	$MySql .= "INNER JOIN Countries ON Entries.EnCountry = Countries.CoId AND Countries.CoTournament = " . $tourId . " ";

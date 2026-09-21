@@ -48,19 +48,30 @@ if ($rank < 1) {
 	die('Nieprawidłowe miejsce.');
 }
 
-// Determine class text
-$classText = '';
-if (!empty($eventCode)) {
-	// Try custom text first (eventCode may be composite like 'I:RM')
-	if (isset($eventTexts[$eventCode]) && !empty($eventTexts[$eventCode])) {
-		$classText = $eventTexts[$eventCode];
-	} else {
-		// Look up event name from DB
-		$allEvents = pl_diploma_get_events();
-		if (isset($allEvents[$eventCode])) {
-			$classText = $allEvents[$eventCode]['name'];
-		}
-	}
+// Determine event type ('I'/'T'/'M') from the composite event code's prefix,
+// the same convention used everywhere else in this module — no event
+// selected (manual athlete entry) defaults to individual.
+$evType = 'I';
+if (strlen($eventCode) > 2 && $eventCode[1] === ':') {
+	$evType = $eventCode[0];
+}
+$rawEventCode = pl_diploma_raw_event_code($eventCode);
+$eventTextRow = isset($eventTexts[$eventCode]) ? $eventTexts[$eventCode] : array();
+
+$categoryLine = pl_diploma_resolve_category_line($rawEventCode, $evType, $eventTextRow);
+
+// Build title phrase if titles are enabled, same as the batch diploma printouts
+$titleText = '';
+if ($config['TitlesEnabled'] && $rawEventCode !== '') {
+	$titleYear = pl_diploma_extract_year($config['Dates']);
+	$titleText = pl_diploma_build_title(
+		$rank,
+		isset($eventTextRow['titlePrefix']) ? $eventTextRow['titlePrefix'] : '',
+		isset($eventTextRow['titleText']) ? $eventTextRow['titleText'] : '',
+		$titleYear,
+		$evType !== 'I',   // team or mixed
+		$evType === 'M'    // mixed adds "w mikście", suppresses "Zespołowego"
+	);
 }
 
 // Use custom text as body text override
@@ -73,14 +84,15 @@ $pdf->printDiploma(
 	$config['CompetitionName'],
 	$config['Dates'],
 	$config['Location'],
-	$classText,
+	$categoryLine,
 	$rank,
 	$athleteName,
 	$clubName,
 	array(),
 	$bodyText,
 	$config['HeadJudge'],
-	$config['Organizer']
+	$config['Organizer'],
+	$titleText
 );
 
 $pdf->Output('dyplom.pdf', 'I');

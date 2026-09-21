@@ -348,6 +348,20 @@ commit as the fix. Terse is fine; the goal is "don't step on this rake again," n
   (MSYS path conversion turns `/tmp/x.php` into `C:/...`). Prefix the command with
   `MSYS_NO_PATHCONV=1`, or write the path as `//tmp/x.php`.
 
+## ianseo Entries table
+
+- **`Entries.EnFirstName` holds the surname, and `Entries.EnName` holds the given name — the
+  opposite of what the column names suggest.** Confirmed via `Import/Fun_BibImport.php`'s own
+  doc comment (`EnFirstName → family name (LueFamilyName)`, `EnName → given name (LueName)`) and
+  its own test (`BibImportTest.php` asserts `EnFirstName = 'Kowalski'` for the surname and
+  `EnName = 'Jan'` for the given name from a `"Kowalski Jan"` input). Any code building a
+  human-readable full name must `CONCAT(EnName, ' ', EnFirstName)`, not the other way round —
+  `Diplomas/Fun_Diploma.php` had every query doing `CONCAT(EnFirstName, ' ', EnName)`, which
+  read as "first name, then name" but actually rendered every diploma surname-first
+  ("Kowalski Jan" instead of "Jan Kowalski") until fixed. The reversed order is also wrong for
+  substring search: a `LIKE` filter built from the same backwards `CONCAT` fails to match a
+  naturally-typed "Jan Kowalski" query against a stored "Kowalski Jan" string.
+
 ## ianseo scores
 
 - **`Individuals.IndScore` is not the qualification total.** In this ruleset's competitions

@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['saveConfig'])) {
 		'Dates' => isset($_POST['Dates']) ? trim($_POST['Dates']) : '',
 		'Location' => isset($_POST['Location']) ? trim($_POST['Location']) : '',
 		'PlaceFrom' => isset($_POST['PlaceFrom']) ? intval($_POST['PlaceFrom']) : 1,
-		'PlaceTo' => isset($_POST['PlaceTo']) ? intval($_POST['PlaceTo']) : 3,
+		'PlaceTo' => isset($_POST['PlaceTo']) ? intval($_POST['PlaceTo']) : 8,
 		'BodyText' => isset($_POST['BodyText']) ? trim($_POST['BodyText']) : '',
 		'HeadJudge' => isset($_POST['HeadJudge']) ? trim($_POST['HeadJudge']) : '',
 		'Organizer' => isset($_POST['Organizer']) ? trim($_POST['Organizer']) : '',
@@ -40,16 +40,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['saveConfig'])) {
 
 	pl_diploma_save_config($_SESSION['TourId'], $data);
 
-	// Save event texts and title fields
+	// Save event texts, title fields, and category-line fields
 	$allEvents = pl_diploma_get_events();
 	foreach ($allEvents as $evCode => $ev) {
 		$fieldName        = 'EventText_' . $evCode;
 		$fieldPrefix      = 'TitlePrefix_' . $evCode;
 		$fieldTitleText   = 'TitleText_' . $evCode;
+		$fieldCategoryName = 'CategoryName_' . $evCode;
+		$fieldBowPhrase    = 'BowPhrase_' . $evCode;
 		$text        = isset($_POST[$fieldName])      ? trim($_POST[$fieldName])      : '';
 		$titlePrefix = isset($_POST[$fieldPrefix])    ? trim($_POST[$fieldPrefix])    : '';
 		$titleText   = isset($_POST[$fieldTitleText]) ? trim($_POST[$fieldTitleText]) : '';
-		pl_diploma_save_event_text($_SESSION['TourId'], $evCode, $text, $titlePrefix, $titleText);
+		$categoryName = isset($_POST[$fieldCategoryName]) ? trim($_POST[$fieldCategoryName]) : '';
+		$bowPhrase    = isset($_POST[$fieldBowPhrase])    ? trim($_POST[$fieldBowPhrase])    : '';
+		pl_diploma_save_event_text($_SESSION['TourId'], $evCode, $text, $titlePrefix, $titleText, $categoryName, $bowPhrase);
 	}
 
 	$message = 'Konfiguracja została zapisana.';
@@ -60,16 +64,16 @@ $config = pl_diploma_get_config($_SESSION['TourId']);
 $eventTexts = pl_diploma_get_event_texts($_SESSION['TourId']);
 $allEvents = pl_diploma_get_events();
 
-// Pre-fill defaults from session if config is empty
-if (empty($config['CompetitionName'])) {
+// Pre-fill defaults from session only on a tournament's first-ever visit to this
+// page — once a config row exists (even with fields left deliberately blank), never
+// re-inject the session's own values over what was saved.
+if (!$config['ConfigExists']) {
 	$config['CompetitionName'] = isset($_SESSION['TourName']) ? $_SESSION['TourName'] : '';
-}
-if (empty($config['Dates'])) {
+
 	$from = isset($_SESSION['TourWhenFrom']) ? $_SESSION['TourWhenFrom'] : '';
 	$to = isset($_SESSION['TourWhenTo']) ? $_SESSION['TourWhenTo'] : '';
 	$config['Dates'] = ($from === $to) ? $from : $from . ' - ' . $to;
-}
-if (empty($config['Location'])) {
+
 	$config['Location'] = isset($_SESSION['TourWhere']) ? $_SESSION['TourWhere'] : '';
 }
 
@@ -161,12 +165,14 @@ if (count($allEvents)) {
 
 	echo '<br>';
 	echo '<table class="Tabella">';
-	echo '<tr><th class="SubTitle" colspan="5">Tekst kategorii i tytuły na dyplomach</th></tr>';
+	echo '<tr><th class="SubTitle" colspan="7">Tekst kategorii i tytuły na dyplomach</th></tr>';
 	echo '<tr>';
 	echo '<th style="width:60px;">Kod</th>';
-	echo '<th style="width:180px;">Nazwa domyślna</th>';
-	echo '<th>Tekst na dyplomie<br><small>(puste = domyślny)</small></th>';
-	echo '<th style="width:160px;">Prefiks tytułu<br><small>(np. Młodzieżowego)</small></th>';
+	echo '<th style="width:150px;">Nazwa domyślna</th>';
+	echo '<th>Tekst na dyplomie<br><small>(puste = domyślny; zastępuje cały poniższy wiersz)</small></th>';
+	echo '<th style="width:130px;">Nazwa kategorii<br><small>(np. juniorów)</small></th>';
+	echo '<th style="width:130px;">Rodzaj łuku<br><small>(np. łuków klasycznych)</small></th>';
+	echo '<th style="width:130px;">Prefiks tytułu<br><small>(np. Młodzieżowego)</small></th>';
 	echo '<th>Tekst tytułu<br><small>(np. Polski Juniorów)</small></th>';
 	echo '</tr>';
 
@@ -176,11 +182,11 @@ if (count($allEvents)) {
 		if ($ev['type'] !== $currentGroup) {
 			$currentGroup = $ev['type'];
 			$groupLabel = isset($groupLabels[$currentGroup]) ? $groupLabels[$currentGroup] : $currentGroup;
-			echo '<tr><td colspan="5" style="padding:6px 4px;background:#e9ecef;font-weight:bold;">' . htmlspecialchars($groupLabel) . '</td></tr>';
+			echo '<tr><td colspan="7" style="padding:6px 4px;background:#e9ecef;font-weight:bold;">' . htmlspecialchars($groupLabel) . '</td></tr>';
 		}
 
 		// Current saved values (or empty defaults)
-		$saved = isset($eventTexts[$evCode]) ? $eventTexts[$evCode] : array('customText' => '', 'titlePrefix' => '', 'titleText' => '');
+		$saved = isset($eventTexts[$evCode]) ? $eventTexts[$evCode] : array('customText' => '', 'titlePrefix' => '', 'titleText' => '', 'categoryName' => '', 'bowPhrase' => '');
 
 		// Pre-fill title fields from hardcoded defaults when nothing saved yet
 		$defaults = pl_diploma_get_title_defaults($ev['rawCode']);
@@ -191,6 +197,11 @@ if (count($allEvents)) {
 			? $saved['titleText']
 			: $defaults['text'];
 
+		// Pre-fill category-line fields from hardcoded defaults when nothing saved yet
+		$categoryDefaults = pl_diploma_get_category_defaults($ev['rawCode']);
+		$displayCategoryName = ($saved['categoryName'] !== '') ? $saved['categoryName'] : $categoryDefaults['name'];
+		$displayBowPhrase = ($saved['bowPhrase'] !== '') ? $saved['bowPhrase'] : $categoryDefaults['bowPhrase'];
+
 		// Build preview for rank 1 (isTeam/isMixed = false for preview)
 		$preview = '';
 		if (!empty($displayTitleText)) {
@@ -199,10 +210,24 @@ if (count($allEvents)) {
 			$preview = pl_diploma_build_title(1, $displayPrefix, $displayTitleText, $titleYear, $isTeamPreview, $isMixedPreview);
 		}
 
+		// Build category-line preview using the same values the form is currently showing
+		$categoryLinePreview = pl_diploma_resolve_category_line($ev['rawCode'], $ev['type'], array(
+			'customText' => $saved['customText'],
+			'categoryName' => $displayCategoryName,
+			'bowPhrase' => $displayBowPhrase,
+		));
+
 		echo '<tr>';
 		echo '<td style="padding:4px;text-align:center;">' . htmlspecialchars($ev['rawCode']) . '</td>';
 		echo '<td style="padding:4px;">' . htmlspecialchars($ev['name']) . '</td>';
-		echo '<td style="padding:4px;"><input type="text" name="EventText_' . htmlspecialchars($evCode) . '" value="' . htmlspecialchars($saved['customText']) . '" style="width:95%;padding:3px;"></td>';
+		echo '<td style="padding:4px;">';
+		echo '<input type="text" name="EventText_' . htmlspecialchars($evCode) . '" value="' . htmlspecialchars($saved['customText']) . '" style="width:95%;padding:3px;">';
+		if (!empty($categoryLinePreview)) {
+			echo '<br><small style="color:#6c757d;">' . htmlspecialchars($categoryLinePreview) . '</small>';
+		}
+		echo '</td>';
+		echo '<td style="padding:4px;"><input type="text" name="CategoryName_' . htmlspecialchars($evCode) . '" value="' . htmlspecialchars($displayCategoryName) . '" style="width:95%;padding:3px;"></td>';
+		echo '<td style="padding:4px;"><input type="text" name="BowPhrase_' . htmlspecialchars($evCode) . '" value="' . htmlspecialchars($displayBowPhrase) . '" style="width:95%;padding:3px;"></td>';
 		echo '<td style="padding:4px;"><input type="text" name="TitlePrefix_' . htmlspecialchars($evCode) . '" value="' . htmlspecialchars($displayPrefix) . '" style="width:95%;padding:3px;"></td>';
 		echo '<td style="padding:4px;">';
 		echo '<input type="text" name="TitleText_' . htmlspecialchars($evCode) . '" value="' . htmlspecialchars($displayTitleText) . '" style="width:95%;padding:3px;">';
