@@ -6,6 +6,15 @@
 
 ---
 
+## Purpose
+
+Connects ianseo's athlete lookup/synchronisation system to the PZŁucz live
+athlete registry at `sportzona.pl`, transforming Sportzona's athlete data
+into the JSON format ianseo expects so operators can import and validate
+registered Polish archers without manually entering data.
+
+---
+
 ## 1. Competition Format Summary
 
 This feature has no regulation citation — it is an **operational integration**
@@ -104,6 +113,10 @@ over the internal Sportzona database ID.
 - Given name → `firstName`
 - Family name → `lastName`
 - Name order → Western (given name first) — fixed, not per-athlete
+- Given names joined by a comma in one `firstName` field (a Sportzona
+  data-entry artifact, e.g. `"Artur,  Damian"`) are reduced to the primary
+  given name before use, both for `GivenName` and for gender derivation —
+  see Requirements → Given name comma normalization.
 
 ### 4.3 Date of birth
 
@@ -131,7 +144,9 @@ prompt the operator during the sync itself.
 
 > ⚠ Edge cases exist. Polish male names ending in "a" are uncommon but not
 > absent (e.g. some diminutives). Names of foreign athletes registered with
-> PZŁucz may not follow this pattern. Manual review is expected.
+> PZŁucz may not follow this pattern. Manual review is expected. A static
+> exception table narrows this gap for known cases — see Requirements →
+> Gender heuristic exception table.
 
 ### 4.5 Club as country affiliation
 
@@ -320,8 +335,8 @@ shall be **ignored**. It is not mapped to any ianseo field.
 | ------------------- | ---------------------------- | -------------------------------------------- |
 | Athlete code (ID)   | `licence`                    | Direct string                                |
 | Family name         | `lastName`                   | Direct string                                |
-| Given name          | `firstName`                  | Direct string                                |
-| Gender              | `firstName`                  | Heuristic: ends with "a" → female, else male |
+| Given name          | `firstName`                  | Direct string, minus a comma-joined second given name if present |
+| Gender              | `firstName`                  | Exception table, then heuristic: ends with "a" → female, else male |
 | Date of birth       | `birthYear`                  | `"{birthYear}-01-01"`                        |
 | Country code        | `clubName`                   | 2–4 char code via §4.5.3 (e.g. `CSB`)        |
 | Country description | `clubName`                   | Raw full club name string                    |
@@ -339,8 +354,10 @@ shall be **ignored**. It is not mapped to any ianseo field.
 ### ⚠ Gender heuristic is approximate
 
 The name-ending heuristic will misclassify some athletes. Operators must plan
-for a manual gender-review step at or after athlete registration. There is no
-automated fallback.
+for a manual gender-review step at or after athlete registration. A static
+exception table (see Requirements → Gender heuristic exception table)
+corrects known cases found in the live registry; unlisted names still rely
+on the heuristic alone.
 
 ### ⚠ No full date of birth
 
@@ -382,3 +399,55 @@ None — all business decisions have been confirmed by the operator.
 - Ranking synchronisation
 - Club names table synchronisation
 - Automatic gender assignment without operator review
+
+---
+
+## Requirements
+
+### Requirement: Gender heuristic exception table
+The adapter SHALL derive gender from `firstName` by checking a static exception table before falling back to the "ends with letter `a` (case-insensitive) → female, otherwise male" heuristic described in §4.4. A name matching an entry in the female-exception list SHALL be classified female regardless of its ending; a name matching an entry in the male-exception list SHALL be classified male regardless of its ending. Matching SHALL be case-insensitive and SHALL be evaluated against the normalized given name (see "Given name comma normalization"), not the raw `firstName` field.
+
+The female-exception list SHALL include at minimum: Angeliki, Abigail, Ariel, Dinah, Elizabeth, Kendall, Madeleine, Miriam, Nelly, Nicole, Nikol, Noemi, Sophie, Vivienne, Zerin.
+
+The male-exception list SHALL include at minimum: Barnaba, Bonawentura, Ilia, Illia, Jarema, Kosma, Kuba, Mykyta, Nikita.
+
+Any given name not matching either list SHALL fall back to the existing "ends with `a`" heuristic unchanged.
+
+#### Scenario: Female exception overrides the ends-with-a default
+- **WHEN** the adapter derives gender for the given name "Angeliki"
+- **THEN** it SHALL return female, even though the name does not end in "a"
+
+#### Scenario: Male exception overrides the ends-with-a default
+- **WHEN** the adapter derives gender for the given name "Kosma"
+- **THEN** it SHALL return male, even though the name ends in "a"
+
+#### Scenario: Ukrainian male exception overrides the ends-with-a default
+- **WHEN** the adapter derives gender for the given name "Illia" or "Nikita" or "Mykyta" or "Ilia"
+- **THEN** it SHALL return male, even though each name ends in "a"
+
+#### Scenario: Unlisted name still uses the ends-with-a heuristic
+- **WHEN** the adapter derives gender for a given name that matches neither exception list
+- **THEN** it SHALL classify by whether the name ends with the letter "a", as before
+
+#### Scenario: Exception matching is case-insensitive
+- **WHEN** the adapter derives gender for the given name "ANGELIKI" or "kosma"
+- **THEN** it SHALL still match the corresponding exception entry
+
+### Requirement: Given name comma normalization
+When the raw `firstName` value from Sportzona contains a comma (a data-entry artifact where two given names were entered into one field), the adapter SHALL use only the trimmed text before the first comma as the effective given name. This normalized value SHALL be used both as the `GivenName` output field and as the input to gender derivation. A `firstName` with no comma SHALL be used unchanged, including one containing space-separated multiple given names (e.g. "Jan Maciej"), which is not treated as an artifact.
+
+#### Scenario: Comma-joined given names are reduced to the first name
+- **WHEN** the raw `firstName` is `"Artur,  Damian"`
+- **THEN** the adapter SHALL emit `GivenName` as `"Artur"` and derive gender from `"Artur"`
+
+#### Scenario: Comma with no surrounding whitespace is still split correctly
+- **WHEN** the raw `firstName` is `"Marcin,Artur"`
+- **THEN** the adapter SHALL emit `GivenName` as `"Marcin"`
+
+#### Scenario: Trailing comma with an empty second segment
+- **WHEN** the raw `firstName` is `"Józef,"`
+- **THEN** the adapter SHALL emit `GivenName` as `"Józef"`
+
+#### Scenario: Space-separated double given names are left untouched
+- **WHEN** the raw `firstName` is `"Jan Maciej"`
+- **THEN** the adapter SHALL emit `GivenName` as `"Jan Maciej"` unchanged
