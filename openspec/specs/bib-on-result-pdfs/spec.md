@@ -1,3 +1,13 @@
+# Bib on Result PDFs Specification
+
+## Purpose
+
+Prints each athlete's licence number (bib) as a "Nr lic." column on the PL
+Individual Qualification and Individual Finals ranking PDFs, so results are
+identifiable by federation licence without affecting non-PL tournaments.
+
+## Requirements
+
 ### Requirement: Bib column on Individual Qualification PDF
 The Individual Qualification ranking PDF for PL tournaments SHALL display the athlete's licence number (bib) as a dedicated column labelled "Nr lic.", positioned between the category columns (ageclass/subclass) and the country/club column.
 

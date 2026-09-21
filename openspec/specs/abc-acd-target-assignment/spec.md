@@ -1,4 +1,14 @@
-## ADDED Requirements
+# ABC/ACD Target Assignment Specification
+
+## Purpose
+
+Assigns athletes to target bosses using the alternating ABC/ACD slot pattern
+PZŁucz requires for 4-athlete-per-target sessions, grouping by class and/or
+division, keeping clubs together on consecutive bosses, and balancing
+cross-class club waves — with preview-before-save and an unassigned-athlete
+report for overflow.
+
+## Requirements
 
 ### Requirement: ABC/ACD slot pattern
 The system SHALL assign target positions using a staggered alternating pattern based on the absolute boss number: odd-numbered bosses use positions A, B, C (D left empty); even-numbered bosses use positions A, C, D (B left empty). The session MUST be configured with `SesAth4Target = 4`.

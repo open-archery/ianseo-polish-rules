@@ -6,7 +6,7 @@
 
 ---
 
-## 1. Purpose
+## Purpose
 
 Tournament operators are often provided a list of participant licence numbers
 (referred to as "bibs") by the organising federation. The list frequently does
@@ -219,7 +219,7 @@ athlete — the operator is responsible for consistency.
 
 ---
 
-## 8. Entry-column requirements
+## Requirements
 
 ### Requirement: Entry creation sets both age-class columns
 

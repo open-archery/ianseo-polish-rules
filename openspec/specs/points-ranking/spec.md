@@ -1,4 +1,12 @@
-## ADDED Requirements
+# Points Ranking Specification
+
+## Purpose
+
+Calculates and reports the PZŁucz season points ranking — individual, team,
+club and voivodeship — from an operator-selected preset's classification and
+bracket rules, producing PDF reports and ranking diplomas.
+
+## Requirements
 
 ### Requirement: Preset selection per tournament
 The system SHALL allow the operator to select one competition preset for the current tournament from a list of read-only predefined presets. The selection SHALL be persisted per tournament in `PLPointsTournamentConfig`. Exactly one preset may be active at a time per tournament.
