@@ -67,8 +67,8 @@ A report that yields no rows SHALL be omitted from the output entirely.
 - **THEN** the output contains an individual table and a separate mixed table, and no athlete's individual and mixed points are ever summed
 
 #### Scenario: Combined then rollups
-- **WHEN** the LZS preset declares `SEPARATE(ind)`, `CLUB`, `VOIVODESHIP`
-- **THEN** the output contains, in order: the individual classification table, the club table, the voivodeship table
+- **WHEN** the LZS preset declares `VOIVODESHIP`, `CLUB`, `SEPARATE(ind)`
+- **THEN** the output contains, in order: the voivodeship table, the club table, the individual classification table
 
 #### Scenario: Empty report omitted
 - **WHEN** a preset declares `SEPARATE(mix)` and the tournament has no mixed team event
