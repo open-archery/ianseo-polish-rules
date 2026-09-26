@@ -398,7 +398,7 @@ final class Fun_PointsRankingTest extends \PlTestCase
 
     // --- pl_points_calculate: end-to-end wiring (LZS-shaped scenario) --------
 
-    public function testCalculateWiresLoadersIntoClubTotalsForAQualOnlyTeamPreset(): void
+    public function testCalculateWiresLoadersIntoClubTotalsForAQualOnlyIndividualPreset(): void
     {
         $preset = \PL_POINTS_PRESETS['lzs'];
 
@@ -415,30 +415,17 @@ final class Fun_PointsRankingTest extends \PlTestCase
         // Starters (individual): also matches "FROM Individuals" — registered after, so it wins for that query text.
         \FakeDb::on('/CONCAT\(Entries\.EnDivision, Entries\.EnClass\) AS Category/', [['Category' => 'RU21M', 'Cnt' => 8]]);
 
-        // Team classification ('tea'): one team, place 1 -> 9 points, roster of 3.
-        \FakeDb::on('/FROM Teams\b/', [
-            ['TeCoId' => 5, 'TeSubTeam' => 0, 'TeEvent' => 'RU21M', 'Place' => 1],
-        ]);
-        \FakeDb::on('/Teams\.TeEvent AS Category/', [['Category' => 'RU21M', 'Cnt' => 2]]);
-        \FakeDb::on('/FROM TeamComponent/', [
-            ['ClubId' => 5, 'SubTeam' => 0, 'Event' => 'RU21M', 'EnId' => 1],
-            ['ClubId' => 5, 'SubTeam' => 0, 'Event' => 'RU21M', 'EnId' => 2],
-            ['ClubId' => 5, 'SubTeam' => 0, 'Event' => 'RU21M', 'EnId' => 3],
-        ]);
-
         \FakeDb::on('/FROM Countries/', [['CoId' => 5, 'CoCode' => 'ORL', 'CoName' => 'Orzeł']]);
         \FakeDb::on('/SELECT EnId, EnCode, EnName/', [
             ['EnId' => 1, 'EnCode' => 'PL001', 'EnName' => 'Kowalski', 'EnFirstName' => 'Jan', 'EnDivision' => 'R', 'EnClass' => 'U21M', 'ClubId' => 5],
-            ['EnId' => 2, 'EnCode' => 'PL002', 'EnName' => 'Nowak', 'EnFirstName' => 'Piotr', 'EnDivision' => 'R', 'EnClass' => 'U21M', 'ClubId' => 5],
-            ['EnId' => 3, 'EnCode' => 'PL003', 'EnName' => 'Wiśniewski', 'EnFirstName' => 'Adam', 'EnDivision' => 'R', 'EnClass' => 'U21M', 'ClubId' => 5],
         ]);
 
         $result = \pl_points_calculate(1, $preset);
 
         $clubReport = current(array_filter($result['reports'], fn ($r) => $r['kind'] === 'CLUB'));
         $this->assertNotFalse($clubReport, 'CLUB report should be present');
-        // 9 (individual, place 1) + 9 (team, place 1, uncapped) = 18.
-        $this->assertSame(18, $clubReport['rows'][0]['points']);
+        // 9 (individual, place 1) — LZS has no team classification, so no team points reach the club.
+        $this->assertSame(9, $clubReport['rows'][0]['points']);
     }
 
     public function testCalculateShowsBothAthleteNamesForAMixedPair(): void

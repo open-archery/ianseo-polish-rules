@@ -25,7 +25,7 @@ See proposal.md for the full rationale; this document covers only the mechanics 
 
 *Why `SEPARATE(ind)` and not `COMBINED(ind, cap 0)`:* `COMBINED` exists to sum an athlete's points across *multiple* listed classifications into a `Suma` column. With only `ind` left, a `COMBINED` report would render a single classification column plus a `Suma` column that always equals it — a redundant column with no other consumer. `SEPARATE(ind)` is what preset 3 (Puchar Polski) already uses for its individual-only table, so this keeps the same report kind for the same shape of data instead of inventing a one-classification "combined" report.
 
-*Why delete `one_team_per_club` rather than set it `false`:* every read site uses `!empty($preset[...])`, so an absent key already behaves as `false`. Leaving a `one_team_per_club => false` line on a preset with no team classification is dead configuration with nothing to toggle.
+*Why set `one_team_per_club` to `false` rather than delete the key:* every read site uses `!empty($preset[...])`, so either form behaves identically at runtime. Every sibling preset (`mmp`/`mpj`/`mmm`/`oom`) explicitly lists all fields including `one_team_per_club => false`; keeping that shape on `lzs` too avoids making it the one preset with an asymmetric array.
 
 **D2 — `CLUB`/`VOIVODESHIP` need no code change.**
 `pl_points_compute_club_totals()` already sums whatever classifications a preset declares; with no `COMBINED` report declared, the existing "no COMBINED report → totals are uncapped, computed over every declared classification" path (already specified in the Club ranking requirement) applies unchanged. Removing `tea` from `classifications` is sufficient — the club rollup naturally becomes individual-only.
