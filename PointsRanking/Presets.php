@@ -218,16 +218,8 @@ const PL_POINTS_PRESETS = [
             'classes' => ['U24M', 'U24W', 'U21M', 'U21W', 'U18M', 'U18W'],
         ],
         'classifications' => [
-            // One table shared by ind and tea.
             'ind' => [
                 'subject' => 'IND', 'source' => 'QUAL', 'cutoff' => false,
-                'brackets' => [
-                    [1, 1, 9], [2, 2, 7], [3, 3, 6], [4, 4, 5], [5, 5, 4],
-                    [6, 6, 3], [7, 7, 2], [8, 8, 1],
-                ],
-            ],
-            'tea' => [
-                'subject' => 'TEAM', 'source' => 'QUAL', 'cutoff' => false,
                 'brackets' => [
                     [1, 1, 9], [2, 2, 7], [3, 3, 6], [4, 4, 5], [5, 5, 4],
                     [6, 6, 3], [7, 7, 2], [8, 8, 1],
@@ -237,11 +229,10 @@ const PL_POINTS_PRESETS = [
         'reports' => [
             ['kind' => 'VOIVODESHIP', 'label' => 'Klasyfikacja województw'],
             ['kind' => 'CLUB', 'label' => 'Klasyfikacja klubowa'],
-            ['kind' => 'COMBINED', 'classifications' => ['ind', 'tea'], 'cap' => 0, 'label' => 'Podsumowanie punktacji'],
-            ['kind' => 'SEPARATE', 'classification' => 'tea', 'label' => 'Klasyfikacja drużynowa'],
+            ['kind' => 'SEPARATE', 'classification' => 'ind', 'label' => 'Klasyfikacja indywidualna'],
         ],
         'three_of_four' => false,
-        'one_team_per_club' => true,
+        'one_team_per_club' => false,
         'min_participation' => null,
     ],
 

@@ -61,8 +61,8 @@ In `COMBINED`, `CLUB` and `VOIVODESHIP` reports, a team or mixed share SHALL be 
 Each classification SHALL declare its rank source as `QUAL` or `ELIM`. `QUAL` reads `Individuals.IndRank` for individuals and `Teams.TeRank` for teams. `ELIM` reads `Individuals.IndRankFinal` and `Teams.TeRankFinal` as absolute values (`ABS()` — ianseo core writes negative final ranks in some flows). For an event with no elimination phase (`Events.EvFinalFirstPhase = 0`) an `ELIM` classification SHALL fall back to the qualification rank, matching the Diplomas module. A subject whose place in the declared source is `0` SHALL be treated as having no result and SHALL receive 0 points.
 
 #### Scenario: Qualification-only competition
-- **WHEN** the LZS preset declares both its classifications as `QUAL` and the tournament has no elimination round
-- **THEN** places are read from `IndRank` and `TeRank` and every scored athlete receives points
+- **WHEN** the LZS preset declares its `ind` classification as `QUAL` and the tournament has no elimination round
+- **THEN** places are read from `IndRank` and every scored athlete receives points
 
 #### Scenario: Elimination source
 - **WHEN** a Puchar Polski classification declares source `ELIM`
@@ -122,7 +122,7 @@ The roster SHALL be read from `TeamComponent` when the classification source is 
 When a preset declares `one_team_per_club`, only `Teams.TeSubTeam = 0` SHALL be scored; further sub-teams of the same club in the same category SHALL be ignored.
 
 #### Scenario: Qualification team roster
-- **WHEN** the LZS preset scores its team classification with source `QUAL`
+- **WHEN** the Międzywojewódzkie Mistrzostwa Młodzików preset scores its team classification with source `QUAL`
 - **THEN** the roster is read from `TeamComponent`, not `TeamFinComponent`
 
 #### Scenario: Team of 3 — split and club credit
@@ -200,8 +200,8 @@ A report that yields no rows SHALL be omitted from the output entirely.
 - **THEN** the output contains an individual table and a separate mixed table, and no athlete's individual and mixed points are ever summed
 
 #### Scenario: Combined then rollups
-- **WHEN** the LZS preset declares `COMBINED(ind, tea, cap 0)`, `SEPARATE(tea)`, `CLUB`, `VOIVODESHIP`
-- **THEN** the output contains, in order: the athlete table with `Indywidualnie / Zespołowo / Suma` columns, the team ranking table, the club table, the voivodeship table
+- **WHEN** the LZS preset declares `VOIVODESHIP`, `CLUB`, `SEPARATE(ind)`
+- **THEN** the output contains, in order: the voivodeship table, the club table, the individual classification table
 
 #### Scenario: Empty report omitted
 - **WHEN** a preset declares `SEPARATE(mix)` and the tournament has no mixed team event
@@ -219,7 +219,7 @@ A value dropped by the cap SHALL reach no report — neither the athlete's `Suma
 - **THEN** the individual 7 is dropped and the total is 20,5
 
 #### Scenario: Unlimited cap
-- **WHEN** the LZS preset declares cap 0 and an athlete earns 9 individually and 3 from the team
+- **WHEN** a `COMBINED` report declares cap `0` and an athlete earns 9 points in one listed classification and 3 in another
 - **THEN** the total is 12
 
 #### Scenario: Fewer results than the cap
@@ -345,9 +345,9 @@ Presets SHALL be defined as PHP constant arrays in `Presets.php` and read direct
 | 3 | Puchar Polski — runda | all | `SEPARATE(ind)`, `SEPARATE(mix)` | NO | ELIM |
 | 4 | Międzywojewódzkie Mistrzostwa Młodzików | all | `COMBINED(ind,tea,mix, cap 2)`, `CLUB`, `VOIVODESHIP` | YES | QUAL |
 | 5 | Ogólnopolska Olimpiada Młodzieży | all | `COMBINED(ind,tea,mix, cap 2)`, `CLUB`, `VOIVODESHIP` | YES | ELIM |
-| 6 | Mistrzostwa Krajowego Zrzeszenia LZS | `R` × `U24M,U24W,U21M,U21W,U18M,U18W` | `COMBINED(ind,tea, cap 0)`, `SEPARATE(tea)`, `CLUB`, `VOIVODESHIP` | NO | QUAL |
+| 6 | Mistrzostwa Krajowego Zrzeszenia LZS | `R` × `U24M,U24W,U21M,U21W,U18M,U18W` | `VOIVODESHIP`, `CLUB`, `SEPARATE(ind)` | NO | QUAL |
 
-Presets 1, 2 and 5 enable `three_of_four` (their annexes carry the 4th-athlete rule). Preset 4 does **not**: MM Młodzików teams and mixed teams are **declared** 3-person club rosters ("trzech zgłoszonych zawodników"), entered by the operator as ianseo team entries — any number of sub-teams per club, all scoring, club teams only. Preset 4 declares `min_participation` (3 clubs, 2 voivodeships). Preset 6 enables `one_team_per_club`.
+Presets 1, 2 and 5 enable `three_of_four` (their annexes carry the 4th-athlete rule). Preset 4 does **not**: MM Młodzików teams and mixed teams are **declared** 3-person club rosters ("trzech zgłoszonych zawodników"), entered by the operator as ianseo team entries — any number of sub-teams per club, all scoring, club teams only. Preset 4 declares `min_participation` (3 clubs, 2 voivodeships). LZS competitions field no team event at all: preset 6 scores individuals only, and its club/voivodeship totals are the sum of individual points.
 
 **Brackets — preset 3 (Puchar Polski), covers juniorzy młodsi, juniorzy and seniorzy in every division:**
 
@@ -358,7 +358,7 @@ Presets 1, 2 and 5 enable `three_of_four` (their annexes carry the 4th-athlete r
 
 The mixed table intentionally stops at 9-16: at most 16 pairs take part in a Puchar Polski mixed bracket.
 
-**Brackets — preset 6 (LZS)**, one table shared by `ind` and `tea`:
+**Brackets — preset 6 (LZS)**, the `ind` classification's bracket table:
 
 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
 |---|---|---|---|---|---|---|---|
