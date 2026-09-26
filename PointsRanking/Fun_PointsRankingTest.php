@@ -401,6 +401,7 @@ final class Fun_PointsRankingTest extends \PlTestCase
     public function testCalculateWiresLoadersIntoClubTotalsForAQualOnlyIndividualPreset(): void
     {
         $preset = \PL_POINTS_PRESETS['lzs'];
+        $this->assertSame(['ind'], array_keys($preset['classifications']), 'LZS must score individuals only, no team classification');
 
         \FakeDb::on('/FROM Divisions/', [['DivId' => 'R', 'DivDescription' => 'Recurve']]);
         \FakeDb::on('/FROM Classes/', [['ClId' => 'U21M', 'ClDescription' => 'U21 Men', 'ClViewOrder' => 1]]);

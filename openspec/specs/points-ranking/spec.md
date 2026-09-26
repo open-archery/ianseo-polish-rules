@@ -345,7 +345,7 @@ Presets SHALL be defined as PHP constant arrays in `Presets.php` and read direct
 | 3 | Puchar Polski — runda | all | `SEPARATE(ind)`, `SEPARATE(mix)` | NO | ELIM |
 | 4 | Międzywojewódzkie Mistrzostwa Młodzików | all | `COMBINED(ind,tea,mix, cap 2)`, `CLUB`, `VOIVODESHIP` | YES | QUAL |
 | 5 | Ogólnopolska Olimpiada Młodzieży | all | `COMBINED(ind,tea,mix, cap 2)`, `CLUB`, `VOIVODESHIP` | YES | ELIM |
-| 6 | Mistrzostwa Krajowego Zrzeszenia LZS | `R` × `U24M,U24W,U21M,U21W,U18M,U18W` | `SEPARATE(ind)`, `CLUB`, `VOIVODESHIP` | NO | QUAL |
+| 6 | Mistrzostwa Krajowego Zrzeszenia LZS | `R` × `U24M,U24W,U21M,U21W,U18M,U18W` | `VOIVODESHIP`, `CLUB`, `SEPARATE(ind)` | NO | QUAL |
 
 Presets 1, 2 and 5 enable `three_of_four` (their annexes carry the 4th-athlete rule). Preset 4 does **not**: MM Młodzików teams and mixed teams are **declared** 3-person club rosters ("trzech zgłoszonych zawodników"), entered by the operator as ianseo team entries — any number of sub-teams per club, all scoring, club teams only. Preset 4 declares `min_participation` (3 clubs, 2 voivodeships). LZS competitions field no team event at all: preset 6 scores individuals only, and its club/voivodeship totals are the sum of individual points.
 
