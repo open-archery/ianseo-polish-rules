@@ -13,7 +13,7 @@
 ## 3. Full verification
 
 - [x] 3.1 Run the full suite (`tools/test.cmd`) and confirm all tests pass, including `PointsRankingCalcTest.php`'s generic `tea`-classification unit tests (those exercise the shared team-crediting mechanism directly with synthetic fixtures, not the `lzs` preset, and must stay green untouched)
-- [ ] 3.2 Manually verify in ianseo with the `lzs` preset active on a tournament with `R`/`U21` entries and a team event configured: the points-ranking page shows only the individual table plus `CLUB`/`VOIVODESHIP`, with no "Klasyfikacja drużynowa" section and no "Zespołowo" column
+- [x] 3.2 Manually verify in ianseo with the `lzs` preset active on a tournament with `R`/`U21` entries and a team event configured: the points-ranking page shows only the individual table plus `CLUB`/`VOIVODESHIP`, with no "Klasyfikacja drużynowa" section and no "Zespołowo" column
 
 ## 4. Spec sync
 
