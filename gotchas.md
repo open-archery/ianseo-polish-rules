@@ -102,6 +102,22 @@ commit as the fix. Terse is fine; the goal is "don't step on this rake again," n
   by this fix** — it's pre-existing, unverified, and higher-stakes if it ever ties the wrong
   way (a real face-size mismatch, not just a label), not a new regression — check it before
   trusting the "narrower face overrides broader one" comment at that call site.
+- **`CreateTargetFace()`'s trailing `$T3=0, $W3=0, $T4=0, $W4=0` defaults silently produce a
+  "no target face" row, not an error.** Every `CreateTargetFace()` call in
+  `pl_setup_70m_family()` only ever passed `$T1/$W1/$T2/$W2` — correct for TourType 3 (a single
+  round always has exactly 2 legs) but wrong for TourType 37 (Double Round, `$Multiplier=2`):
+  `pl_double_legs()` doubles every class to 4 legs (confirmed live and by
+  `testPlSetup70mFamilyMultiplierTwoDoublesEverySession` — RM's legs become `70m-1..70m-4`, all
+  still 70m), yet legs 3-4 got no `TfT3/TfT4/TfW3/TfW4` at all. This showed up live as
+  `Tournament/ManTargets.php` (core) rendering *no target selected* for distance columns 3-4 on
+  a real TourType-37 tournament, and ISK/phones had no scoring keypad to render for those legs
+  even though `Distances`/`DistanceInformation` correctly covered all 4. Fixed with a `$face2()`
+  closure that doubles `(T1,W1,T2,W2)` into `(T1,W1,T1,W1,T2,W2,T2,W2)` when `$isDouble` — note
+  the *repeat-each-group* order, not `(T1,W1,T2,W2,T1,W1,T2,W2)`: `pl_double_legs()` doubles each
+  meter-group **in place** (U15's `[40m, 20m]` becomes `[40m, 40m, 20m, 20m]`, not interleaved),
+  so legs 3-4 must repeat group 2's own size, not mirror legs 1-2 verbatim — the two happen to
+  coincide only when a class has a single distance repeated (T1==T2 already), which is why this
+  was easy to miss by eyeballing the single-distance classes alone.
 
 ## ianseo core paths
 
