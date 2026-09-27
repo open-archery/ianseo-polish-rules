@@ -530,6 +530,33 @@ final class LibTest extends \PlTestCase
         $this->assertSame([[6, 6], [6, 6], [6, 6], [6, 6]], $di[0][1]);
     }
 
+    public function testPlSetup70mFamilyMultiplierTwoFillsAllFourTargetFaceLegs(): void
+    {
+        // Regression: on a Double Round (TourType 37), pl_double_legs() gives
+        // every class 4 legs (see testPlSetup70mFamilyMultiplierTwoDoublesEverySession),
+        // but every CreateTargetFace() call in this function only ever passed
+        // T1/W1/T2/W2 — legs 3-4 silently defaulted to 0 (no target face at
+        // all), which showed up live as "no target selected" for distances 3-4
+        // in ManTargets.php and no scoring keypad on ISK/phones for those legs.
+        \pl_setup_70m_family(7, 37, 2, $this->plClassNames(), $this->plMixedClassNames());
+
+        $faces = \CallLog::calls('CreateTargetFace');
+
+        // CreateTargetFace($TourId, $Id, $Name, $Classes, $Default, $T1, $W1, $T2, $W2, $T3, $W3, $T4, $W4)
+        $generic = array_values(array_filter($faces, fn ($f) => $f[2] === 'Łuk klasyczny/barebow domyślna'))[0];
+        // RM/RW/RU21 etc. are a single 70m group doubled to 4 identical legs.
+        $this->assertSame([TGT_OUT_FULL, 122, TGT_OUT_FULL, 122, TGT_OUT_FULL, 122, TGT_OUT_FULL, 122], array_slice($generic, 5));
+
+        $compound = array_values(array_filter($faces, fn ($f) => $f[2] === 'Łuk bloczkowy domyślna'))[0];
+        $this->assertSame([TGT_OUT_5_big10, 80, TGT_OUT_5_big10, 80, TGT_OUT_5_big10, 80, TGT_OUT_5_big10, 80], array_slice($compound, 5));
+
+        // U15's two DIFFERENT distance groups (40m, 20m) double in place —
+        // [40m, 40m, 20m, 20m], not interleaved — so the face must repeat
+        // each group's own size, not mirror legs 1-2 onto legs 3-4 verbatim.
+        $u15 = array_values(array_filter($faces, fn ($f) => $f[2] === 'Łuk klasyczny Młodzik (40 m / 20 m)'))[0];
+        $this->assertSame([TGT_OUT_FULL, 122, TGT_OUT_FULL, 122, TGT_OUT_FULL, 80, TGT_OUT_FULL, 80], array_slice($u15, 5));
+    }
+
     public function testPlSetup70mFamilyType37ExcludesU12U10AndMasters(): void
     {
         \pl_setup_70m_family(7, 3, 1, $this->plClassNames(), $this->plMixedClassNames());

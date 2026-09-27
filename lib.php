@@ -829,6 +829,19 @@ function pl_setup_70m_family($TourId, $TourType, $Multiplier, $PL_CLASS_NAMES, $
     // ---- Target Faces ----------------------------------------------------------
     // Each wildcard/regex face is only created if a class actually exists to
     // use it — same "no orphaned config" reasoning as the distances above.
+    //
+    // Every face below is defined for exactly the 2 distance-groups a single
+    // round has. On a Double Round (TourType 37, $isDouble), pl_double_legs()
+    // doubles each meter-group IN PLACE (e.g. U15's [40m, 20m] becomes
+    // [40m, 40m, 20m, 20m], not interleaved) — so legs 3-4 must repeat each
+    // group's own (T, W), not just mirror legs 1-2 verbatim. Leaving T3/W3/T4/W4
+    // at CreateTargetFace()'s default 0 (i.e. not doubling here at all) used to
+    // leave legs 3-4 with no target face row at all — ManTargets.php showed no
+    // target selected for those columns and ISK/phones had no keypad to render
+    // for them, even though Distances/DistanceInformation covered all 4 legs.
+    $face2 = function ($T1, $W1, $T2, $W2) use ($isDouble) {
+        return $isDouble ? array($T1, $W1, $T1, $W1, $T2, $W2, $T2, $W2) : array($T1, $W1, $T2, $W2);
+    };
     $i = 1;
     // Recurve (incl. Barebow): 122 cm full face
     // Excludes U12/U10 explicitly (rather than matching every R/B class)
@@ -842,7 +855,7 @@ function pl_setup_70m_family($TourId, $TourType, $Multiplier, $PL_CLASS_NAMES, $
     // comment below) — enumerate the other prefixes instead.
     if (pl_division_has_classes($TourType, 'R', $preset) || pl_division_has_classes($TourType, 'B', $preset)) {
         CreateTargetFace($TourId, $i++, 'Łuk klasyczny/barebow domyślna', 'REG-^R(M|W|U24|U21|U18|U15|[4-8]0)|^B', '1',
-            TGT_OUT_FULL, 122, TGT_OUT_FULL, 122);
+            ...$face2(TGT_OUT_FULL, 122, TGT_OUT_FULL, 122));
     }
     // Compound: 80 cm 6-ring face (broad default; Masters 70+/80+ narrows
     // this below with their own full-face definition, same "narrower face
@@ -851,25 +864,28 @@ function pl_setup_70m_family($TourId, $TourType, $Multiplier, $PL_CLASS_NAMES, $
     // stay compatible with whatever engine evaluates TfRegExp).
     if (pl_division_has_classes($TourType, 'C', $preset)) {
         CreateTargetFace($TourId, $i++, 'Łuk bloczkowy domyślna', 'C%', '1',
-            TGT_OUT_5_big10, 80, TGT_OUT_5_big10, 80);
+            ...$face2(TGT_OUT_5_big10, 80, TGT_OUT_5_big10, 80));
     }
     // Recurve U15: 122 cm for 40 m, 80 cm for 20 m
     if (pl_class_in_preset('U15M', 'R', $preset) || pl_class_in_preset('U15W', 'R', $preset)) {
         CreateTargetFace($TourId, $i++, 'Łuk klasyczny Młodzik (40 m / 20 m)', 'RU15%', '1',
-            TGT_OUT_FULL, 122, TGT_OUT_FULL, 80);
+            ...$face2(TGT_OUT_FULL, 122, TGT_OUT_FULL, 80));
     }
-    // Recurve U12 / U10: 122 cm full face
+    // Recurve U12 / U10: 122 cm full face — TourType 3 only, never 37 (see
+    // pl_class_in_preset() vs TourType-eligibility note elsewhere), so $face2's
+    // $isDouble branch never actually fires for this one; kept for consistency.
     if ($TourType == 3 && (pl_class_in_preset('U12M', 'R', $preset) || pl_class_in_preset('U12W', 'R', $preset)
         || pl_class_in_preset('U10M', 'R', $preset) || pl_class_in_preset('U10W', 'R', $preset))) {
         CreateTargetFace($TourId, $i++, 'Łuk klasyczny Dziecko (U12/łuk popularny)', 'REG-^R(U10|U12)', '1',
-            TGT_OUT_FULL, 122, TGT_OUT_FULL, 122);
+            ...$face2(TGT_OUT_FULL, 122, TGT_OUT_FULL, 122));
     }
     // Compound Masters 70+/80+: 80 cm full face (not the 6-ring face) —
     // narrower than 'C%' above, so it overrides it for these four classes.
+    // TourType 3 only, never 37 — same note as U12/U10 above.
     if ($TourType == 3 && (pl_class_in_preset('70M', 'C', $preset) || pl_class_in_preset('70W', 'C', $preset)
         || pl_class_in_preset('80M', 'C', $preset) || pl_class_in_preset('80W', 'C', $preset))) {
         CreateTargetFace($TourId, $i++, 'Łuk bloczkowy Master 70+/80+', 'REG-^C(70|80)', '1',
-            TGT_OUT_FULL, 80, TGT_OUT_FULL, 80);
+            ...$face2(TGT_OUT_FULL, 80, TGT_OUT_FULL, 80));
     }
 
     // ---- Event-class bindings, Finals, Distance Info ---------------------------
