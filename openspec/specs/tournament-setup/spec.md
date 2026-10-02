@@ -87,7 +87,7 @@ Used at the Polish Championships and regional competitions.
 | Polish class name                 | Code        | Age range           | Sex     |
 | ---------------------------------- | ----------- | -------------------- | ------- |
 | Seniorzy / Seniorki                | M / W       | Open (24 and over)   | M and W |
-| Młodzieżowiec / Młodzieżowniczka   | U24M / U24W | 21–23 years          | M and W |
+| Młodzieżowiec / Młodzieżówka   | U24M / U24W | 21–23 years          | M and W |
 | Junior / Juniorka                  | U21M / U21W | 18–20 years          | M and W |
 | Junior młodszy / Juniorka młodsza  | U18M / U18W | 15–17 years          | M and W |
 
@@ -311,7 +311,7 @@ The Indoor Round is held indoors at a short distance. Each archer shoots **60 ar
 | Polish class name                 | Code        | Notes                       |
 | ---------------------------------- | ----------- | ---------------------------- |
 | Seniorzy / Seniorki                | M / W       |                               |
-| Młodzieżowiec / Młodzieżowniczka   | U24M / U24W | Recurve only                 |
+| Młodzieżowiec / Młodzieżówka   | U24M / U24W | Recurve only                 |
 | Junior / Juniorka                  | U21M / U21W |                               |
 | Junior młodszy / Juniorka młodsza  | U18M / U18W |                               |
 | Młodzik / Młodziczka               | U15M / U15W |                               |
@@ -668,7 +668,7 @@ When a category preset (sub-rule) is selected, the setup script SHALL create onl
 - **THEN** U12 is configured with the 80cm full face at 15m and U10 with the 122cm full face at 10m
 
 ### Requirement: U24 is Recurve-only on every TourType
-U24 (Młodzieżowiec/Młodzieżowniczka) SHALL be created only under the Recurve (R) division, never under Compound (C) or Barebow (B), on every TourType that offers it.
+U24 (Młodzieżowiec/Młodzieżówka) SHALL be created only under the Recurve (R) division, never under Compound (C) or Barebow (B), on every TourType that offers it.
 
 #### Scenario: No Compound or Barebow U24
 - **WHEN** any setup script creates the U24 class
