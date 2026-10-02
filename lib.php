@@ -34,7 +34,7 @@ $PL_CLASS_NAMES = array(
     'M'    => 'Seniorzy',
     'W'    => 'Seniorki',
     'U24M' => 'Młodzieżowiec',
-    'U24W' => 'Młodzieżowniczka',
+    'U24W' => 'Młodzieżówka',
     'U21M' => 'Junior',
     'U21W' => 'Juniorka',
     'U18M' => 'Junior młodszy',
@@ -232,7 +232,7 @@ function pl_standard_class_candidates($TourType) {
     $c[] = array('code' => 'M',    'ageFrom' => 24, 'ageTo' => 127, 'sex' => 0, 'valid' => 'M',                        'name' => 'Seniorzy',              'div' => array('R', 'C', 'B'));
     $c[] = array('code' => 'W',    'ageFrom' => 24, 'ageTo' => 127, 'sex' => 1, 'valid' => 'W',                        'name' => 'Seniorki',              'div' => array('R', 'C', 'B'));
     $c[] = array('code' => 'U24M', 'ageFrom' => 21, 'ageTo' => 23,  'sex' => 0, 'valid' => 'U24M,M',                   'name' => 'Młodzieżowiec',         'div' => array('R'));
-    $c[] = array('code' => 'U24W', 'ageFrom' => 21, 'ageTo' => 23,  'sex' => 1, 'valid' => 'U24W,W',                   'name' => 'Młodzieżowniczka',      'div' => array('R'));
+    $c[] = array('code' => 'U24W', 'ageFrom' => 21, 'ageTo' => 23,  'sex' => 1, 'valid' => 'U24W,W',                   'name' => 'Młodzieżówka',          'div' => array('R'));
     $c[] = array('code' => 'U21M', 'ageFrom' => 18, 'ageTo' => 20,  'sex' => 0, 'valid' => 'U21M,M',                   'name' => 'Junior',                'div' => array('R', 'C', 'B'));
     $c[] = array('code' => 'U21W', 'ageFrom' => 18, 'ageTo' => 20,  'sex' => 1, 'valid' => 'U21W,W',                   'name' => 'Juniorka',              'div' => array('R', 'C', 'B'));
     $c[] = array('code' => 'U18M', 'ageFrom' => 15, 'ageTo' => 17,  'sex' => 0, 'valid' => 'U18M,U21M',                'name' => 'Junior młodszy',        'div' => array('R', 'C', 'B'));

@@ -180,7 +180,7 @@ function CreateStandardClasses($TourId, $TourType) {
 
     // U24 — age 21-23, Recurve only
     CreateClass($TourId, $i++, 21, 23, 0, 'U24M', 'U24M,M', 'Młodzieżowiec', 1, 'R');
-    CreateClass($TourId, $i++, 21, 23, 1, 'U24W', 'U24W,W', 'Młodzieżowniczka', 1, 'R');
+    CreateClass($TourId, $i++, 21, 23, 1, 'U24W', 'U24W,W', 'Młodzieżówka', 1, 'R');
 
     // U21 (Junior) — age 18-20
     CreateClass($TourId, $i++, 18, 20, 0, 'U21M', 'U21M,M', 'Junior',       1, 'R,C,B');
@@ -678,7 +678,7 @@ $i = 1;
 CreateEventNew($TourId, 'RM',    'Łuk klasyczny Seniorzy',               $i++, $optR);
 CreateEventNew($TourId, 'RW',    'Łuk klasyczny Seniorki',               $i++, $optR);
 CreateEventNew($TourId, 'RU24M', 'Łuk klasyczny Młodzieżowiec',          $i++, $optR);
-CreateEventNew($TourId, 'RU24W', 'Łuk klasyczny Młodzieżowniczka',       $i++, $optR);
+CreateEventNew($TourId, 'RU24W', 'Łuk klasyczny Młodzieżówka',       $i++, $optR);
 CreateEventNew($TourId, 'RU21M', 'Łuk klasyczny Junior',                 $i++, $optR);
 CreateEventNew($TourId, 'RU21W', 'Łuk klasyczny Juniorka',               $i++, $optR);
 
@@ -873,7 +873,7 @@ $i = 1;
 CreateEventNew($TourId, 'RM',    'Łuk klasyczny Seniorzy',               $i++, $optR);
 CreateEventNew($TourId, 'RW',    'Łuk klasyczny Seniorki',               $i++, $optR);
 CreateEventNew($TourId, 'RU24M', 'Łuk klasyczny Młodzieżowiec',          $i++, $optR);
-CreateEventNew($TourId, 'RU24W', 'Łuk klasyczny Młodzieżowniczka',       $i++, $optR);
+CreateEventNew($TourId, 'RU24W', 'Łuk klasyczny Młodzieżówka',       $i++, $optR);
 CreateEventNew($TourId, 'RU21M', 'Łuk klasyczny Junior',                 $i++, $optR);
 CreateEventNew($TourId, 'RU21W', 'Łuk klasyczny Juniorka',               $i++, $optR);
 
