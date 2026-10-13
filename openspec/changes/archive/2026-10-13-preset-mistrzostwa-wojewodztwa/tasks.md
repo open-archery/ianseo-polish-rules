@@ -14,4 +14,4 @@
 
 ## 4. Spec sync
 
-- [ ] 4.1 After code and tests are green, run `/opsx:sync` (or archive) so `openspec/specs/points-ranking/spec.md` picks up the delta
+- [x] 4.1 After code and tests are green, run `/opsx:sync` (or archive) so `openspec/specs/points-ranking/spec.md` picks up the delta
