@@ -236,4 +236,22 @@ const PL_POINTS_PRESETS = [
         'min_participation' => null,
     ],
 
+    // 7 — Mistrzostwa Województwa (individual only, club ranking only)
+    'mw' => [
+        'name' => 'Mistrzostwa Województwa',
+        'scope' => ['divisions' => [], 'classes' => []],
+        'classifications' => [
+            'ind' => [
+                'subject' => 'IND', 'source' => 'ELIM', 'cutoff' => false,
+                'brackets' => [[1, 1, 3], [2, 2, 2], [3, 3, 1]],
+            ],
+        ],
+        'reports' => [
+            ['kind' => 'CLUB', 'label' => 'Klasyfikacja klubowa'],
+        ],
+        'three_of_four' => false,
+        'one_team_per_club' => false,
+        'min_participation' => null,
+    ],
+
 ];

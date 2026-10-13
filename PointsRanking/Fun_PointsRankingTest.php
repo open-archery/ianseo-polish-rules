@@ -429,6 +429,49 @@ final class Fun_PointsRankingTest extends \PlTestCase
         $this->assertSame(9, $clubReport['rows'][0]['points']);
     }
 
+    public function testCalculateScoresMedallistsOnlyForTheMwClubPreset(): void
+    {
+        $preset = \PL_POINTS_PRESETS['mw'];
+        $this->assertSame(['CLUB'], array_column($preset['reports'], 'kind'));
+
+        \FakeDb::on('/FROM Divisions/', [['DivId' => 'R', 'DivDescription' => 'Recurve']]);
+        \FakeDb::on('/FROM Classes/', [
+            ['ClId' => 'M', 'ClDescription' => 'Men', 'ClViewOrder' => 1],
+            ['ClId' => 'W', 'ClDescription' => 'Women', 'ClViewOrder' => 2],
+        ]);
+        \FakeDb::on('/SELECT DISTINCT EnDivision/', [
+            ['EnDivision' => 'R', 'EnClass' => 'M'], ['EnDivision' => 'R', 'EnClass' => 'W'],
+        ]);
+        \FakeDb::on('/FROM EventClass/', [
+            ['EvCode' => 'RM', 'DivCode' => 'R', 'Class' => 'M'],
+            ['EvCode' => 'RW', 'DivCode' => 'R', 'Class' => 'W'],
+        ]);
+        \FakeDb::on('/FROM PLVoivodeshipMap/', []);
+
+        // One club: 1st in RM (3), 3rd in RW (1), 4th in RM (0).
+        \FakeDb::on('/FROM Individuals\b.*INNER JOIN Entries/s', [
+            ['EnId' => 1, 'EnCode' => 'PL001', 'EnName' => 'Kowalski', 'EnFirstName' => 'Jan', 'EnDivision' => 'R', 'EnClass' => 'M', 'ClubId' => 5, 'Place' => 1],
+            ['EnId' => 2, 'EnCode' => 'PL002', 'EnName' => 'Nowak', 'EnFirstName' => 'Ewa', 'EnDivision' => 'R', 'EnClass' => 'W', 'ClubId' => 5, 'Place' => 3],
+            ['EnId' => 3, 'EnCode' => 'PL003', 'EnName' => 'Lis', 'EnFirstName' => 'Adam', 'EnDivision' => 'R', 'EnClass' => 'M', 'ClubId' => 5, 'Place' => 4],
+        ]);
+        \FakeDb::on('/CONCAT\(Entries\.EnDivision, Entries\.EnClass\) AS Category/', [
+            ['Category' => 'RM', 'Cnt' => 8], ['Category' => 'RW', 'Cnt' => 8],
+        ]);
+        \FakeDb::on('/FROM Countries/', [['CoId' => 5, 'CoCode' => 'ORL', 'CoName' => 'Orzeł']]);
+        \FakeDb::on('/SELECT EnId, EnCode, EnName/', [
+            ['EnId' => 1, 'EnCode' => 'PL001', 'EnName' => 'Kowalski', 'EnFirstName' => 'Jan', 'EnDivision' => 'R', 'EnClass' => 'M', 'ClubId' => 5],
+            ['EnId' => 2, 'EnCode' => 'PL002', 'EnName' => 'Nowak', 'EnFirstName' => 'Ewa', 'EnDivision' => 'R', 'EnClass' => 'W', 'ClubId' => 5],
+            ['EnId' => 3, 'EnCode' => 'PL003', 'EnName' => 'Lis', 'EnFirstName' => 'Adam', 'EnDivision' => 'R', 'EnClass' => 'M', 'ClubId' => 5],
+        ]);
+
+        $result = \pl_points_calculate(1, $preset);
+
+        $this->assertCount(1, $result['reports'], 'only the CLUB report is rendered');
+        $clubReport = $result['reports'][0];
+        $this->assertSame('CLUB', $clubReport['kind']);
+        $this->assertSame(4, $clubReport['rows'][0]['points']); // 3 + 1; 4th place adds nothing
+    }
+
     public function testCalculateShowsBothAthleteNamesForAMixedPair(): void
     {
         $preset = \PL_POINTS_PRESETS['pp'];

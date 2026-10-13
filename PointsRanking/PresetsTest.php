@@ -63,6 +63,7 @@ final class PresetsTest extends \PHPUnit\Framework\TestCase
     #[DataProvider('presetProvider')]
     public function testEveryReportReferencesADeclaredClassification(string $presetKey, array $preset): void
     {
+        $this->assertNotEmpty($preset['reports']);
         $declared = array_keys($preset['classifications']);
         foreach ($preset['reports'] as $report) {
             $refs = [];
@@ -95,8 +96,8 @@ final class PresetsTest extends \PHPUnit\Framework\TestCase
         );
     }
 
-    public function testSixPresetsShipped(): void
+    public function testSevenPresetsShipped(): void
     {
-        $this->assertCount(6, \PL_POINTS_PRESETS);
+        $this->assertCount(7, \PL_POINTS_PRESETS);
     }
 }
