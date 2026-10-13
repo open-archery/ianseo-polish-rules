@@ -578,7 +578,10 @@ function pl_points_calculate($tourId, array $preset): array
     $categories = pl_points_load_categories($tourId, $preset['scope']);
     $starters = pl_points_load_starters($tourId, $categories, !empty($preset['one_team_per_club']));
     $directory = pl_points_load_entries_directory($tourId);
-    $voivodeshipMap = pl_points_get_voivodeship_map();
+    // The map only feeds the VOIVODESHIP report and the min-participation warning.
+    $needsVoivodeshipMap = !empty($preset['min_participation'])
+        || in_array('VOIVODESHIP', array_column($preset['reports'], 'kind'), true);
+    $voivodeshipMap = $needsVoivodeshipMap ? pl_points_get_voivodeship_map() : [];
 
     $classified = [];
 
